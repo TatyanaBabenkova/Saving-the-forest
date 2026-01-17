@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Возрождение Леса</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
+    :root {
+      --primary: #4effbf;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Montserrat', sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Интерфейс */
+    #ui {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+      box-sizing: border-box;
+      transition: opacity 0.5s;
+    }
+
+    .bar-container {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      padding: 10px 20px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .bar-label {
+      color: #fff;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-track {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff6b6b, #ffd93d, #4effbf);
+      width: 0%; /* Меняется JS-ом */
+      transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+      box-shadow: 0 0 10px rgba(78, 255, 191, 0.5);
+    }
+
+    /* Стартовый экран */
+    .screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(14, 18, 26, 0.85);
+      backdrop-filter: blur(15px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: opacity 0.8s, visibility 0.8s;
+      pointer-events: auto;
+    }
+    .screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    h1 {
+      font-size: clamp(30px, 5vw, 60px);
+      color: #fff;
+      margin: 0 0 20px 0;
+      text-align: center;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p {
+      color: #94a3b8;
+      max-width: 400px;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+
+    .btn {
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 16px 48px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    }
+    .btn:hover { transform: scale(1.05); }
+    .btn:active { transform: scale(0.95); }
+
+    /* Всплывающие подсказки */
+    .float-text {
+      position: absolute;
+      color: #fff;
+      font-weight: 700;
+      pointer-events: none;
+      animation: floatUp 1s forwards;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      z-index: 5;
+    }
+    @keyframes floatUp {
+      0% { transform: translateY(0) scale(0.8); opacity: 1; }
+      100% { transform: translateY(-50px) scale(1.2); opacity: 0; }
+    }
+
+    /* Индикатор клика */
+    .cursor-glow {
+      position: fixed;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: transform 0.1s;
+      z-index: 100;
+      display: none;
+    }
+    @media (hover: hover) { .cursor-glow { display: block; } }
+
+  </style>
+</head>
+<body>
+
+  <canvas id="canvas"></canvas>
+  <div class="cursor-glow" id="cursor"></div>
+
+  <div id="ui">
+    <div style="flex:1"></div> <div class="bar-container">
+      <div class="bar-label">
+        <span>Чистота природы</span>
+        <span id="percent">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="startScreen">
+    <h1>Возрождение</h1>
+    <p>Лес полон мусора, птицы улетели, а небо стало серым. <br>Кликай на мусор, чтобы очистить природу и вернуть жизнь.</p>
+    <button class="btn" onclick="Game.start()">Начать уборку</button>
+  </div>
+
+  <div class="screen hidden" id="endScreen">
+    <h1>Природа спасена!</h1>
+    <p>Благодаря тебе лес снова дышит. Слышишь, как поют птицы?</p>
+    <button class="btn" onclick="Game.restart()">Сыграть ещё раз</button>
+  </div>
+
+<script>
+/**
+ * AUDIO SYNTH (Звуковой движок)
+ * Генерирует звуки "на лету", чтобы не грузить файлы.
+ */
+const AudioSys = {
+  ctx: null,
+  masterGain: null,
+  
+  init() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.3;
+    this.masterGain.connect(this.ctx.destination);
+    this.startAmbience();
+  },
+
+  playTone(freq, type, dur, vol = 1) {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, this.ctx.currentTime + dur);
+    
+    g.gain.setValueAtTime(vol, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+    
+    osc.connect(g);
+    g.connect(this.masterGain);
+    osc.start();
+    osc.stop(this.ctx.currentTime + dur);
+  },
+
+  trashSound() {
+    // Звук "сминания" мусора
+    this.playTone(200 + Math.random()*100, 'sawtooth', 0.1, 0.5);
+    this.playTone(100, 'square', 0.15, 0.3);
+  },
+
+  natureSound() {
+    // Приятный "дзынь"
+    this.playTone(800 + Math.random()*400, 'sine', 1.5, 0.2);
+  },
+
+  startAmbience() {
+    // Генератор фонового шума (ветер -> пение птиц)
+    // Реализовано упрощенно через обновление параметров в GameLoop
+  }
+};
+
+/**
+ * GRAPHICS & LOGIC
+ */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+let W, H, DPR;
+
+const ANIMALS_POOL = ['🦌', '🦊', '🐇', '🦆', '🦉', '🦋', '🐦', '🐿️'];
+const TRASH_POOL = ['🥡', '🥤', '🧴', '🥫', '📦', '🗞️', '🚬', '🛢️'];
+
+// Состояние игры
+const State = {
+  pollution: 1.0, // 1.0 = грязно, 0.0 = чисто
+  trashItems: [],
+  animals: [],
+  particles: [],
+  clouds: [],
+  targetPollution: 1.0,
+  playing: false
+};
+
+// --- КЛАССЫ ---
+
+class Trash {
+  constructor() {
+    this.x = Math.random() * W;
+    // Распределяем мусор по "земле" (нижняя треть экрана)
+    this.y = H * 0.65 + Math.random() * (H * 0.3); 
+    this.size = 30 + Math.random() * 20;
+    this.type = TRASH_POOL[Math.floor(Math.random() * TRASH_POOL.length)];
+    this.rotation = (Math.random() - 0.5);
+    this.hover = false;
+    this.scale = 0;
+    this.targetScale = 1;
+  }
+
+  draw(dt) {
+    // Анимация появления
+    this.scale += (this.targetScale - this.scale) * 5 * dt;
+    
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.scale(this.scale * (this.hover ? 1.2 : 1), this.scale * (this.hover ? 1.2 : 1));
+    
+    ctx.font = `${this.size}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Тень
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillText(this.type, 2, 5);
+    
+    // Сам предмет (немного серый если грязно)
+    ctx.filter = `grayscale(${State.pollution * 80}%) brightness(${1 - State.pollution*0.3})`;
+    ctx.fillText(this.type, 0, 0);
+    ctx.filter = 'none';
+
+    ctx.restore();
+  }
+
+  checkHit(mx, my) {
+    const d = Math.hypot(mx - this.x, my - this.y);
+    return d < this.size;
+  }
+}
+
+class Animal {
+  constructor() {
+    this.type = ANIMALS_POOL[Math.floor(Math.random() * ANIMALS_POOL.length)];
+    this.x = Math.random() > 0.5 ? -50 : W + 50; // Спавн за экраном
+    this.y = H * 0.6 + Math.random() * (H * 0.25);
+    
+    // Птицы выше
+    if (['🦉', '🐦', '🦋', '🦆'].includes(this.type)) {
+      this.y = H * 0.1 + Math.random() * (H * 0.4);
+      this.floating = true;
+    }
+
+    this.dir = this.x < 0 ? 1 : -1; // Направление движения
+    this.speed = (20 + Math.random() * 40) * (this.floating ? 1.5 : 1);
+    this.size = 0;
+    this.targetSize = 40 + Math.random() * 20;
+    this.time = Math.random() * 10;
+  }
+
+  update(dt) {
+    this.size += (this.targetSize - this.size) * 3 * dt;
+    this.x += this.speed * this.dir * dt;
+    this.time += dt;
+
+    if (this.floating) {
+      this.y += Math.sin(this.time * 3) * 0.5;
+    } else {
+      // Прыжки для наземных
+      this.y += Math.sin(this.time * 10) * 0.3;
+    }
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(this.dir * -1, 1); // Разворот картинки
+    ctx.scale(this.size / 40, this.size / 40);
+    
+    // Свечение для магических животных
+    if (State.pollution < 0.2) {
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 15;
+    }
+    
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.type, 0, 0);
+    
+    ctx.restore();
+  }
+}
+
+class Particle {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.color = color;
+    this.vx = (Math.random() - 0.5) * 200;
+    this.vy = (Math.random() - 1) * 200;
+    this.life = 1.0;
+    this.decay = 0.5 + Math.random();
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= this.decay * dt;
+  }
+  draw() {
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+  }
+}
+
+// --- ОТРИСОВКА МИРА ---
+
+function drawSky(p) {
+  // p = pollution (1 = грязно, 0 = чисто)
+  
+  // Интерполяция цветов неба
+  // Грязно: #3f3f3f -> #1a1a1a
+  // Чисто:  #4fa8ff -> #b0e0ff (День) или Закат
+  
+  const r1 = 63 * p + 79 * (1-p); 
+  const g1 = 63 * p + 168 * (1-p);
+  const b1 = 63 * p + 255 * (1-p);
+  
+  const r2 = 26 * p + 176 * (1-p);
+  const g2 = 26 * p + 224 * (1-p);
+  const b2 = 26 * p + 255 * (1-p);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${r1},${g1},${b1})`);
+  grad.addColorStop(1, `rgb(${r2},${g2},${b2})`);
+  
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  // Солнце
+  const sunY = H * 0.2 + (p * 50); // Солнце поднимается когда чисто
+  ctx.save();
+  ctx.translate(W * 0.7, sunY);
+  
+  // Лучи (God Rays) - видны только когда чисто
+  if (p < 0.6) {
+    ctx.globalAlpha = (1 - p) * 0.4;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.rotate(Date.now() * 0.0001);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(W, 100);
+      ctx.lineTo(W, -100);
+      const gradRay = ctx.createRadialGradient(0,0,10, 0,0,W);
+      gradRay.addColorStop(0, 'rgba(255,255,200,0.5)');
+      gradRay.addColorStop(1, 'rgba(255,255,200,0)');
+      ctx.fillStyle = gradRay;
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  
+  // Сам диск
+  const sunColor = p > 0.5 ? '#888' : '#fff'; // Серое солнце в смоге
+  const sunGlow = p > 0.5 ? 0 : 50 * (1-p);
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur = sunGlow;
+  ctx.fillStyle = sunColor;
+  ctx.beginPath();
+  ctx.arc(0,0, 40, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawLandscape(p) {
+  // Земля / Трава
+  // Цвет земли: Коричневый серый -> Сочный зеленый
+  const r = 50 * p + 34 * (1-p);
+  const g = 40 * p + 160 * (1-p);
+  const b = 30 * p + 70 * (1-p);
+  
+  ctx.fillStyle = `rgb(${r},${g},${b})`;
+  
+  // Рисуем холмы кривыми Безье
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  ctx.lineTo(0, H * 0.6);
+  ctx.bezierCurveTo(W*0.3, H*0.55, W*0.6, H*0.65, W, H*0.6);
+  ctx.lineTo(W, H);
+  ctx.fill();
+
+  // Деревья (процедурные треугольники)
+  // Количество деревьев фиксировано, но цвет меняется
+  const treeColor = p > 0.5 ? '#1a1510' : '#0b4d28';
+  ctx.fillStyle = treeColor;
+  
+  // Используем псевдо-случайность, чтобы деревья не "прыгали"
+  let seed = 123;
+  const pseudoRandom = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  
+  for(let i=0; i<15; i++) {
+    const tx = pseudoRandom() * W;
+    const ty = H * 0.6 + pseudoRandom() * 50;
+    const tw = 20 + pseudoRandom() * 30;
+    const th = 40 + pseudoRandom() * 80;
+    
+    // Ствол
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(tx-tw/6, ty, tw/3, th/4);
+    
+    // Крона
+    ctx.fillStyle = treeColor;
+    if (p < 0.3 && i % 3 === 0) ctx.fillStyle = '#146b3a'; // Разнотонность
+    
+    ctx.beginPath();
+    ctx.moveTo(tx - tw/2, ty);
+    ctx.lineTo(tx, ty - th);
+    ctx.lineTo(tx + tw/2, ty);
+    ctx.fill();
+  }
+}
+
+// --- GAME LOOP ---
+
+let lastTime = 0;
+function loop(time) {
+  const dt = (time - lastTime) / 1000;
+  lastTime = time;
+
+  // Плавное изменение загрязнения
+  State.pollution += (State.targetPollution - State.pollution) * 2 * dt;
+
+  // 1. Рисуем мир
+  drawSky(State.pollution);
+  drawLandscape(State.pollution);
+
+  // 2. Туман (если грязно)
+  if (State.pollution > 0.1) {
+    ctx.fillStyle = `rgba(100, 100, 100, ${State.pollution * 0.4})`;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // 3. Объекты (сортируем по Y для глубины)
+  // ... животные
+  State.animals.forEach(anim => {
+    anim.update(dt);
+    anim.draw();
+  });
+  // Удаляем ушедших животных
+  State.animals = State.animals.filter(a => a.x > -100 && a.x < W + 100);
+
+  // ... мусор
+  State.trashItems.forEach(t => t.draw(dt));
+
+  // ... частицы
+  State.particles.forEach((p, i) => {
+    p.update(dt);
+    p.draw();
+    if(p.life <= 0) State.particles.splice(i, 1);
+  });
+
+  // 4. Генерация животных
+  if (State.playing && State.animals.length < 5) {
+    // Чем чище, тем чаще спавн
+    const chance = 0.01 + (1 - State.pollution) * 0.05;
+    if (Math.random() < chance) {
+      State.animals.push(new Animal());
+    }
+  }
+  
+  // Проверка конца игры
+  if (State.playing && State.trashItems.length === 0 && State.pollution < 0.05) {
+    endGame();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// --- LOGIC ---
+
+const Game = {
+  start() {
+    AudioSys.init();
+    State.playing = true;
+    State.trashItems = [];
+    State.animals = [];
+    State.particles = [];
+    State.pollution = 1.0;
+    State.targetPollution = 1.0;
+    
+    // Спавним мусор (много)
+    for(let i=0; i<30; i++) {
+      State.trashItems.push(new Trash());
+    }
+
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('endScreen').classList.add('hidden');
+    document.getElementById('ui').style.opacity = 1;
+    
+    updateUI();
+  },
+
+  restart() {
+    this.start();
+  },
+
+  onClick(x, y) {
+    if (!State.playing) return;
+    
+    // Проверка клика по мусору
+    let hitIndex = -1;
+    // Ищем с конца (чтобы кликать на верхние предметы)
+    for (let i = State.trashItems.length - 1; i >= 0; i--) {
+      if (State.trashItems[i].checkHit(x, y)) {
+        hitIndex = i;
+        break;
+      }
+    }
+
+    if (hitIndex !== -1) {
+      const item = State.trashItems[hitIndex];
+      
+      // Эффекты
+      AudioSys.trashSound();
+      spawnParticles(item.x, item.y);
+      showFloatText(item.x, item.y, "+10");
+      
+      // Удаление
+      State.trashItems.splice(hitIndex, 1);
+      
+      // Обновление прогресса
+      const total = 30; // Начальное кол-во
+      const current = State.trashItems.length;
+      const progress = 1 - (current / total);
+      
+      State.targetPollution = Math.max(0, 1.0 - progress);
+      
+      // Звук природы, если достигли этапа
+      if (Math.random() > 0.7 && progress > 0.3) {
+        AudioSys.natureSound();
+      }
+
+      updateUI();
+    }
+  }
+};
+
+function spawnParticles(x, y) {
+  for(let i=0; i<10; i++) {
+    State.particles.push(new Particle(x, y, '#fff'));
+    State.particles.push(new Particle(x, y, '#4effbf')); // Зеленые искры
+  }
+}
+
+function showFloatText(x, y, txt) {
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.innerText = txt;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function updateUI() {
+  const total = 30;
+  const current = State.trashItems.length;
+  const pct = Math.floor((1 - current/total) * 100);
+  
+  document.getElementById('fill').style.width = pct + '%';
+  document.getElementById('percent').innerText = pct + '%';
+}
+
+function endGame() {
+  State.playing = false;
+  // Финальный аккорд
+  AudioSys.natureSound();
+  AudioSys.playTone(400, 'sine', 2, 0.1);
+  AudioSys.playTone(600, 'sine', 2, 0.1);
+  
+  // Конфетти из животных
+  for(let i=0; i<10; i++) State.animals.push(new Animal());
+
+  setTimeout(() => {
+    document.getElementById('endScreen').classList.remove('hidden');
+    document.getElementById('ui').style.opacity = 0;
+  }, 2000);
+}
+
+// --- SETUP ---
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  ctx.scale(DPR, DPR);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Mouse / Touch
+canvas.addEventListener('pointerdown', (e) => {
+  Game.onClick(e.clientX, e.clientY);
+});
+window.addEventListener('pointermove', (e) => {
+  const c = document.getElementById('cursor');
+  c.style.left = e.clientX + 'px';
+  c.style.top = e.clientY + 'px';
+  
+  // Hover effect
+  const mx = e.clientX, my = e.clientY;
+  let hover = false;
+  State.trashItems.forEach(t => {
+    t.hover = t.checkHit(mx, my);
+    if(t.hover) hover = true;
+  });
+  c.style.borderColor = hover ? '#ff6b6b' : 'rgba(255,255,255,0.5)';
+  c.style.transform = hover ? 'translate(-50%, -50%) scale(1.5)' : 'translate(-50%, -50%) scale(1)';
+  canvas.style.cursor = hover ? 'pointer' : 'default';
+});
+
+// Запуск цикла
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
