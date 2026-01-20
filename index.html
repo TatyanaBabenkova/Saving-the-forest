@@ -2,367 +2,865 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>Пазл «Панорама» — Попутчик</title>
-  <meta name="description" content="Красивая браузерная игра-пазл" />
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600&display=swap" rel="stylesheet" />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Эко-Хранитель: Возрождение</title>
   <style>
-    :root{
-      --acc:#6ce0ff;
-      --text:#e9f1ff;
-      --muted:#a8b0c7;
-      --radius:18px;
-      --glass: rgba(255,255,255,.08);
-      --shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04);
-    }
-    
-    *{box-sizing:border-box}
-    
-    html,body{height:100%; margin:0; padding:0;}
-    body{
-      font-family:"Rubik",system-ui,-apple-system,sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(1200px 700px at 80% 10%, #1f2750 0%, #0b1020 55%),
-        radial-gradient(900px 500px at 10% 90%, #1f2b33 0%, #0b1020 65%);
-      overflow:hidden; /* Убираем скролл страницы, скроллим блоки */
-    }
-    .bg{
-      position:fixed; inset:0; pointer-events:none;
-      background:
-        radial-gradient(60vmax 40vmax at 10% 85%, rgba(108,224,255,.10), transparent 60%),
-        radial-gradient(50vmax 35vmax at 90% 10%, rgba(161,255,207,.08), transparent 60%);
-      filter:saturate(120%);
-      animation:floaty 18s ease-in-out infinite;
-    }
-    @keyframes floaty{
-      0%{transform:translateY(0)}
-      50%{transform:translateY(-12px)}
-      100%{transform:translateY(0)}
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+    :root {
+      --glass: rgba(255, 255, 255, 0.1);
+      --glass-border: rgba(255, 255, 255, 0.2);
+      --accent: #74f7d4;
+      --accent-strong: #5ad0ff;
+      --hot: #f5b7ff;
+      --shadow: rgba(3, 7, 18, 0.5);
+      --ui-glow: rgba(90, 208, 255, 0.3);
     }
 
-    .wrap{
-      position:relative;
-      height:100vh;
-      display:grid;
-      grid-template-columns: 340px 1fr;
-      grid-template-rows: auto 1fr;
-      gap:20px;
-      padding:20px;
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at 20% 20%, #0d2038, #0a1324 60%, #070b16 100%);
+      font-family: 'Nunito', sans-serif;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      cursor: none;
     }
 
-    /* Шапка на всю ширину */
-    header{
-      grid-column:1/-1;
-      display:flex;
-      align-items:center;
-      gap:12px;
-      padding:14px 18px;
-      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
-      border-radius: var(--radius);
-      box-shadow:var(--shadow);
-      backdrop-filter: blur(10px);
-      height: fit-content;
-    }
-    header .logo{
-      width:42px; height:42px; border-radius:12px;
-      background: conic-gradient(from 200deg, #8be9ff, #baffd9, #8be9ff);
-      box-shadow: 0 0 32px rgba(140,255,220,.25) inset;
-      flex-shrink: 0;
-    }
-    header h1{font-size:20px; margin:0; letter-spacing:.3px}
-    header .sub{color:var(--muted); font-size:13px}
-
-    /* Панель управления */
-    .panel{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-      padding:16px;
-      background:var(--glass);
-      border-radius: var(--radius);
-      box-shadow:var(--shadow);
-      backdrop-filter: blur(16px);
-      overflow-y: auto; /* Скролл внутри панели */
-    }
-    .section{display:flex; flex-direction:column; gap:8px}
-    .section h2{
-      font-size:14px; font-weight:600; margin:0;
-      color:#cfe6ff; text-transform:uppercase; letter-spacing:.12em;
-    }
-    .section .mut{color:var(--muted); font-size:13px; line-height: 1.4;}
-
-    /* Галерея */
-    .gallery{
-      display:flex;
-      flex-wrap:nowrap;
-      gap:10px;
-      overflow-x:auto;
-      padding: 4px;
-      scroll-snap-type:x mandatory;
-    }
-    .thumb{
-      position:relative;
-      border-radius:10px;
-      overflow:hidden;
-      cursor:pointer;
-      border:1px solid rgba(255,255,255,.15);
-      background:#0e1428;
-      flex:0 0 auto;
-      width: 100px;
-      aspect-ratio: 16/9;
-      transition: all .2s ease;
-      scroll-snap-align:start;
-    }
-    .thumb img{
-      width:100%; height:100%; object-fit:cover; opacity: 0.7; transition: opacity .2s;
-    }
-    .thumb:hover img { opacity: 1; }
-    .thumb.active{
-      border-color: #7df2ff;
-      box-shadow: 0 0 0 2px #7df2ff, 0 0 12px rgba(125, 242, 255, 0.4);
-      transform: translateY(-2px);
-      z-index: 2;
-    }
-    .thumb.active img { opacity: 1; }
-
-    /* Контролы */
-    .controls{display:grid; grid-template-columns: 1fr 1fr; gap:8px}
-    .btn{
-      user-select:none; -webkit-tap-highlight-color:transparent;
-      background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06));
-      border:1px solid rgba(255,255,255,.10);
-      color:white; padding:10px 12px; border-radius:12px;
-      cursor:pointer; text-align:center; box-shadow:var(--shadow);
-      transition: transform .08s ease;
-      font-weight:600; font-size:13px;
-    }
-    .btn:active{transform: translateY(1px)}
-    .btn.primary{
-      background:linear-gradient(180deg, rgba(140,255,220,.4), rgba(140,255,220,.08));
-      border-color: rgba(161,255,207,.45); color:#04161a;
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
     }
 
-    .row{display:flex; align-items:center; justify-content:space-between; gap:10px}
-    .row .label{font-size:14px; color:#cfe6ff}
-    .row .value{font-weight:600}
-    .range{accent-color:#7df2ff; width:100%; margin: 4px 0;}
-
-    .toggles{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:4px;}
-    .toggle{
-      display:flex; align-items:center; gap:8px;
-      background:rgba(255,255,255,.06);
-      padding:6px 12px; border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      font-size:13px; cursor:pointer; user-select:none;
-    }
-    .toggle input{accent-color:#7df2ff}
-
-    .stats{
-      display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:6px;
-    }
-    .stat{
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:12px; padding:8px 10px;
-      text-align:center; font-size: 12px; color: var(--muted);
-    }
-    .stat b{display:block; font-size:16px; margin-top:2px; color: #fff;}
-
-    /* Игровая зона */
-    .board-wrap{
-      position:relative;
-      background:var(--glass);
-      border-radius: var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      display: grid;
-      place-items: center; /* Центрируем доску */
+    /* --- UI LAYER --- */
+    #ui-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
       padding: 20px;
-    }
-
-    .boardSizer{
-      position:relative; 
-      width:100%; 
-      max-width: 1200px; /* Ограничим ширину на больших экранах */
-      aspect-ratio: 16/9; /* Фиксируем пропорции */
-    }
-
-    .board{
-      position:absolute; inset:0;
-      display:grid; place-items:stretch;
-      transition: filter .3s ease;
-    }
-    
-    .tile{
-      position:relative; user-select:none; -webkit-user-drag:none;
-      background-size: 100% 100%; /* Растягиваем фон по размеру тайла */
-      /* Но мы будем пересчитывать это в JS */
-      background-repeat:no-repeat;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
-      cursor:pointer; border-radius:6px;
-      transition: transform .08s ease, box-shadow .15s ease;
-      background-color:#111828;
-    }
-    .tile:active{transform: scale(.98)}
-    .tile.right{
-      box-shadow:0 0 0 3px rgba(161,255,207,.95), inset 0 0 0 1px rgba(255,255,255,.08);
-      z-index: 1;
-    }
-    .tile.selected{
-      outline:3px solid var(--acc); outline-offset:-2px;
-      box-shadow:0 0 0 3px rgba(108,224,255,.95), inset 0 0 0 1px rgba(255,255,255,.08);
-      z-index: 2;
-    }
-
-    .paused .board{filter: grayscale(1) brightness(.8)}
-    .paused .overlayPause{opacity:1; pointer-events:auto}
-    .overlayPause{
-      position:absolute; inset:0;
-      display:flex; align-items:center; justify-content:center;
-      background:rgba(6,10,22,.55);
-      font-size:22px; font-weight:600; letter-spacing:.3px;
-      opacity:0; pointer-events:none; transition: opacity .25s ease;
       z-index: 10;
+      gap: 18px;
     }
 
-    /* Образец */
-    .previewBox{
-      position:absolute; right:14px; bottom:14px;
-      width:220px; aspect-ratio:16/9;
-      border-radius:12px;
-      background-position:center; background-size:cover;
-      box-shadow:0 10px 25px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.2);
-      opacity:0; pointer-events:none;
-      transform:translateY(6px);
-      transition:opacity .25s ease, transform .25s ease;
-      z-index:5;
+    /* Верхняя панель */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
     }
-    .previewBox.visible{ opacity:1; transform:translateY(0); }
 
-    /* Модалка победы */
-    .win-modal{
-      position:absolute;
-      left: 50%; top: 50%;
-      transform: translate(-50%, -50%) scale(0.9);
-      width:min(400px, 90%);
-      background:rgba(6,10,22,.95);
-      border:1px solid rgba(255,255,255,.18);
-      border-radius:24px;
-      box-shadow: 0 20px 50px rgba(0,0,0,.5);
-      padding:24px;
-      display:none;
-      z-index:20;
-      backdrop-filter: blur(20px);
-      text-align: center;
+    .card {
+      background: linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 15px 20px;
+      color: #fff;
+      box-shadow: 0 12px 36px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.2);
+      transform: translateY(-100px);
+      animation: slideDown 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    @keyframes slideDown { to { transform: translateY(0); } }
+
+    .level-badge {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 4px;
+    }
+
+    .task-text {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #0b1220;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      box-shadow: 0 6px 16px rgba(90, 208, 255, 0.35);
+    }
+
+    /* Прогресс бар */
+    .progress-container {
+      flex: 1;
+      max-width: 420px;
+      position: relative;
+    }
+    .bar-track {
+      height: 10px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff8aa5, #f2c27b, #74f7d4, #5ad0ff);
+      box-shadow: 0 0 18px rgba(90, 208, 255, 0.55);
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .phase-indicator {
+      position: absolute;
+      right: 0; top: -20px;
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--accent);
+      text-shadow: 0 0 10px rgba(0,255,163,0.5);
+    }
+
+    /* Уведомления по центру */
+    .toast {
+      position: absolute;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      background: rgba(8, 12, 24, 0.78);
+      padding: 20px 40px;
+      border-radius: 50px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: 800;
       opacity: 0;
-      transition: all .3s ease;
+      pointer-events: none;
+      transition: 0.3s;
+      text-align: center;
+      border: 1px solid rgba(42, 250, 223, 0.6);
+      box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
     }
-    .win-modal.visible{
-      display:block; 
-      opacity: 1;
+    .toast.show {
       transform: translate(-50%, -50%) scale(1);
-    }
-    .win-modal .title{font-size:24px; font-weight:700; margin-bottom: 8px;}
-    .win-modal .sub{color:var(--muted); margin-bottom: 20px;}
-    .win-actions{display:flex; flex-direction: column; gap:10px;}
-
-    canvas.confetti{position:absolute; inset:0; pointer-events:none; z-index:3}
-    .credit{font-size:12px; color:var(--muted); margin-top: 4px;}
-
-    /* --- АДАПТИВ (ПОРТРЕТНЫЙ МОБИЛЬНЫЙ) --- */
-    @media (max-width: 980px) and (orientation: portrait){
-      .wrap {
-        display: flex;
-        flex-direction: column;
-        padding: 10px;
-        gap: 12px;
-        height: auto; /* Разрешаем скролл страницы в высоту */
-        min-height: 100vh;
-      }
-      body { overflow-y: auto; } /* Включаем скролл body */
-
-      header { position: sticky; top: 0; z-index: 10; padding: 10px 14px; }
-      .panel { overflow: visible; }
-      
-      .previewBox {
-        width: 140px;
-        bottom: 10px; right: 10px;
-      }
-      .boardSizer{ width: 100%; }
-      .hide-on-mobile { display: none !important; }
+      opacity: 1;
     }
 
-    /* --- АДАПТИВ (ЛАНДШАФТНЫЙ МОБИЛЬНЫЙ - ИСПРАВЛЕНИЕ) --- */
-    @media (max-width: 920px) and (orientation: landscape) {
-      .wrap {
-        display: grid; 
-        grid-template-columns: 240px 1fr; /* Фиксированная узкая колонка */
-        grid-template-rows: 1fr; /* Одна строка */
-        gap: 10px;
-        padding: 10px;
-        height: 100vh;
-        overflow: hidden;
-      }
+    /* Экраны (Старт/Финал) */
+    .screen {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(17, 32, 62, 0.92), rgba(4, 7, 16, 0.96));
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      transition: opacity 0.6s;
+      pointer-events: auto;
+    }
+    .screen.hidden { opacity: 0; pointer-events: none; }
 
-      /* Скрываем шапку в горизонтали для места */
-      header { display: none; }
+    h1 {
+      font-size: 4rem;
+      margin: 0;
+      background: linear-gradient(135deg, #fff 0%, #2afadf 40%, #00d4ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 25px rgba(0,212,255,0.35));
+    }
+    .subtitle {
+      color: #a0aec0;
+      font-size: 1.2rem;
+      margin-top: 10px;
+      max-width: 520px;
+      text-align: center;
+      line-height: 1.6;
+    }
 
-      .panel {
-        grid-row: 1/-1; /* На всю высоту */
-        padding: 12px;
-        overflow-y: auto;
-      }
-      
-      /* Уменьшаем элементы в панели */
-      .gallery { padding-bottom: 0; }
-      .thumb { width: 80px; }
-      .section h2 { font-size: 12px; }
-      .btn { padding: 8px 10px; font-size: 12px; }
-      
-      .board-wrap {
-        padding: 0;
-        background: transparent;
-        box-shadow: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      .boardSizer {
-        max-height: 96vh; /* Чтобы не вылезала за экран */
-        width: auto;      /* Ширина подстроится под аспект */
-        aspect-ratio: 16/9;
-      }
-      
-      .previewBox {
-        width: 120px;
-        bottom: 5px; right: 5px;
-      }
+    .btn-main {
+      margin-top: 40px;
+      padding: 18px 50px;
+      font-size: 18px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #0b121f;
+      background: linear-gradient(135deg, #74f7d4, #5ad0ff);
+      border: none;
+      border-radius: 100px;
+      cursor: pointer;
+      box-shadow: 0 14px 34px rgba(90, 208, 255, 0.45);
+      transition: transform 0.1s, box-shadow 0.1s;
+      font-family: 'Nunito', sans-serif;
+    }
+    .btn-main:hover { transform: scale(1.05); box-shadow: 0 18px 50px rgba(90, 208, 255, 0.7); }
+    .btn-main:active { transform: scale(0.95); }
+
+    .info-card {
+      align-self: flex-end;
+      max-width: 320px;
+      text-align: right;
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.75);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    /* Custom Cursor */
+    .cursor {
+      position: fixed;
+      width: 30px; height: 30px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      transition: transform 0.1s, width 0.2s, height 0.2s;
+      mix-blend-mode: difference;
+    }
+    .cursor-dot {
+      position: fixed;
+      width: 6px; height: 6px;
+      background: var(--accent-strong);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+    }
+    .cursor.active { width: 54px; height: 54px; border-color: var(--accent); border-width: 3px; box-shadow: 0 0 24px rgba(116, 247, 212, 0.6); }
+
+    .noscript {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: rgba(8, 10, 20, 0.92);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      padding: 24px;
+      z-index: 30;
     }
   </style>
 </head>
 <body>
-  <div class="bg"></div>
 
-  <div class="wrap">
-    <header>
-      <div class="logo" aria-hidden="true"></div>
-      <div>
-        <h1>Пазл «Панорама»</h1>
-        <div class="sub">Собери панораму.</div>
+  <canvas id="gameCanvas" aria-label="Игровое поле"></canvas>
+  <noscript>
+    <div class="noscript">Для запуска игры нужен JavaScript. Пожалуйста, включите его и перезагрузите страницу.</div>
+  </noscript>
+  
+  <div id="ui-layer">
+    <div class="hud">
+      <div class="card progress-container">
+        <div class="level-badge">Статус миссии</div>
+        <div class="task-text" id="taskLabel">Запуск очищения...</div>
+        <div class="bar-track">
+          <div class="bar-fill" id="barFill"></div>
+        </div>
+        <div class="phase-indicator" id="phaseLabel">Фаза 0/4</div>
       </div>
-    </header>
-
-    <aside class="panel" id="leftPanel">
-      <div class="section">
-        <div class="gallery" id="gallery"></div>
-        <div class="credit" id="credit"></div>
+      
+      <div class="card" style="text-align:right">
+        <div class="level-badge">Очки</div>
+        <div class="task-text" style="justify-content: flex-end; font-size: 20px;">
+          <span id="scoreVal">0</span> ✨
+        </div>
       </div>
+    </div>
 
-      <div class="section">
-        <div class="row" style="margin-bottom:-4px">
+    <div class="card info-card">
+      <span class="chip">Гид духа</span>
+      <div style="margin-top:10px;">Собирай мусор, освобождай землю и наблюдай, как мир наполняется светом. Чем чище воздух, тем быстрее возвращается жизнь.</div>
+    </div>
+    
+    <div class="toast" id="toast">Новая фаза: Лес растет!</div>
+  </div>
+
+  <div class="screen" id="startScreen">
+    <h1>Эко-Хранитель: Возрождение</h1>
+    <div class="subtitle">Мир затянут пепельной вуалью. Ты — хранитель света: очисти территорию от техногенного мусора, насыть почву энергией и пробуди жизнь.</div>
+    <button class="btn-main" onclick="Game.init()">Запустить восстановление</button>
+  </div>
+  
+  <div class="screen hidden" id="winScreen">
+    <h1 style="background: linear-gradient(135deg, #feca57, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Сияние Возвращено!</h1>
+    <div class="subtitle">Ты разбудил экосистему: воздух чист, лес полон жизни, а земля снова светится теплом.</div>
+    <div class="subtitle" style="margin-top:20px; color:#fff; font-weight:bold" id="finalScore"></div>
+    <button class="btn-main" onclick="Game.init()">Начать заново</button>
+  </div>
+
+  <div class="cursor" id="cursorRing"></div>
+  <div class="cursor-dot" id="cursorDot"></div>
+
+<script>
+/**
+ * AUDIO ENGINE
+ */
+const AudioSys = {
+  ctx: null,
+  init() {
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AudioContext();
+  },
+  play(type) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.connect(g);
+    g.connect(this.ctx.destination);
+
+    if (type === 'pop') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400 + Math.random()*200, t);
+      osc.frequency.exponentialRampToValueAtTime(900, t + 0.1);
+      g.gain.setValueAtTime(0.3, t);
+      g.gain.linearRampToValueAtTime(0, t + 0.1);
+      osc.start(); osc.stop(t + 0.15);
+    } else if (type === 'magic') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(200, t);
+      osc.frequency.linearRampToValueAtTime(700, t + 0.5);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.2, t + 0.2);
+      g.gain.linearRampToValueAtTime(0, t + 1.0);
+      osc.start(); osc.stop(t + 1.0);
+    }
+  }
+};
+
+/**
+ * RENDER ENGINE
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+let W, H, DPR;
+
+// Ассеты (Эмодзи высокого качества)
+const TRASH_TYPES = ['🥡', '🥤', '🛢️', '🗞️', '📦', '🚬', '🧪', '🦴'];
+const ANIMAL_TYPES = ['🦊', '🐰', '🦋', '🦉', '🦌', '🐿️', '🐦'];
+
+// Цветовые палитры для фаз (Смог -> Чисто)
+const PALETTES = {
+  skyStart: [24, 40, 70],
+  skyEnd:   [92, 168, 230],
+  horizon:  [255, 226, 188],
+  grassStart: [28, 34, 30],
+  grassEnd:   [34, 118, 92],
+  mountain: [28, 45, 70]
+};
+
+// Состояние игры
+const State = {
+  phase: 0,
+  pollution: 1.0,
+  score: 0,
+  trash: [],
+  trees: [],
+  animals: [],
+  particles: [],
+  clouds: [],
+  stars: [],
+  active: false
+};
+
+/* --- ENTITIES --- */
+
+class Star {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * (H * 0.5);
+    this.size = Math.random() * 2 + 0.5;
+    this.twinkle = Math.random() * Math.PI * 2;
+  }
+  update(dt) {
+    this.twinkle += dt * 2;
+  }
+  draw() {
+    const alpha = 0.2 + (1 - State.pollution) * 0.5 + Math.sin(this.twinkle) * 0.2;
+    ctx.fillStyle = `rgba(255,255,255,${Math.max(0, alpha)})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+class Cloud {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * (H * 0.4);
+    this.speed = 5 + Math.random() * 10;
+    this.size = 0.5 + Math.random();
+  }
+  update(dt) {
+    this.x += this.speed * dt;
+    if (this.x > W + 200) this.x = -200;
+  }
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(this.size, this.size);
+    ctx.fillStyle = `rgba(255,255,255, ${0.08 + (1-State.pollution)*0.35})`;
+    ctx.beginPath();
+    ctx.arc(0,0, 30, 0, Math.PI*2);
+    ctx.arc(40,10, 40, 0, Math.PI*2);
+    ctx.arc(-30,10, 30, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+class Tree {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = H * 0.55 + Math.random() * (H * 0.2);
+    this.scale = 0;
+    this.targetScale = 0.5 + Math.random() * 0.8;
+    this.colorVar = Math.random() * 40;
+    this.type = Math.random() > 0.5 ? 'pine' : 'oak';
+    this.sway = Math.random() * Math.PI;
+  }
+  update(dt) {
+    if (State.phase >= 2) {
+      this.scale += (this.targetScale - this.scale) * 2 * dt;
+    }
+    this.sway += dt;
+  }
+  draw() {
+    if (this.scale < 0.01) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    const wind = Math.sin(this.sway) * 0.05 * (1-State.pollution);
+    ctx.rotate(wind);
+    ctx.scale(this.scale, this.scale);
+
+    ctx.fillStyle = '#3b2f2a';
+    ctx.fillRect(-5, 0, 10, -40);
+
+    const r = 30 + (1-State.pollution)*85;
+    const g = 70 + (1-State.pollution)*110 + this.colorVar;
+    const b = 35 + (1-State.pollution)*55;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+
+    if (this.type === 'pine') {
+      ctx.beginPath();
+      ctx.ellipse(0, -30, 40, 20, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = `rgb(${r+10},${g+10},${b+10})`;
+      ctx.ellipse(0, -50, 30, 15, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, -70, 15, 10, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, -50, 30, 0, Math.PI*2);
+      ctx.arc(-20, -40, 25, 0, Math.PI*2);
+      ctx.arc(20, -40, 25, 0, Math.PI*2);
+      ctx.fill();
+    }
+    
+    ctx.restore();
+  }
+}
+
+class Trash {
+  constructor() {
+    this.size = 30 + Math.random() * 20;
+    this.x = Math.random() * (W - 100) + 50;
+    this.y = H * 0.5 + Math.random() * (H * 0.4);
+    this.char = TRASH_TYPES[Math.floor(Math.random() * TRASH_TYPES.length)];
+    this.rot = Math.random() - 0.5;
+    this.scale = 0;
+    this.hover = false;
+    this.floatY = Math.random() * Math.PI * 2;
+  }
+  draw(dt) {
+    this.scale += (1 - this.scale) * 5 * dt;
+    this.floatY += dt * 3;
+    const floatOffset = Math.sin(this.floatY) * 5;
+    ctx.save();
+    ctx.translate(this.x, this.y + floatOffset);
+    ctx.rotate(this.rot + (this.hover ? Math.sin(Date.now()*0.02)*0.2 : 0));
+
+    const s = this.scale * (this.hover ? 1.2 : 1);
+    ctx.scale(s, s);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(0, 25, 15, 5, 0, 0, Math.PI*2); ctx.fill();
+
+    if(State.pollution > 0.5) ctx.filter = `grayscale(0.8) contrast(1.2)`;
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(this.char, 0, 0);
+    ctx.filter = 'none';
+    
+    ctx.restore();
+  }
+}
+
+class Animal {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = H * 0.5 + Math.random() * (H * 0.4);
+    this.char = ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
+    this.isBird = ['🦉', '🦋', '🐦'].includes(this.char);
+    if(this.isBird) this.y = H * 0.2 + Math.random() * (H * 0.3);
+    
+    this.scale = 0;
+    this.dir = Math.random() > 0.5 ? 1 : -1;
+    this.timer = Math.random() * 100;
+  }
+  update(dt) {
+    this.scale += (1 - this.scale) * 3 * dt;
+    this.timer += dt;
+    this.x += this.dir * (this.isBird ? 40 : 10) * dt;
+    if(this.x > W+50) this.dir = -1;
+    if(this.x < -50) this.dir = 1;
+  }
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(this.dir, 1);
+
+    const bounce = this.isBird ? Math.sin(this.timer*5)*10 : Math.abs(Math.sin(this.timer*5))*-15;
+    ctx.translate(0, bounce);
+    ctx.scale(this.scale, this.scale);
+
+    if(this.scale < 0.9) {
+        ctx.shadowColor = '#00ffa3';
+        ctx.shadowBlur = 20;
+    }
+
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(this.char, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
+class Particle {
+  constructor(x, y, type) {
+    this.x = x; this.y = y;
+    this.life = 1.0;
+    this.type = type;
+    this.vx = (Math.random()-0.5)*100;
+    this.vy = (Math.random()-0.5)*100;
+    if(type==='text') { this.vy = -100; this.msg = "+10"; }
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= dt * (this.type==='text'? 0.8 : 2.0);
+  }
+  draw() {
+    ctx.globalAlpha = Math.max(0, this.life);
+    if(this.type === 'text') {
+      ctx.font = 'bold 20px Nunito';
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = '#00ffa3'; ctx.shadowBlur = 5;
+      ctx.fillText(this.msg, this.x, this.y);
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.fillStyle = '#00ffa3';
+      ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* --- GAME LOGIC --- */
+
+const Game = {
+  lastTime: 0,
+  
+  init() {
+    AudioSys.init();
+    State.active = true;
+    State.score = 0;
+    State.pollution = 1.0;
+    State.phase = 0;
+    State.trash = [];
+    State.trees = [];
+    State.animals = [];
+    State.particles = [];
+    State.clouds = [];
+    State.stars = [];
+    
+    for(let i=0; i<30; i++) State.stars.push(new Star());
+    for(let i=0; i<6; i++) State.clouds.push(new Cloud());
+    for(let i=0; i<22; i++) State.trees.push(new Tree());
+    for(let i=0; i<40; i++) State.trash.push(new Trash());
+    
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('winScreen').classList.add('hidden');
+    this.updateUI();
+    
+    requestAnimationFrame(this.loop);
+  },
+  
+  loop(time) {
+    if(!State.active) return;
+    const dt = Math.min((time - Game.lastTime) / 1000, 0.1);
+    Game.lastTime = time;
+    
+    Game.update(dt);
+    Game.draw();
+    
+    requestAnimationFrame(Game.loop);
+  },
+  
+  update(dt) {
+    const totalTrash = 40;
+    const currentTrash = State.trash.length;
+    const progress = 1 - (currentTrash / totalTrash);
+    
+    State.pollution += ((1 - progress) - State.pollution) * 2 * dt;
+    
+    let newPhase = 0;
+    if (progress > 0.2) newPhase = 1;
+    if (progress > 0.5) newPhase = 2;
+    if (progress > 0.8) newPhase = 3;
+    if (progress >= 1.0) newPhase = 4;
+
+    if (newPhase > State.phase) {
+      State.phase = newPhase;
+      Game.onPhaseChange(newPhase);
+    }
+    
+    State.stars.forEach(s => s.update(dt));
+    State.clouds.forEach(c => c.update(dt));
+    State.trees.forEach(t => t.update(dt));
+    State.trash.forEach(t => t.draw(dt));
+    State.animals.forEach(a => a.update(dt));
+    State.particles.forEach((p, i) => {
+      p.update(dt);
+      if(p.life <= 0) State.particles.splice(i, 1);
+    });
+    
+    if (State.phase >= 3 && State.animals.length < 8 && Math.random() < 0.02) {
+      State.animals.push(new Animal());
+      AudioSys.play('magic');
+    }
+  },
+  
+  draw() {
+    const p = State.pollution;
+    const r = PALETTES.skyStart[0]*p + PALETTES.skyEnd[0]*(1-p);
+    const g = PALETTES.skyStart[1]*p + PALETTES.skyEnd[1]*(1-p);
+    const b = PALETTES.skyStart[2]*p + PALETTES.skyEnd[2]*(1-p);
+    
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, `rgb(${r},${g},${b})`);
+    grad.addColorStop(0.7, `rgb(${r+10},${g+18},${b+20})`);
+    grad.addColorStop(1, `rgb(${r+25},${g+22},${b+24})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+
+    const horizon = PALETTES.horizon;
+    const haze = ctx.createLinearGradient(0, H*0.15, 0, H*0.6);
+    haze.addColorStop(0, `rgba(${horizon[0]}, ${horizon[1]}, ${horizon[2]}, ${0.08 + (1-p)*0.2})`);
+    haze.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, W, H);
+
+    State.stars.forEach(s => s.draw());
+    
+    ctx.save();
+    ctx.translate(W*0.8, H*0.15);
+    ctx.fillStyle = p > 0.6 ? '#c7d2fe' : '#fcd77b';
+    ctx.shadowColor = p > 0.6 ? 'transparent' : '#f7c96c';
+    ctx.shadowBlur = p > 0.6 ? 0 : 60;
+    ctx.beginPath(); ctx.arc(0,0, 40, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    if(p < 0.5) {
+        ctx.globalAlpha = (0.5 - p) * 0.45;
+        ctx.globalCompositeOperation = 'screen';
+        for(let i=0; i<12; i++) {
+            ctx.rotate(Date.now()*0.0002 + i);
+            ctx.fillStyle = 'rgba(255, 244, 214, 0.35)';
+            ctx.fillRect(0, -4, W, 8);
+        }
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    
+    State.clouds.forEach(c => c.draw());
+    
+    const mountain = PALETTES.mountain;
+    ctx.fillStyle = `rgba(${mountain[0] + (1-p)*10}, ${mountain[1] + (1-p)*15}, ${mountain[2] + (1-p)*20}, 0.75)`;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for(let x=0; x<=W; x+=50) {
+        ctx.lineTo(x, H*0.5 - Math.sin(x*0.01)*50);
+    }
+    ctx.lineTo(W, H);
+    ctx.fill();
+    
+    const ridge = ctx.createLinearGradient(0, H*0.35, 0, H*0.6);
+    ridge.addColorStop(0, 'rgba(255,255,255,0.15)');
+    ridge.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = ridge;
+    ctx.fillRect(0, H*0.35, W, H*0.3);
+
+    const gr = PALETTES.grassStart[0]*p + PALETTES.grassEnd[0]*(1-p);
+    const gg = PALETTES.grassStart[1]*p + PALETTES.grassEnd[1]*(1-p);
+    const gb = PALETTES.grassStart[2]*p + PALETTES.grassEnd[2]*(1-p);
+    const groundGrad = ctx.createLinearGradient(0, H*0.55, 0, H);
+    groundGrad.addColorStop(0, `rgb(${gr},${gg},${gb})`);
+    groundGrad.addColorStop(1, `rgb(${gr-8},${gg-14},${gb-10})`);
+    ctx.fillStyle = groundGrad;
+    
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    ctx.lineTo(0, H*0.55);
+    ctx.bezierCurveTo(W*0.3, H*0.5, W*0.7, H*0.6, W, H*0.55);
+    ctx.lineTo(W, H);
+    ctx.fill();
+
+    const texture = ctx.createLinearGradient(0, H*0.6, 0, H);
+    texture.addColorStop(0, `rgba(255,255,255,${0.05 + (1-p)*0.05})`);
+    texture.addColorStop(1, 'rgba(0,0,0,0.15)');
+    ctx.fillStyle = texture;
+    ctx.fillRect(0, H*0.6, W, H*0.4);
+    
+    const renderList = [
+      ...State.trees.map(o => ({...o, draw: ()=>o.draw(), y: o.y})),
+      ...State.trash.map(o => ({...o, draw: ()=>o.draw(0.016), y: o.y})),
+      ...State.animals.map(o => ({...o, draw: ()=>o.draw(), y: o.y}))
+    ];
+    renderList.sort((a,b) => a.y - b.y);
+    renderList.forEach(obj => obj.draw());
+    
+    State.particles.forEach(p => p.draw());
+    
+    const rad = ctx.createRadialGradient(W/2, H/2, H*0.4, W/2, H/2, H);
+    rad.addColorStop(0, 'rgba(0,0,0,0)');
+    rad.addColorStop(1, 'rgba(0,0,10,0.38)');
+    ctx.fillStyle = rad;
+    ctx.fillRect(0,0,W,H);
+
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    for(let i = 0; i < 120; i++) {
+      const nx = (i * 37) % W;
+      const ny = (i * 83) % H;
+      ctx.fillRect(nx, ny, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  },
+  
+  onPhaseChange(p) {
+    const titles = [
+      "Запуск", "Смог ослабевает", "Почва откликается", "Лес оживает", "Сияние Возвращено"
+    ];
+    const tasks = [
+      "Сканирование территории",
+      "Освободи воздух от токсинов",
+      "Пробуди почву и ростки",
+      "Верни животных и птиц",
+      "Территория восстановлена"
+    ];
+    const toast = document.getElementById('toast');
+    toast.textContent = titles[p];
+    toast.classList.add('show');
+    
+    document.getElementById('taskLabel').textContent = tasks[p];
+    document.getElementById('phaseLabel').textContent = `Фаза ${p}/4`;
+    
+    setTimeout(() => toast.classList.remove('show'), 3000);
+    
+    if(p === 4) {
+      setTimeout(() => {
+        document.getElementById('finalScore').textContent = `Счет: ${State.score}`;
+        document.getElementById('winScreen').classList.remove('hidden');
+        State.active = false;
+      }, 2000);
+    }
+  },
+  
+  click(x, y) {
+    if(!State.active) return;
+    
+    for(let i=State.trash.length-1; i>=0; i--) {
+      const t = State.trash[i];
+      const dx = x - t.x;
+      const dy = y - (t.y + Math.sin(t.floatY)*5);
+      if(Math.hypot(dx, dy) < 40) {
+        State.trash.splice(i, 1);
+        State.score += 10;
+        this.spawnFX(x, y);
+        AudioSys.play('pop');
+        this.updateUI();
+        return;
+      }
+    }
+  },
+  
+  spawnFX(x, y) {
+    for(let i=0; i<8; i++) State.particles.push(new Particle(x, y, 'spark'));
+    State.particles.push(new Particle(x, y, 'text'));
+  },
+  
+  updateUI() {
+    document.getElementById('scoreVal').textContent = State.score;
+    const progress = (1 - (State.trash.length / 40)) * 100;
+    document.getElementById('barFill').style.width = `${progress}%`;
+  }
+};
+
+/* --- INPUTS --- */
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+window.addEventListener('pointermove', e => {
+  const r = document.getElementById('cursorRing');
+  const d = document.getElementById('cursorDot');
+  r.style.left = d.style.left = e.clientX + 'px';
+  r.style.top = d.style.top = e.clientY + 'px';
+  
+  let hover = false;
+  State.trash.forEach(t => {
+    const dx = e.clientX - t.x;
+    const dy = e.clientY - (t.y + Math.sin(t.floatY)*5);
+    t.hover = (Math.hypot(dx, dy) < 40);
+    if(t.hover) hover = true;
+  });
+  
+  if(hover) r.classList.add('active');
+  else r.classList.remove('active');
+});
+
+window.addEventListener('pointerdown', e => {
+  Game.click(e.clientX, e.clientY);
+  const r = document.getElementById('cursorRing');
+  r.style.transform = 'translate(-50%, -50%) scale(0.8)';
+  setTimeout(() => r.style.transform = 'translate(-50%, -50%) scale(1)', 100);
+});
+
+</script>
+</body>
+</html>
