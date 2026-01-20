@@ -3,16 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Эко-Хранитель: Возрождение</title>
+  <title>Эко-Хранитель</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
 
     :root {
-      --glass: rgba(255, 255, 255, 0.1);
-      --glass-border: rgba(255, 255, 255, 0.2);
       --accent: #74f7d4;
       --accent-strong: #5ad0ff;
-      --shadow: rgba(3, 7, 18, 0.5);
     }
 
     body {
@@ -20,655 +17,76 @@
       overflow: hidden;
       background: radial-gradient(circle at 20% 20%, #0d2038, #0a1324 60%, #070b16 100%);
       font-family: 'Nunito', sans-serif;
-      /* Отключаем жесты для игры, но разрешаем для кнопок ниже */
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
-      /* Курсор скрываем только если это ПК */
-      cursor: none; 
+      -webkit-user-select: none;
+      cursor: default;
     }
 
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+    canvas { display: block; width: 100%; height: 100%; }
 
-    /* --- UI LAYER --- */
+    /* UI */
     #ui-layer {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      z-index: 10;
-      gap: 15px;
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column; padding: 20px; z-index: 10;
     }
 
-    .hud {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 20px;
-    }
+    .hud { display: flex; justify-content: space-between; gap: 15px; }
 
     .card {
-      background: linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04));
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      padding: 15px 20px;
-      color: #fff;
-      box-shadow: 0 12px 36px var(--shadow);
-      transform: translateY(-100px);
-      animation: slideDown 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-    }
-
-    @keyframes slideDown { to { transform: translateY(0); } }
-
-    .level-badge {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: rgba(255,255,255,0.6);
-      margin-bottom: 4px;
-    }
-
-    .task-text {
-      font-size: 16px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .chip {
-      display: inline-flex;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      color: #0b1220;
-      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-    }
-
-    /* Прогресс бар */
-    .progress-container {
-      flex: 1;
-      max-width: 420px;
-      position: relative;
-    }
-    .bar-track {
-      height: 10px;
-      background: rgba(0,0,0,0.3);
-      border-radius: 10px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-    .bar-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #ff8aa5, #f2c27b, #74f7d4, #5ad0ff);
-      box-shadow: 0 0 18px rgba(90, 208, 255, 0.55);
-      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .phase-indicator {
-      position: absolute;
-      right: 0; top: -20px;
-      font-size: 12px;
-      font-weight: 900;
-      color: var(--accent);
-    }
-
-    /* Уведомления */
-    .toast {
-      position: absolute;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.8);
-      background: rgba(8, 12, 24, 0.85);
-      padding: 15px 30px;
-      border-radius: 50px;
-      color: #fff;
-      font-size: 18px;
-      font-weight: 800;
-      opacity: 0;
-      pointer-events: none;
-      transition: 0.3s;
-      text-align: center;
-      border: 1px solid rgba(42, 250, 223, 0.6);
-      white-space: nowrap;
-    }
-    .toast.show {
-      transform: translate(-50%, -50%) scale(1);
-      opacity: 1;
-    }
-
-    /* Экраны */
-    .screen {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at top, rgba(17, 32, 62, 0.95), rgba(4, 7, 16, 0.98));
+      background: rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 50; /* Поверх всего */
-      transition: opacity 0.6s;
-      pointer-events: auto;
-      padding: 20px;
-      text-align: center;
-      /* Разрешаем клики на экранах меню */
-      touch-action: manipulation;
-      cursor: auto; 
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 10px 15px;
+      color: #fff;
     }
-    .screen.hidden { opacity: 0; pointer-events: none; z-index: -1; }
+
+    .task-text { font-weight: 700; font-size: 14px; margin-bottom: 5px; }
+    
+    .bar-track {
+      height: 8px; background: rgba(0,0,0,0.3);
+      border-radius: 10px; overflow: hidden; width: 100%; min-width: 150px;
+    }
+    .bar-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #ff8aa5, #74f7d4, #5ad0ff);
+      transition: width 0.5s;
+    }
+
+    /* SCREENS */
+    .screen {
+      position: absolute; inset: 0;
+      background: rgba(10, 15, 30, 0.95);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      transition: opacity 0.5s;
+      pointer-events: auto;
+      padding: 20px; text-align: center;
+    }
+    .screen.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
 
     h1 {
-      font-size: 3.5rem;
-      line-height: 1.1;
-      margin: 0 0 20px 0;
-      background: linear-gradient(135deg, #fff 0%, #2afadf 40%, #00d4ff 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 0 20px rgba(0,212,255,0.3));
+      font-size: 2.5rem; margin: 0 0 15px 0;
+      background: linear-gradient(135deg, #fff, #2afadf);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .subtitle {
-      color: #a0aec0;
-      font-size: 1.1rem;
-      max-width: 500px;
-      line-height: 1.5;
-    }
+    .subtitle { color: #ccc; font-size: 1rem; max-width: 400px; line-height: 1.5; }
 
     .btn-main {
-      margin-top: 40px;
-      padding: 18px 45px;
-      font-size: 18px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+      margin-top: 30px;
+      padding: 15px 40px;
+      font-size: 18px; font-weight: 800;
       color: #0b121f;
       background: linear-gradient(135deg, #74f7d4, #5ad0ff);
-      border: none;
-      border-radius: 100px;
+      border: none; border-radius: 50px;
       cursor: pointer;
-      box-shadow: 0 10px 30px rgba(90, 208, 255, 0.4);
-      transition: transform 0.1s;
-      touch-action: manipulation; /* Важно для мобильных */
-      z-index: 60;
-      position: relative;
+      box-shadow: 0 0 20px rgba(90, 208, 255, 0.4);
+      /* Важно для клика */
+      pointer-events: auto; 
+      touch-action: manipulation;
     }
-    .btn-main:active { transform: scale(0.95); }
-
-    .info-card {
-      align-self: flex-end;
-      max-width: 300px;
-      text-align: right;
-      font-size: 12px;
-      line-height: 1.4;
-      color: rgba(255,255,255,0.7);
-    }
-
-    /* АДАПТАЦИЯ */
-    @media (max-width: 768px) {
-      body { cursor: auto; }
-      .cursor, .cursor-dot { display: none !important; }
-      
-      h1 { font-size: 2.2rem; }
-      .subtitle { font-size: 1rem; }
-      
-      .hud {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-      }
-      .progress-container { max-width: 100%; order: 2; }
-      .card:nth-child(2) { order: 1; align-self: flex-end; }
-      .info-card { display: none; }
-    }
-
-    /* CURSOR FX (Desktop) */
-    @media (hover: hover) {
-        .cursor {
-            position: fixed;
-            width: 30px; height: 30px;
-            border: 2px solid #fff;
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 100;
-            transition: transform 0.1s, width 0.2s, height 0.2s;
-            mix-blend-mode: difference;
-        }
-        .cursor-dot {
-            position: fixed;
-            width: 6px; height: 6px;
-            background: var(--accent-strong);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 100;
-        }
-        .cursor.active { 
-            width: 50px; height: 50px; 
-            border-color: var(--accent); 
-            background: rgba(116, 247, 212, 0.1);
-            border-width: 2px;
-        }
-    }
-  </style>
-</head>
-<body>
-
-  <canvas id="gameCanvas"></canvas>
-  
-  <div id="ui-layer">
-    <div class="hud">
-      <div class="card progress-container">
-        <div class="level-badge">Статус</div>
-        <div class="task-text" id="taskLabel">Запуск...</div>
-        <div class="bar-track">
-          <div class="bar-fill" id="barFill"></div>
-        </div>
-        <div class="phase-indicator" id="phaseLabel">Фаза 0/4</div>
-      </div>
-      
-      <div class="card" style="display:flex; justify-content:space-between; align-items:center; min-width: 100px;">
-        <div class="level-badge" style="margin:0">Очки</div>
-        <div class="task-text" style="font-size: 18px;">
-          <span id="scoreVal">0</span> ✨
-        </div>
-      </div>
-    </div>
-
-    <div class="card info-card">
-      <span class="chip">Гид</span>
-      <div style="margin-top:8px;">Нажимай на мусор, чтобы переработать его. Очисти горизонт!</div>
-    </div>
-    
-    <div class="toast" id="toast">Лес растет!</div>
-  </div>
-
-  <div class="screen" id="startScreen">
-    <h1>Эко-Хранитель: Возрождение</h1>
-    <div class="subtitle">Мир затянут мусором. Нажимай на отходы (пакеты, банки, огрызки), чтобы очистить природу.</div>
-    <button class="btn-main" onclick="Game.init()">Начать миссию</button>
-  </div>
-  
-  <div class="screen hidden" id="winScreen">
-    <h1 style="background: linear-gradient(135deg, #feca57, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Природа спасена!</h1>
-    <div class="subtitle">Воздух чист, а лес полон жизни.</div>
-    <div class="subtitle" style="margin-top:20px; color:#fff; font-weight:bold; font-size: 1.5rem;" id="finalScore"></div>
-    <button class="btn-main" onclick="location.reload()">Играть снова</button>
-  </div>
-
-  <div class="cursor" id="cursorRing"></div>
-  <div class="cursor-dot" id="cursorDot"></div>
-
-<script>
-// --- АУДИО ---
-const AudioSys = {
-  ctx: null,
-  init() {
-    try {
-      window.AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioContext();
-    } catch(e) { console.warn("Audio blocked"); }
-  },
-  play(type) {
-    if (!this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    osc.connect(g);
-    g.connect(this.ctx.destination);
-
-    if (type === 'pop') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(300, t);
-      osc.frequency.exponentialRampToValueAtTime(800, t + 0.1);
-      g.gain.setValueAtTime(0.2, t);
-      g.gain.linearRampToValueAtTime(0, t + 0.15);
-      osc.start(); osc.stop(t + 0.15);
-    } else if (type === 'magic') {
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(200, t);
-      osc.frequency.linearRampToValueAtTime(600, t + 0.5);
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.1, t + 0.2);
-      g.gain.linearRampToValueAtTime(0, t + 1.0);
-      osc.start(); osc.stop(t + 1.0);
-    }
-  }
-};
-
-// --- ГРАФИКА И ПЕРЕМЕННЫЕ ---
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d', { alpha: false });
-let W = window.innerWidth;
-let H = window.innerHeight;
-let DPR = window.devicePixelRatio || 1;
-
-// Мусор: Огрызки, Банки, Пакеты, Коробки
-const TRASH_TYPES = ['🥡', '🥤', '🛢️', '📦', '🍏', '🍌', '🥫', '🦴']; 
-const ANIMAL_TYPES = ['🦊', '🐰', '🦋', '🦉', '🦌', '🐿️', '🐦'];
-
-const PALETTES = {
-  skyStart: [24, 40, 70],
-  skyEnd:   [92, 168, 230],
-  horizon:  [255, 226, 188],
-  grassStart: [28, 34, 30],
-  grassEnd:   [34, 118, 92],
-  mountain: [28, 45, 70]
-};
-
-const State = {
-  phase: 0,
-  pollution: 1.0,
-  score: 0,
-  trash: [],
-  trees: [],
-  animals: [],
-  particles: [],
-  clouds: [],
-  stars: [],
-  active: false
-};
-
-/* --- КЛАССЫ --- */
-
-class Star {
-  constructor() {
-    this.x = Math.random() * W;
-    this.y = Math.random() * (H * 0.5);
-    this.size = Math.random() * 2 + 0.5;
-    this.twinkle = Math.random() * Math.PI * 2;
-  }
-  update(dt) { this.twinkle += dt * 2; }
-  draw() {
-    const alpha = 0.2 + (1 - State.pollution) * 0.5 + Math.sin(this.twinkle) * 0.2;
-    ctx.fillStyle = `rgba(255,255,255,${Math.max(0, alpha)})`;
-    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-class Cloud {
-  constructor() {
-    this.x = Math.random() * W;
-    this.y = Math.random() * (H * 0.4);
-    this.speed = 5 + Math.random() * 10;
-    this.size = 0.5 + Math.random();
-  }
-  update(dt) {
-    this.x += this.speed * dt;
-    if (this.x > W + 200) this.x = -200;
-  }
-  draw() {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.scale(this.size, this.size);
-    ctx.fillStyle = `rgba(255,255,255, ${0.08 + (1-State.pollution)*0.35})`;
-    ctx.beginPath();
-    ctx.arc(0,0, 30, 0, Math.PI*2); ctx.arc(40,10, 40, 0, Math.PI*2); ctx.arc(-30,10, 30, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-class Tree {
-  constructor() {
-    this.x = Math.random() * W;
-    this.y = H * 0.55 + Math.random() * (H * 0.2);
-    this.scale = 0;
-    this.targetScale = 0.5 + Math.random() * 0.8;
-    this.colorVar = Math.random() * 40;
-    this.type = Math.random() > 0.5 ? 'pine' : 'oak';
-    this.sway = Math.random() * Math.PI;
-  }
-  update(dt) {
-    if (State.phase >= 2) this.scale += (this.targetScale - this.scale) * 2 * dt;
-    this.sway += dt;
-  }
-  draw() {
-    if (this.scale < 0.01) return;
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    const wind = Math.sin(this.sway) * 0.05 * (1-State.pollution);
-    ctx.rotate(wind);
-    ctx.scale(this.scale, this.scale);
-    ctx.fillStyle = '#3b2f2a';
-    ctx.fillRect(-5, 0, 10, -40);
-
-    const r = 30 + (1-State.pollution)*85;
-    const g = 70 + (1-State.pollution)*110 + this.colorVar;
-    const b = 35 + (1-State.pollution)*55;
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-
-    if (this.type === 'pine') {
-      ctx.beginPath(); ctx.ellipse(0, -30, 40, 20, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.fillStyle = `rgb(${r+10},${g+10},${b+10})`; ctx.ellipse(0, -50, 30, 15, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(0, -70, 15, 10, 0, 0, Math.PI*2); ctx.fill();
-    } else {
-      ctx.beginPath(); ctx.arc(0, -50, 30, 0, Math.PI*2); ctx.arc(-20, -40, 25, 0, Math.PI*2); ctx.arc(20, -40, 25, 0, Math.PI*2); ctx.fill();
-    }
-    ctx.restore();
-  }
-}
-
-class Trash {
-  constructor() {
-    this.size = 35 + Math.random() * 15;
-    this.x = Math.random() * (W - 100) + 50;
-    this.y = H * 0.5 + Math.random() * (H * 0.4);
-    this.char = TRASH_TYPES[Math.floor(Math.random() * TRASH_TYPES.length)];
-    this.rot = (Math.random() - 0.5) * 0.5;
-    this.scale = 0;
-    this.hover = false;
-    this.floatY = Math.random() * Math.PI * 2;
-  }
-  draw(dt) {
-    this.scale += (1 - this.scale) * 5 * dt;
-    this.floatY += dt * 1.5; // Плавное парение
-    const floatOffset = Math.sin(this.floatY) * 6;
-    
-    ctx.save();
-    ctx.translate(this.x, this.y + floatOffset);
-    ctx.rotate(this.rot);
-
-    // Увеличение при наведении
-    const s = this.scale * (this.hover ? 1.3 : 1.0);
-    ctx.scale(s, s);
-
-    // Тень
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath(); ctx.ellipse(0, 25, 15, 5, 0, 0, Math.PI*2); ctx.fill();
-
-    // Вид мусора
-    if(State.pollution > 0.5) ctx.filter = `grayscale(0.6) sepia(0.3)`;
-    ctx.font = '40px serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(this.char, 0, 0);
-    ctx.filter = 'none';
-    
-    ctx.restore();
-  }
-}
-
-class Animal {
-  constructor() {
-    this.x = Math.random() * W;
-    this.y = H * 0.5 + Math.random() * (H * 0.4);
-    this.char = ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
-    this.isBird = ['🦉', '🦋', '🐦'].includes(this.char);
-    if(this.isBird) this.y = H * 0.2 + Math.random() * (H * 0.3);
-    this.scale = 0;
-    this.dir = Math.random() > 0.5 ? 1 : -1;
-    this.timer = Math.random() * 100;
-  }
-  update(dt) {
-    this.scale += (1 - this.scale) * 3 * dt;
-    this.timer += dt;
-    this.x += this.dir * (this.isBird ? 40 : 10) * dt;
-    if(this.x > W+50) this.dir = -1;
-    if(this.x < -50) this.dir = 1;
-  }
-  draw() {
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.scale(this.dir, 1);
-    const bounce = this.isBird ? Math.sin(this.timer*5)*10 : Math.abs(Math.sin(this.timer*5))*-15;
-    ctx.translate(0, bounce);
-    ctx.scale(this.scale, this.scale);
-    if(this.scale < 0.9) { ctx.shadowColor = '#00ffa3'; ctx.shadowBlur = 20; }
-    ctx.font = '40px serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(this.char, 0, 0);
-    ctx.shadowBlur = 0;
-    ctx.restore();
-  }
-}
-
-class Particle {
-  constructor(x, y, type) {
-    this.x = x; this.y = y;
-    this.life = 1.0;
-    this.type = type;
-    this.vx = (Math.random()-0.5)*100;
-    this.vy = (Math.random()-0.5)*100;
-    if(type==='text') { this.vy = -100; this.msg = "+10"; }
-  }
-  update(dt) {
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
-    this.life -= dt * (this.type==='text'? 0.8 : 2.0);
-  }
-  draw() {
-    ctx.globalAlpha = Math.max(0, this.life);
-    if(this.type === 'text') {
-      ctx.font = 'bold 24px Nunito';
-      ctx.fillStyle = '#fff';
-      ctx.shadowColor = '#00ffa3'; ctx.shadowBlur = 5;
-      ctx.fillText(this.msg, this.x, this.y);
-      ctx.shadowBlur = 0;
-    } else {
-      ctx.fillStyle = '#00ffa3';
-      ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-}
-
-/* --- ЛОГИКА ИГРЫ --- */
-const Game = {
-  lastTime: 0,
-  
-  init() {
-    // 1. Принудительно обновляем размер экрана
-    resize();
-    
-    // 2. Активируем звук
-    AudioSys.init();
-    
-    // 3. Скрываем меню и запускаем
-    document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('winScreen').classList.add('hidden');
-    
-    State.active = true;
-    State.score = 0;
-    State.pollution = 1.0;
-    State.phase = 0;
-    
-    this.spawnWorld();
-    this.updateUI();
-    
-    Game.lastTime = performance.now();
-    requestAnimationFrame(this.loop);
-  },
-
-  spawnWorld() {
-    State.stars = []; State.clouds = []; State.trees = []; State.trash = [];
-    // Защита от нулевого размера
-    if(!W) W = window.innerWidth;
-    if(!H) H = window.innerHeight;
-
-    for(let i=0; i<30; i++) State.stars.push(new Star());
-    for(let i=0; i<6; i++) State.clouds.push(new Cloud());
-    for(let i=0; i<25; i++) State.trees.push(new Tree());
-    
-    // Меньше мусора на телефонах
-    const trashCount = W < 600 ? 25 : 40;
-    for(let i=0; i<trashCount; i++) State.trash.push(new Trash());
-  },
-  
-  loop(time) {
-    if(!State.active) return;
-    const dt = Math.min((time - Game.lastTime) / 1000, 0.1);
-    Game.lastTime = time;
-    
-    Game.update(dt);
-    Game.draw();
-    
-    requestAnimationFrame(Game.loop);
-  },
-  
-  update(dt) {
-    const totalTrash = W < 600 ? 25 : 40;
-    const remaining = State.trash.length;
-    // Процент очистки
-    const progress = Math.max(0, 1 - (remaining / totalTrash));
-    
-    State.pollution += ((1 - progress) - State.pollution) * 2 * dt;
-    
-    let newPhase = 0;
-    if (progress > 0.2) newPhase = 1;
-    if (progress > 0.5) newPhase = 2;
-    if (progress > 0.8) newPhase = 3;
-    if (remaining === 0) newPhase = 4;
-
-    if (newPhase > State.phase) {
-      State.phase = newPhase;
-      Game.onPhaseChange(newPhase);
-    }
-    
-    State.stars.forEach(s => s.update(dt));
-    State.clouds.forEach(c => c.update(dt));
-    State.trees.forEach(t => t.update(dt));
-    State.trash.forEach(t => t.draw(dt));
-    State.animals.forEach(a => a.update(dt));
-    State.particles.forEach((p, i) => {
-      p.update(dt);
-      if(p.life <= 0) State.particles.splice(i, 1);
-    });
-    
-    if (State.phase >= 3 && State.animals.length < 8 && Math.random() < 0.02) {
-      State.animals.push(new Animal());
-      AudioSys.play('magic');
-    }
-  },
-  
-  draw() {
-    const p = Math.max(0, State.pollution);
-    
-    // НЕБО
-    const r = PALETTES.skyStart[0]*p + PALETTES.skyEnd[0]*(1-p);
-    const g = PALETTES.skyStart[1]*p + PALETTES.skyEnd[1]*(1-p);
-    const b = PALETTES.skyStart[2]*p + PALETTES.skyEnd[2]*(1-p);
-    
-    const grad = ctx.createLinearGradient(0,0,0,H);
-    grad.addColorStop(0, `rgb(${r},${g},${b})`);
-    grad.addColorStop(0.7, `rgb(${r+10},${g+18},${b+20})`);
-    grad.addColorStop(1, `rgb(${r+25},${g+22},${b+24})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,0,W,H);
-
-    // Звезды и Солнце
-    State.stars.forEach(s => s.draw());
-    
-    ctx.save();
-    ctx.translate(W*0.8, H*0.15);
-    ctx.fillStyle = p > 0.6 ? '#c7d2fe' :
+    .btn-main:active { transform: scale(0.95
