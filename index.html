@@ -12,9 +12,7 @@
       --glass-border: rgba(255, 255, 255, 0.2);
       --accent: #74f7d4;
       --accent-strong: #5ad0ff;
-      --hot: #f5b7ff;
       --shadow: rgba(3, 7, 18, 0.5);
-      --ui-glow: rgba(90, 208, 255, 0.3);
     }
 
     body {
@@ -22,9 +20,10 @@
       overflow: hidden;
       background: radial-gradient(circle at 20% 20%, #0d2038, #0a1324 60%, #070b16 100%);
       font-family: 'Nunito', sans-serif;
-      touch-action: none;
+      touch-action: none; /* Важно для мобильных */
       -webkit-tap-highlight-color: transparent;
-      cursor: none;
+      user-select: none;
+      cursor: none; /* Скрываем курсор только на ПК */
     }
 
     canvas {
@@ -42,15 +41,15 @@
       flex-direction: column;
       padding: 20px;
       z-index: 10;
-      gap: 18px;
+      gap: 15px;
     }
 
-    /* Верхняя панель */
     .hud {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 20px;
+      width: 100%;
     }
 
     .card {
@@ -61,7 +60,7 @@
       border-radius: 20px;
       padding: 15px 20px;
       color: #fff;
-      box-shadow: 0 12px 36px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.2);
+      box-shadow: 0 12px 36px var(--shadow);
       transform: translateY(-100px);
       animation: slideDown 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     }
@@ -69,7 +68,7 @@
     @keyframes slideDown { to { transform: translateY(0); } }
 
     .level-badge {
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 1px;
       color: rgba(255,255,255,0.6);
@@ -79,24 +78,18 @@
     .task-text {
       font-size: 16px;
       font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      white-space: nowrap;
     }
 
     .chip {
       display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
+      padding: 4px 10px;
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
       color: #0b1220;
       background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-      box-shadow: 0 6px 16px rgba(90, 208, 255, 0.35);
     }
 
     /* Прогресс бар */
@@ -125,39 +118,39 @@
       font-size: 12px;
       font-weight: 900;
       color: var(--accent);
-      text-shadow: 0 0 10px rgba(0,255,163,0.5);
     }
 
-    /* Уведомления по центру */
+    /* Уведомления */
     .toast {
       position: absolute;
-      top: 30%;
+      top: 40%;
       left: 50%;
       transform: translate(-50%, -50%) scale(0.8);
-      background: rgba(8, 12, 24, 0.78);
-      padding: 20px 40px;
+      background: rgba(8, 12, 24, 0.85);
+      padding: 15px 30px;
       border-radius: 50px;
       color: #fff;
-      font-size: 24px;
+      font-size: 18px;
       font-weight: 800;
       opacity: 0;
       pointer-events: none;
       transition: 0.3s;
       text-align: center;
       border: 1px solid rgba(42, 250, 223, 0.6);
-      box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+      width: max-content;
+      max-width: 90%;
     }
     .toast.show {
       transform: translate(-50%, -50%) scale(1);
       opacity: 1;
     }
 
-    /* Экраны (Старт/Финал) */
+    /* Экраны */
     .screen {
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at top, rgba(17, 32, 62, 0.92), rgba(4, 7, 16, 0.96));
-      backdrop-filter: blur(20px);
+      background: radial-gradient(circle at top, rgba(17, 32, 62, 0.95), rgba(4, 7, 16, 0.98));
+      backdrop-filter: blur(10px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -165,100 +158,103 @@
       z-index: 20;
       transition: opacity 0.6s;
       pointer-events: auto;
+      padding: 20px;
+      text-align: center;
     }
     .screen.hidden { opacity: 0; pointer-events: none; }
 
     h1 {
-      font-size: 4rem;
-      margin: 0;
+      font-size: 3rem;
+      line-height: 1.1;
+      margin: 0 0 20px 0;
       background: linear-gradient(135deg, #fff 0%, #2afadf 40%, #00d4ff 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 0 25px rgba(0,212,255,0.35));
     }
     .subtitle {
       color: #a0aec0;
-      font-size: 1.2rem;
-      margin-top: 10px;
-      max-width: 520px;
-      text-align: center;
-      line-height: 1.6;
+      font-size: 1.1rem;
+      max-width: 500px;
+      line-height: 1.5;
     }
 
     .btn-main {
-      margin-top: 40px;
-      padding: 18px 50px;
+      margin-top: 30px;
+      padding: 16px 40px;
       font-size: 18px;
-      font-weight: 900;
+      font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 1px;
       color: #0b121f;
       background: linear-gradient(135deg, #74f7d4, #5ad0ff);
       border: none;
       border-radius: 100px;
       cursor: pointer;
-      box-shadow: 0 14px 34px rgba(90, 208, 255, 0.45);
-      transition: transform 0.1s, box-shadow 0.1s;
-      font-family: 'Nunito', sans-serif;
+      box-shadow: 0 10px 30px rgba(90, 208, 255, 0.4);
+      transition: transform 0.1s;
     }
-    .btn-main:hover { transform: scale(1.05); box-shadow: 0 18px 50px rgba(90, 208, 255, 0.7); }
     .btn-main:active { transform: scale(0.95); }
 
     .info-card {
       align-self: flex-end;
-      max-width: 320px;
+      max-width: 300px;
       text-align: right;
-      font-size: 13px;
-      line-height: 1.5;
-      color: rgba(255,255,255,0.75);
-      border: 1px solid rgba(255,255,255,0.15);
+      font-size: 12px;
+      line-height: 1.4;
+      color: rgba(255,255,255,0.7);
     }
 
-    /* Custom Cursor */
-    .cursor {
-      position: fixed;
-      width: 30px; height: 30px;
-      border: 2px solid #fff;
-      border-radius: 50%;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      z-index: 100;
-      transition: transform 0.1s, width 0.2s, height 0.2s;
-      mix-blend-mode: difference;
+    /* --- МОБИЛЬНАЯ АДАПТАЦИЯ --- */
+    @media (max-width: 768px) {
+      /* Возвращаем стандартный курсор на мобильных */
+      body { cursor: auto; }
+      .cursor, .cursor-dot { display: none !important; }
+      
+      .hud {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .progress-container { max-width: 100%; }
+      .info-card { display: none; } /* Скрываем подсказку на телефоне для места */
+      h1 { font-size: 2rem; }
+      .task-text { font-size: 14px; }
     }
-    .cursor-dot {
-      position: fixed;
-      width: 6px; height: 6px;
-      background: var(--accent-strong);
-      border-radius: 50%;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      z-index: 100;
-    }
-    .cursor.active { width: 54px; height: 54px; border-color: var(--accent); border-width: 3px; box-shadow: 0 0 24px rgba(116, 247, 212, 0.6); }
 
-    .noscript {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      background: rgba(8, 10, 20, 0.92);
-      color: #fff;
-      font-size: 20px;
-      font-weight: 700;
-      padding: 24px;
-      z-index: 30;
+    /* --- PC CURSOR --- */
+    @media (hover: hover) {
+        .cursor {
+        position: fixed;
+        width: 30px; height: 30px;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        z-index: 100;
+        transition: transform 0.1s, width 0.2s, height 0.2s;
+        mix-blend-mode: difference;
+        }
+        .cursor-dot {
+        position: fixed;
+        width: 6px; height: 6px;
+        background: var(--accent-strong);
+        border-radius: 50%;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        z-index: 100;
+        }
+        .cursor.active { 
+            width: 50px; height: 50px; 
+            border-color: var(--accent); 
+            background: rgba(116, 247, 212, 0.1);
+            border-width: 2px;
+        }
     }
+
   </style>
 </head>
 <body>
 
-  <canvas id="gameCanvas" aria-label="Игровое поле"></canvas>
-  <noscript>
-    <div class="noscript">Для запуска игры нужен JavaScript. Пожалуйста, включите его и перезагрузите страницу.</div>
-  </noscript>
+  <canvas id="gameCanvas"></canvas>
   
   <div id="ui-layer">
     <div class="hud">
@@ -271,42 +267,39 @@
         <div class="phase-indicator" id="phaseLabel">Фаза 0/4</div>
       </div>
       
-      <div class="card" style="text-align:right">
-        <div class="level-badge">Очки</div>
-        <div class="task-text" style="justify-content: flex-end; font-size: 20px;">
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center; min-width: 100px;">
+        <div class="level-badge" style="margin:0">Очки</div>
+        <div class="task-text" style="font-size: 18px;">
           <span id="scoreVal">0</span> ✨
         </div>
       </div>
     </div>
 
     <div class="card info-card">
-      <span class="chip">Гид духа</span>
-      <div style="margin-top:10px;">Собирай мусор, освобождай землю и наблюдай, как мир наполняется светом. Чем чище воздух, тем быстрее возвращается жизнь.</div>
+      <span class="chip">Гид</span>
+      <div style="margin-top:8px;">Нажимай на мусор, чтобы переработать его в энергию. Очисти горизонт!</div>
     </div>
     
-    <div class="toast" id="toast">Новая фаза: Лес растет!</div>
+    <div class="toast" id="toast">Лес растет!</div>
   </div>
 
   <div class="screen" id="startScreen">
-    <h1>Эко-Хранитель: Возрождение</h1>
-    <div class="subtitle">Мир затянут пепельной вуалью. Ты — хранитель света: очисти территорию от техногенного мусора, насыть почву энергией и пробуди жизнь.</div>
-    <button class="btn-main" onclick="Game.init()">Запустить восстановление</button>
+    <h1>Эко-Хранитель</h1>
+    <div class="subtitle">Мир затянут мусором. Нажимай на отходы, чтобы очистить природу и вернуть жизнь.</div>
+    <button class="btn-main" onclick="Game.init()">Начать</button>
   </div>
   
   <div class="screen hidden" id="winScreen">
-    <h1 style="background: linear-gradient(135deg, #feca57, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Сияние Возвращено!</h1>
-    <div class="subtitle">Ты разбудил экосистему: воздух чист, лес полон жизни, а земля снова светится теплом.</div>
-    <div class="subtitle" style="margin-top:20px; color:#fff; font-weight:bold" id="finalScore"></div>
-    <button class="btn-main" onclick="Game.init()">Начать заново</button>
+    <h1 style="font-size: 2.5rem; background: linear-gradient(135deg, #feca57, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Природа спасена!</h1>
+    <div class="subtitle">Воздух чист, а лес полон жизни.</div>
+    <div class="subtitle" style="margin-top:20px; color:#fff; font-weight:bold; font-size: 1.5rem;" id="finalScore"></div>
+    <button class="btn-main" onclick="Game.init()">Играть снова</button>
   </div>
 
   <div class="cursor" id="cursorRing"></div>
   <div class="cursor-dot" id="cursorDot"></div>
 
 <script>
-/**
- * AUDIO ENGINE
- */
 const AudioSys = {
   ctx: null,
   init() {
@@ -323,35 +316,31 @@ const AudioSys = {
 
     if (type === 'pop') {
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(400 + Math.random()*200, t);
-      osc.frequency.exponentialRampToValueAtTime(900, t + 0.1);
-      g.gain.setValueAtTime(0.3, t);
-      g.gain.linearRampToValueAtTime(0, t + 0.1);
+      osc.frequency.setValueAtTime(300, t); // Чуть мягче звук
+      osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.linearRampToValueAtTime(0, t + 0.15);
       osc.start(); osc.stop(t + 0.15);
     } else if (type === 'magic') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(200, t);
-      osc.frequency.linearRampToValueAtTime(700, t + 0.5);
+      osc.frequency.linearRampToValueAtTime(600, t + 0.6);
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.2, t + 0.2);
-      g.gain.linearRampToValueAtTime(0, t + 1.0);
-      osc.start(); osc.stop(t + 1.0);
+      g.gain.linearRampToValueAtTime(0.1, t + 0.3);
+      g.gain.linearRampToValueAtTime(0, t + 1.2);
+      osc.start(); osc.stop(t + 1.2);
     }
   }
 };
 
-/**
- * RENDER ENGINE
- */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d', { alpha: false });
 let W, H, DPR;
 
-// Ассеты (Эмодзи высокого качества)
-const TRASH_TYPES = ['🥡', '🥤', '🛢️', '🗞️', '📦', '🚬', '🧪', '🦴'];
+// --- ОБНОВЛЕННЫЕ ИКОНКИ МУСОРА ---
+const TRASH_TYPES = ['🍎', '🍌', '🥡', '🥤', '🛍️', '🥫', '🧃', '🍬']; 
 const ANIMAL_TYPES = ['🦊', '🐰', '🦋', '🦉', '🦌', '🐿️', '🐦'];
 
-// Цветовые палитры для фаз (Смог -> Чисто)
 const PALETTES = {
   skyStart: [24, 40, 70],
   skyEnd:   [92, 168, 230],
@@ -361,7 +350,6 @@ const PALETTES = {
   mountain: [28, 45, 70]
 };
 
-// Состояние игры
 const State = {
   phase: 0,
   pollution: 1.0,
@@ -384,15 +372,11 @@ class Star {
     this.size = Math.random() * 2 + 0.5;
     this.twinkle = Math.random() * Math.PI * 2;
   }
-  update(dt) {
-    this.twinkle += dt * 2;
-  }
+  update(dt) { this.twinkle += dt * 2; }
   draw() {
     const alpha = 0.2 + (1 - State.pollution) * 0.5 + Math.sin(this.twinkle) * 0.2;
     ctx.fillStyle = `rgba(255,255,255,${Math.max(0, alpha)})`;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
   }
 }
 
@@ -413,9 +397,7 @@ class Cloud {
     ctx.scale(this.size, this.size);
     ctx.fillStyle = `rgba(255,255,255, ${0.08 + (1-State.pollution)*0.35})`;
     ctx.beginPath();
-    ctx.arc(0,0, 30, 0, Math.PI*2);
-    ctx.arc(40,10, 40, 0, Math.PI*2);
-    ctx.arc(-30,10, 30, 0, Math.PI*2);
+    ctx.arc(0,0, 30, 0, Math.PI*2); ctx.arc(40,10, 40, 0, Math.PI*2); ctx.arc(-30,10, 30, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
   }
@@ -432,9 +414,7 @@ class Tree {
     this.sway = Math.random() * Math.PI;
   }
   update(dt) {
-    if (State.phase >= 2) {
-      this.scale += (this.targetScale - this.scale) * 2 * dt;
-    }
+    if (State.phase >= 2) this.scale += (this.targetScale - this.scale) * 2 * dt;
     this.sway += dt;
   }
   draw() {
@@ -444,7 +424,6 @@ class Tree {
     const wind = Math.sin(this.sway) * 0.05 * (1-State.pollution);
     ctx.rotate(wind);
     ctx.scale(this.scale, this.scale);
-
     ctx.fillStyle = '#3b2f2a';
     ctx.fillRect(-5, 0, 10, -40);
 
@@ -454,54 +433,48 @@ class Tree {
     ctx.fillStyle = `rgb(${r},${g},${b})`;
 
     if (this.type === 'pine') {
-      ctx.beginPath();
-      ctx.ellipse(0, -30, 40, 20, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.fillStyle = `rgb(${r+10},${g+10},${b+10})`;
-      ctx.ellipse(0, -50, 30, 15, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(0, -70, 15, 10, 0, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -30, 40, 20, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.fillStyle = `rgb(${r+10},${g+10},${b+10})`; ctx.ellipse(0, -50, 30, 15, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -70, 15, 10, 0, 0, Math.PI*2); ctx.fill();
     } else {
-      ctx.beginPath();
-      ctx.arc(0, -50, 30, 0, Math.PI*2);
-      ctx.arc(-20, -40, 25, 0, Math.PI*2);
-      ctx.arc(20, -40, 25, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(0, -50, 30, 0, Math.PI*2); ctx.arc(-20, -40, 25, 0, Math.PI*2); ctx.arc(20, -40, 25, 0, Math.PI*2); ctx.fill();
     }
-    
     ctx.restore();
   }
 }
 
 class Trash {
   constructor() {
-    this.size = 30 + Math.random() * 20;
+    this.size = 35 + Math.random() * 15; // Чуть крупнее
     this.x = Math.random() * (W - 100) + 50;
     this.y = H * 0.5 + Math.random() * (H * 0.4);
     this.char = TRASH_TYPES[Math.floor(Math.random() * TRASH_TYPES.length)];
-    this.rot = Math.random() - 0.5;
+    this.rot = (Math.random() - 0.5) * 0.5; // Меньше случайного вращения
     this.scale = 0;
     this.hover = false;
     this.floatY = Math.random() * Math.PI * 2;
   }
   draw(dt) {
     this.scale += (1 - this.scale) * 5 * dt;
-    this.floatY += dt * 3;
-    const floatOffset = Math.sin(this.floatY) * 5;
+    // ЗАМЕДЛЕНО: Медленнее анимация, чтобы легче попасть
+    this.floatY += dt * 1.5; 
+    const floatOffset = Math.sin(this.floatY) * 6;
+    
     ctx.save();
     ctx.translate(this.x, this.y + floatOffset);
-    ctx.rotate(this.rot + (this.hover ? Math.sin(Date.now()*0.02)*0.2 : 0));
+    // Убрано вращение при наведении, заменено на масштаб
+    ctx.rotate(this.rot);
 
-    const s = this.scale * (this.hover ? 1.2 : 1);
+    // При наведении увеличиваем масштаб плавнее
+    const hoverScale = this.hover ? 1.3 : 1.0;
+    const s = this.scale * hoverScale;
     ctx.scale(s, s);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    // Тень
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.beginPath(); ctx.ellipse(0, 25, 15, 5, 0, 0, Math.PI*2); ctx.fill();
 
-    if(State.pollution > 0.5) ctx.filter = `grayscale(0.8) contrast(1.2)`;
+    if(State.pollution > 0.5) ctx.filter = `grayscale(0.6) sepia(0.3)`;
     ctx.font = '40px serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(this.char, 0, 0);
@@ -518,7 +491,6 @@ class Animal {
     this.char = ANIMAL_TYPES[Math.floor(Math.random() * ANIMAL_TYPES.length)];
     this.isBird = ['🦉', '🦋', '🐦'].includes(this.char);
     if(this.isBird) this.y = H * 0.2 + Math.random() * (H * 0.3);
-    
     this.scale = 0;
     this.dir = Math.random() > 0.5 ? 1 : -1;
     this.timer = Math.random() * 100;
@@ -534,16 +506,10 @@ class Animal {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.scale(this.dir, 1);
-
     const bounce = this.isBird ? Math.sin(this.timer*5)*10 : Math.abs(Math.sin(this.timer*5))*-15;
     ctx.translate(0, bounce);
     ctx.scale(this.scale, this.scale);
-
-    if(this.scale < 0.9) {
-        ctx.shadowColor = '#00ffa3';
-        ctx.shadowBlur = 20;
-    }
-
+    if(this.scale < 0.9) { ctx.shadowColor = '#00ffa3'; ctx.shadowBlur = 20; }
     ctx.font = '40px serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(this.char, 0, 0);
@@ -569,298 +535,11 @@ class Particle {
   draw() {
     ctx.globalAlpha = Math.max(0, this.life);
     if(this.type === 'text') {
-      ctx.font = 'bold 20px Nunito';
+      ctx.font = 'bold 24px Nunito'; // Крупнее текст
       ctx.fillStyle = '#fff';
       ctx.shadowColor = '#00ffa3'; ctx.shadowBlur = 5;
       ctx.fillText(this.msg, this.x, this.y);
       ctx.shadowBlur = 0;
     } else {
       ctx.fillStyle = '#00ffa3';
-      ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-}
-
-/* --- GAME LOGIC --- */
-
-const Game = {
-  lastTime: 0,
-  
-  init() {
-    AudioSys.init();
-    State.active = true;
-    State.score = 0;
-    State.pollution = 1.0;
-    State.phase = 0;
-    State.trash = [];
-    State.trees = [];
-    State.animals = [];
-    State.particles = [];
-    State.clouds = [];
-    State.stars = [];
-    
-    for(let i=0; i<30; i++) State.stars.push(new Star());
-    for(let i=0; i<6; i++) State.clouds.push(new Cloud());
-    for(let i=0; i<22; i++) State.trees.push(new Tree());
-    for(let i=0; i<40; i++) State.trash.push(new Trash());
-    
-    document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('winScreen').classList.add('hidden');
-    this.updateUI();
-    
-    requestAnimationFrame(this.loop);
-  },
-  
-  loop(time) {
-    if(!State.active) return;
-    const dt = Math.min((time - Game.lastTime) / 1000, 0.1);
-    Game.lastTime = time;
-    
-    Game.update(dt);
-    Game.draw();
-    
-    requestAnimationFrame(Game.loop);
-  },
-  
-  update(dt) {
-    const totalTrash = 40;
-    const currentTrash = State.trash.length;
-    const progress = 1 - (currentTrash / totalTrash);
-    
-    State.pollution += ((1 - progress) - State.pollution) * 2 * dt;
-    
-    let newPhase = 0;
-    if (progress > 0.2) newPhase = 1;
-    if (progress > 0.5) newPhase = 2;
-    if (progress > 0.8) newPhase = 3;
-    if (progress >= 1.0) newPhase = 4;
-
-    if (newPhase > State.phase) {
-      State.phase = newPhase;
-      Game.onPhaseChange(newPhase);
-    }
-    
-    State.stars.forEach(s => s.update(dt));
-    State.clouds.forEach(c => c.update(dt));
-    State.trees.forEach(t => t.update(dt));
-    State.trash.forEach(t => t.draw(dt));
-    State.animals.forEach(a => a.update(dt));
-    State.particles.forEach((p, i) => {
-      p.update(dt);
-      if(p.life <= 0) State.particles.splice(i, 1);
-    });
-    
-    if (State.phase >= 3 && State.animals.length < 8 && Math.random() < 0.02) {
-      State.animals.push(new Animal());
-      AudioSys.play('magic');
-    }
-  },
-  
-  draw() {
-    const p = State.pollution;
-    const r = PALETTES.skyStart[0]*p + PALETTES.skyEnd[0]*(1-p);
-    const g = PALETTES.skyStart[1]*p + PALETTES.skyEnd[1]*(1-p);
-    const b = PALETTES.skyStart[2]*p + PALETTES.skyEnd[2]*(1-p);
-    
-    const grad = ctx.createLinearGradient(0,0,0,H);
-    grad.addColorStop(0, `rgb(${r},${g},${b})`);
-    grad.addColorStop(0.7, `rgb(${r+10},${g+18},${b+20})`);
-    grad.addColorStop(1, `rgb(${r+25},${g+22},${b+24})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,0,W,H);
-
-    const horizon = PALETTES.horizon;
-    const haze = ctx.createLinearGradient(0, H*0.15, 0, H*0.6);
-    haze.addColorStop(0, `rgba(${horizon[0]}, ${horizon[1]}, ${horizon[2]}, ${0.08 + (1-p)*0.2})`);
-    haze.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = haze;
-    ctx.fillRect(0, 0, W, H);
-
-    State.stars.forEach(s => s.draw());
-    
-    ctx.save();
-    ctx.translate(W*0.8, H*0.15);
-    ctx.fillStyle = p > 0.6 ? '#c7d2fe' : '#fcd77b';
-    ctx.shadowColor = p > 0.6 ? 'transparent' : '#f7c96c';
-    ctx.shadowBlur = p > 0.6 ? 0 : 60;
-    ctx.beginPath(); ctx.arc(0,0, 40, 0, Math.PI*2); ctx.fill();
-    ctx.shadowBlur = 0;
-
-    if(p < 0.5) {
-        ctx.globalAlpha = (0.5 - p) * 0.45;
-        ctx.globalCompositeOperation = 'screen';
-        for(let i=0; i<12; i++) {
-            ctx.rotate(Date.now()*0.0002 + i);
-            ctx.fillStyle = 'rgba(255, 244, 214, 0.35)';
-            ctx.fillRect(0, -4, W, 8);
-        }
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 1;
-    }
-    ctx.restore();
-    
-    State.clouds.forEach(c => c.draw());
-    
-    const mountain = PALETTES.mountain;
-    ctx.fillStyle = `rgba(${mountain[0] + (1-p)*10}, ${mountain[1] + (1-p)*15}, ${mountain[2] + (1-p)*20}, 0.75)`;
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for(let x=0; x<=W; x+=50) {
-        ctx.lineTo(x, H*0.5 - Math.sin(x*0.01)*50);
-    }
-    ctx.lineTo(W, H);
-    ctx.fill();
-    
-    const ridge = ctx.createLinearGradient(0, H*0.35, 0, H*0.6);
-    ridge.addColorStop(0, 'rgba(255,255,255,0.15)');
-    ridge.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = ridge;
-    ctx.fillRect(0, H*0.35, W, H*0.3);
-
-    const gr = PALETTES.grassStart[0]*p + PALETTES.grassEnd[0]*(1-p);
-    const gg = PALETTES.grassStart[1]*p + PALETTES.grassEnd[1]*(1-p);
-    const gb = PALETTES.grassStart[2]*p + PALETTES.grassEnd[2]*(1-p);
-    const groundGrad = ctx.createLinearGradient(0, H*0.55, 0, H);
-    groundGrad.addColorStop(0, `rgb(${gr},${gg},${gb})`);
-    groundGrad.addColorStop(1, `rgb(${gr-8},${gg-14},${gb-10})`);
-    ctx.fillStyle = groundGrad;
-    
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    ctx.lineTo(0, H*0.55);
-    ctx.bezierCurveTo(W*0.3, H*0.5, W*0.7, H*0.6, W, H*0.55);
-    ctx.lineTo(W, H);
-    ctx.fill();
-
-    const texture = ctx.createLinearGradient(0, H*0.6, 0, H);
-    texture.addColorStop(0, `rgba(255,255,255,${0.05 + (1-p)*0.05})`);
-    texture.addColorStop(1, 'rgba(0,0,0,0.15)');
-    ctx.fillStyle = texture;
-    ctx.fillRect(0, H*0.6, W, H*0.4);
-    
-    const renderList = [
-      ...State.trees.map(o => ({...o, draw: ()=>o.draw(), y: o.y})),
-      ...State.trash.map(o => ({...o, draw: ()=>o.draw(0.016), y: o.y})),
-      ...State.animals.map(o => ({...o, draw: ()=>o.draw(), y: o.y}))
-    ];
-    renderList.sort((a,b) => a.y - b.y);
-    renderList.forEach(obj => obj.draw());
-    
-    State.particles.forEach(p => p.draw());
-    
-    const rad = ctx.createRadialGradient(W/2, H/2, H*0.4, W/2, H/2, H);
-    rad.addColorStop(0, 'rgba(0,0,0,0)');
-    rad.addColorStop(1, 'rgba(0,0,10,0.38)');
-    ctx.fillStyle = rad;
-    ctx.fillRect(0,0,W,H);
-
-    ctx.globalAlpha = 0.08;
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    for(let i = 0; i < 120; i++) {
-      const nx = (i * 37) % W;
-      const ny = (i * 83) % H;
-      ctx.fillRect(nx, ny, 1, 1);
-    }
-    ctx.globalAlpha = 1;
-  },
-  
-  onPhaseChange(p) {
-    const titles = [
-      "Запуск", "Смог ослабевает", "Почва откликается", "Лес оживает", "Сияние Возвращено"
-    ];
-    const tasks = [
-      "Сканирование территории",
-      "Освободи воздух от токсинов",
-      "Пробуди почву и ростки",
-      "Верни животных и птиц",
-      "Территория восстановлена"
-    ];
-    const toast = document.getElementById('toast');
-    toast.textContent = titles[p];
-    toast.classList.add('show');
-    
-    document.getElementById('taskLabel').textContent = tasks[p];
-    document.getElementById('phaseLabel').textContent = `Фаза ${p}/4`;
-    
-    setTimeout(() => toast.classList.remove('show'), 3000);
-    
-    if(p === 4) {
-      setTimeout(() => {
-        document.getElementById('finalScore').textContent = `Счет: ${State.score}`;
-        document.getElementById('winScreen').classList.remove('hidden');
-        State.active = false;
-      }, 2000);
-    }
-  },
-  
-  click(x, y) {
-    if(!State.active) return;
-    
-    for(let i=State.trash.length-1; i>=0; i--) {
-      const t = State.trash[i];
-      const dx = x - t.x;
-      const dy = y - (t.y + Math.sin(t.floatY)*5);
-      if(Math.hypot(dx, dy) < 40) {
-        State.trash.splice(i, 1);
-        State.score += 10;
-        this.spawnFX(x, y);
-        AudioSys.play('pop');
-        this.updateUI();
-        return;
-      }
-    }
-  },
-  
-  spawnFX(x, y) {
-    for(let i=0; i<8; i++) State.particles.push(new Particle(x, y, 'spark'));
-    State.particles.push(new Particle(x, y, 'text'));
-  },
-  
-  updateUI() {
-    document.getElementById('scoreVal').textContent = State.score;
-    const progress = (1 - (State.trash.length / 40)) * 100;
-    document.getElementById('barFill').style.width = `${progress}%`;
-  }
-};
-
-/* --- INPUTS --- */
-function resize() {
-  DPR = window.devicePixelRatio || 1;
-  W = window.innerWidth;
-  H = window.innerHeight;
-  canvas.width = W * DPR;
-  canvas.height = H * DPR;
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-}
-window.addEventListener('resize', resize);
-resize();
-
-window.addEventListener('pointermove', e => {
-  const r = document.getElementById('cursorRing');
-  const d = document.getElementById('cursorDot');
-  r.style.left = d.style.left = e.clientX + 'px';
-  r.style.top = d.style.top = e.clientY + 'px';
-  
-  let hover = false;
-  State.trash.forEach(t => {
-    const dx = e.clientX - t.x;
-    const dy = e.clientY - (t.y + Math.sin(t.floatY)*5);
-    t.hover = (Math.hypot(dx, dy) < 40);
-    if(t.hover) hover = true;
-  });
-  
-  if(hover) r.classList.add('active');
-  else r.classList.remove('active');
-});
-
-window.addEventListener('pointerdown', e => {
-  Game.click(e.clientX, e.clientY);
-  const r = document.getElementById('cursorRing');
-  r.style.transform = 'translate(-50%, -50%) scale(0.8)';
-  setTimeout(() => r.style.transform = 'translate(-50%, -50%) scale(1)', 100);
-});
-
-</script>
-</body>
-</html>
+      ctx.beginPath(); ctx.arc(this.x, this.y,
