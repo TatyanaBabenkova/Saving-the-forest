@@ -251,6 +251,95 @@
       padding: 24px;
       z-index: 30;
     }
+
+    @media (max-width: 900px) {
+      #ui-layer {
+        padding: 16px;
+        gap: 12px;
+      }
+
+      .hud {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .progress-container {
+        max-width: 100%;
+      }
+
+      .card {
+        padding: 14px 16px;
+        border-radius: 16px;
+      }
+
+      .task-text {
+        font-size: 15px;
+      }
+
+      h1 {
+        font-size: 2.6rem;
+      }
+
+      .subtitle {
+        font-size: 1rem;
+      }
+
+      .btn-main {
+        width: 100%;
+        max-width: 320px;
+        padding: 16px 24px;
+      }
+
+      .info-card {
+        align-self: stretch;
+        text-align: left;
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 600px) {
+      #ui-layer {
+        padding: 12px;
+      }
+
+      .card {
+        padding: 12px 14px;
+      }
+
+      .toast {
+        font-size: 18px;
+        padding: 14px 24px;
+      }
+
+      .phase-indicator {
+        font-size: 11px;
+      }
+    }
+
+    @media (orientation: portrait) {
+      .toast {
+        top: 24%;
+      }
+
+      .progress-container {
+        max-width: none;
+      }
+
+      .card {
+        animation-duration: 0.6s;
+      }
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      body {
+        cursor: auto;
+      }
+
+      .cursor,
+      .cursor-dot {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
