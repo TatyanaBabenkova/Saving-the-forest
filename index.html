@@ -231,8 +231,8 @@ class Prop {
         this.isTrash = isTrash;
         this.markedForDeletion = false;
         
-        // СКОРОСТЬ: Замедлил еще сильнее
-        this.baseSpeed = isTrash ? 0.002 : 0.0006; 
+        // СКОРОСТЬ
+        this.baseSpeed = isTrash ? 0.002 : 0.0009; // Лес теперь чуть быстрее, чтобы ощущалось движение
         
         this.progress = 0; // от 0 до 1
 
@@ -241,15 +241,16 @@ class Prop {
             this.startX = cx + (Math.random() - 0.5) * 50; 
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.4); 
         } else {
-            // Лес: появляется в точке схода
+            // === ИЗМЕНЕННАЯ ЛОГИКА ДЛЯ ЛЕСА ===
             const isLeft = Math.random() > 0.5;
             
-            // Начинаем почти из одной точки в центре (точка схода)
-            this.startX = cx; 
+            // Спавн: Не в центре, а с отступом от солнца (точка схода)
+            // 15% ширины отступаем от центра, чтобы "дорога" была свободна на горизонте
+            const spawnOffset = width * 0.15; 
+            this.startX = cx + (isLeft ? -spawnOffset : spawnOffset) + (Math.random()-0.5) * 20;
 
-            // Разлетаются в стороны. 
-            // minTarget - чтобы не перекрывали дорогу внизу.
-            const minTarget = width * 0.6; 
+            // Разлет: Сильно в стороны, за пределы экрана
+            const minTarget = width * 0.8; 
             const maxTarget = width * 1.5; 
             const targetOffset = minTarget + Math.random() * (maxTarget - minTarget);
 
@@ -269,29 +270,32 @@ class Prop {
                 handleMiss();
             }
         } else {
-            if (y > height + size || x < -size * 2 || x > width + size * 2) {
+            // Лес удаляем, когда он ушел сильно вниз
+            if (y > height + size * 1.5) {
                 this.markedForDeletion = true;
             }
         }
     }
 
     getScreenPos() {
-        // === ЛОГИКА 3D ===
+        // === ЛОГИКА 3D И ПЕРСПЕКТИВЫ ===
         
-        // 1. Интерполяция масштаба (Scale)
-        // Объекты растут экспоненциально: сначала долго маленькие, потом резко большие.
-        // progress: 0 -> 1
-        // scale: 0 -> 1
-        let scaleCurve = this.progress * this.progress * this.progress; // кубическая
-        if (this.isTrash) scaleCurve = this.progress * this.progress; // мусор растет быстрее
+        let scaleCurve;
+
+        if (this.isTrash) {
+             // Мусор растет стандартно (из точки)
+             scaleCurve = this.progress * this.progress;
+        } else {
+             // ДЕРЕВЬЯ:
+             // 0.1 (10%) - стартовый размер на горизонте. Чтобы не были точками.
+             // Растут по квадрату progress.
+             scaleCurve = 0.1 + (this.progress * this.progress);
+        }
         
-        // 2. Координата Y (Высота на экране)
-        // cy - линия горизонта. height - низ экрана.
-        // Когда progress = 0, Y = cy (горизонт).
-        // Когда progress = 1, Y = height (низ экрана).
+        // Координата Y (Высота на экране)
         const curY = cy + (height - cy) * this.progress;
         
-        // 3. Координата X (Ширина)
+        // Координата X (Ширина)
         // Линейное движение от StartX к TargetX
         const curX = this.startX + (this.targetX - this.startX) * this.progress;
 
@@ -324,7 +328,6 @@ class Trash extends Prop {
         let drawY = this.isDragging ? this.dragY : pos.y;
         let finalScale = this.isDragging ? 1.0 : pos.scale;
         
-        // Скрываем, если еще слишком далеко
         if (finalScale < 0.05) return;
 
         let size = 220 * finalScale; 
@@ -333,11 +336,9 @@ class Trash extends Prop {
         ctx.save();
         ctx.translate(drawX, drawY);
         
-        // Тень (рисуем под объектом)
         if (!this.isDragging) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
-            // Тень чуть ниже центра
             ctx.ellipse(0, size/2, size/3, size/6, 0, 0, Math.PI*2);
             ctx.fill();
         }
@@ -349,9 +350,6 @@ class Trash extends Prop {
             ctx.beginPath();
             ctx.arc(0, 0, size/2.5, 0, Math.PI*2);
             ctx.fill();
-            ctx.fillStyle = 'white';
-            ctx.font = `${Math.ceil(40*finalScale)}px Arial`;
-            ctx.fillText(this.type.id[0].toUpperCase(), -10, 15);
         }
         ctx.restore();
     }
@@ -366,31 +364,27 @@ class Decor extends Prop {
         this.prefix = t.prefix;
         this.baseScale = t.scale;
         
-        // Рандомизация размера, чтобы лес был разным
-        this.sizeVar = 0.8 + Math.random() * 0.4;
+        // Рандомизация размера
+        this.sizeVar = 0.9 + Math.random() * 0.5;
     }
 
     update(dt) {
         super.update(dt);
         const pos = this.getScreenPos();
-        const size = 500 * pos.scale * this.baseScale * this.sizeVar;
+        // Увеличили базовый размер отрисовки (было 500 -> 600)
+        const size = 600 * pos.scale * this.baseScale * this.sizeVar;
         this.checkVisibility(pos.x, pos.y, size);
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
         
-        // Размер дерева
-        let size = 500 * pos.scale * this.baseScale * this.sizeVar;
+        // Размер объекта с учетом перспективы
+        let size = 600 * pos.scale * this.baseScale * this.sizeVar;
         
-        if (pos.scale < 0.01) return;
-
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
-            // === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ===
-            // Рисуем картинку так, чтобы её НИЗ (ноги) стоял на точке Y.
-            // (pos.x - size/2) = центрируем по горизонтали
-            // (pos.y - size) = поднимаем картинку на её высоту вверх, чтобы низ касался земли
+            // Рисуем так, чтобы (pos.x, pos.y) были НИЗОМ объекта (корни на земле)
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
             ctx.fillStyle = '#1B5E20';
@@ -612,8 +606,9 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    // Спавн декора (одиночный, но частый)
-    if (gameState.decorTimer > 40) { // Чуть реже, но регулярно
+    // Спавн декора: УМЕНЬШИЛ ВРЕМЯ до 15ms (было 40)
+    // Это сделает лес намного гуще
+    if (gameState.decorTimer > 15) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
