@@ -1,1674 +1,664 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Эко-Экспресс — Попутчик</title>
-  <style>
-    :root{
-      --bg1:#0f1b2d;
-      --card: rgba(255,255,255,.12);
-      --card2: rgba(255,255,255,.16);
-      --text: rgba(255,255,255,.92);
-      --muted: rgba(255,255,255,.72);
-      --good: rgba(105, 255, 190, .95);
-      --warn: rgba(255, 210, 120, .95);
-      --bad: rgba(255, 110, 110, .95);
-      --shadow: 0 16px 50px rgba(0,0,0,.35);
-      --radius: 22px;
-      --radius2: 18px;
-    }
-    html,body{height:100%; margin:0; background: radial-gradient(1200px 900px at 30% 15%, #1f3b66 0%, #0f1b2d 55%, #07101f 100%); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;}
-    #app{position:fixed; inset:0; display:flex; flex-direction:column; padding:12px; gap:10px; box-sizing:border-box;}
-    .topbar{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:10px 12px; border-radius: var(--radius); background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
-      box-shadow: var(--shadow); backdrop-filter: blur(10px);
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px; min-width: 200px;
-    }
-    .logo{
-      width:38px; height:38px; border-radius: 14px;
-      background: linear-gradient(135deg, rgba(105,255,190,.9), rgba(120,200,255,.9));
-      box-shadow: 0 10px 26px rgba(0,0,0,.25);
-      position:relative;
-      overflow:hidden;
-    }
-    .logo:before{
-      content:""; position:absolute; inset:-10px;
-      background: radial-gradient(18px 18px at 35% 35%, rgba(255,255,255,.95), transparent 55%),
-                  radial-gradient(22px 22px at 70% 70%, rgba(255,255,255,.55), transparent 60%);
-      opacity:.9;
-    }
-    .title{
-      display:flex; flex-direction:column; line-height:1.05;
-    }
-    .title b{font-size: 15px; letter-spacing:.2px}
-    .title span{font-size: 12px; color:var(--muted)}
-    .stats{
-      display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
-    }
-    .pill{
-      display:flex; align-items:center; gap:8px;
-      padding:8px 10px; border-radius: 999px; background: rgba(255,255,255,.10);
-      border: 1px solid rgba(255,255,255,.10);
-      box-shadow: 0 10px 24px rgba(0,0,0,.18);
-      font-size:12px; color:var(--muted);
-      user-select:none;
-      white-space:nowrap;
-    }
-    .dot{width:9px; height:9px; border-radius:999px; background: rgba(255,255,255,.5)}
-    .dot.good{background: var(--good)}
-    .dot.warn{background: var(--warn)}
-    .dot.bad{background: var(--bad)}
-    .btn{
-      cursor:pointer;
-      padding:9px 12px; border-radius: 999px;
-      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
-      border:1px solid rgba(255,255,255,.14);
-      color: var(--text);
-      box-shadow: 0 14px 34px rgba(0,0,0,.22);
-      font-size:12px;
-      user-select:none;
-      transition: transform .12s ease, filter .12s ease;
-    }
-    .btn:hover{filter:brightness(1.05)}
-    .btn:active{transform: translateY(1px) scale(.99)}
-    .main{
-      position:relative;
-      flex:1;
-      border-radius: var(--radius);
-      overflow:hidden;
-      box-shadow: var(--shadow);
-      background: rgba(255,255,255,.06);
-    }
-    canvas{position:absolute; inset:0; width:100%; height:100%;}
-    .hud{
-      position:absolute; left:10px; right:10px; top:10px;
-      display:flex; justify-content:space-between; gap:10px; pointer-events:none;
-    }
-    .card{
-      pointer-events:none;
-      max-width:min(560px, 92vw);
-      padding:12px 14px;
-      border-radius: var(--radius2);
-      background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
-      border: 1px solid rgba(255,255,255,.12);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 14px 34px rgba(0,0,0,.25);
-    }
-    .card h3{margin:0 0 4px 0; font-size:13px; letter-spacing:.2px}
-    .card p{margin:0; font-size:12px; color: var(--muted)}
-    .rightstack{display:flex; flex-direction:column; gap:8px; align-items:flex-end}
-    .hint{
-      pointer-events:none;
-      padding:10px 12px;
-      border-radius: 999px;
-      background: rgba(0,0,0,.22);
-      border:1px solid rgba(255,255,255,.10);
-      color: rgba(255,255,255,.90);
-      font-size:12px;
-      max-width:min(520px, 88vw);
-      backdrop-filter: blur(8px);
-      box-shadow: 0 12px 30px rgba(0,0,0,.22);
-    }
-    .toast{
-      position:absolute; left:50%; transform: translateX(-50%);
-      bottom:14px;
-      padding:10px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.12);
-      border:1px solid rgba(255,255,255,.14);
-      color: rgba(255,255,255,.92);
-      font-size:12px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 16px 40px rgba(0,0,0,.26);
-      opacity:0;
-      transition: opacity .35s ease, transform .35s ease;
-      pointer-events:none;
-      white-space:nowrap;
-      max-width: 92vw;
-      overflow:hidden;
-      text-overflow: ellipsis;
-    }
-    .toast.show{opacity:1; transform: translateX(-50%) translateY(-2px);}
-    .overlay{
-      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-      background: radial-gradient(900px 700px at 50% 30%, rgba(255,255,255,.10), rgba(0,0,0,.55));
-      backdrop-filter: blur(10px);
-      padding:18px;
-    }
-    .modal{
-      width:min(720px, 94vw);
-      border-radius: 28px;
-      background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.08));
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow: 0 30px 80px rgba(0,0,0,.45);
-      overflow:hidden;
-    }
-    .modalHeader{
-      padding:16px 16px 12px 16px;
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      background: linear-gradient(90deg, rgba(105,255,190,.18), rgba(120,200,255,.12));
-      border-bottom:1px solid rgba(255,255,255,.12);
-    }
-    .modalHeader b{font-size:14px}
-    .modalBody{padding:14px 16px 16px 16px; color: rgba(255,255,255,.88); }
-    .grid{
-      display:grid; gap:10px; grid-template-columns: 1fr 1fr;
-    }
-    .tile{
-      padding:12px 12px;
-      border-radius: 18px;
-      background: rgba(255,255,255,.10);
-      border:1px solid rgba(255,255,255,.10);
-    }
-    .tile b{display:block; font-size:12.5px; margin-bottom:4px}
-    .tile span{font-size:12px; color: var(--muted)}
-    .modalActions{
-      display:flex; gap:10px; justify-content:flex-end;
-      padding:12px 16px 16px 16px;
-    }
-    @media (max-width: 720px){
-      .grid{grid-template-columns: 1fr}
-      .brand{min-width: unset}
-      .stats{gap:6px}
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Эко-Тропа: Сортировка</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #333;
+            touch-action: none; /* Отключаем зум и скролл на тачах */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hud {
+            padding: 15px;
+            color: white;
+            text-shadow: 2px 2px 2px black;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        #start-screen, #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 10;
+            pointer-events: auto;
+        }
+        .btn {
+            background: #4CAF50;
+            border: none;
+            padding: 15px 40px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            border-radius: 10px;
+            margin-top: 20px;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+        h1 { font-size: 48px; margin-bottom: 10px; text-align: center; }
+        .hidden { display: none !important; }
+    </style>
 </head>
 <body>
-<div id="app">
-  <div class="topbar">
-    <div class="brand">
-      <div class="logo" aria-hidden="true"></div>
-      <div class="title">
-        <b>Эко-Экспресс</b>
-        <span>путешествие по России • офлайн • для «Попутчика»</span>
-      </div>
-    </div>
-    <div class="stats">
-      <div class="pill" title="Экологическое состояние">
-        <div id="dotEco" class="dot warn"></div>
-        <span id="ecoLabel">Экология: 50%</span>
-      </div>
-      <div class="pill" title="Пройденная зона">
-        <div class="dot"></div>
-        <span id="zoneLabel">Зона: Лес</span>
-      </div>
-      <div class="pill" title="Подсказка управления">
-        <span id="ctrlLabel">Тап/перетаскивание</span>
-      </div>
-      <div class="btn" id="btnHelp">Правила</div>
-      <div class="btn" id="btnReset">Заново</div>
-    </div>
-  </div>
 
-  <div class="main" id="main">
-    <canvas id="c"></canvas>
-
-    <div class="hud">
-      <div class="card">
-        <h3 id="missionTitle">Зона «Лес»</h3>
-        <p id="missionText">Сортируй отходы и устраняй проблемы на маршруте — мир станет ярче и чище.</p>
-      </div>
-      <div class="rightstack">
-        <div class="hint" id="hintBox">Подсказка: перетащи предмет в правильный контейнер (♻)</div>
-      </div>
-    </div>
-
-    <div class="toast" id="toast"></div>
-
-    <div class="overlay" id="overlay" style="display:none;">
-      <div class="modal">
-        <div class="modalHeader">
-          <b>Эко-Экспресс — как играть</b>
-          <div class="btn" id="btnClose">Закрыть</div>
+    <div id="ui-layer">
+        <div class="hud">
+            <span id="score-el">Очки: 0</span>
+            <span id="lives-el">Жизни: 5</span>
         </div>
-        <div class="modalBody">
-          <div class="grid">
-            <div class="tile">
-              <b>♻ Сортировка</b>
-              <span>Появляются предметы — перетаскивай их в контейнеры: Пластик, Бумага, Металл, Органика.</span>
-            </div>
-            <div class="tile">
-              <b>🌿 Экособытия</b>
-              <span>На фоне возникают проблемы (дым, грязная река, вырубка). Тапни/кликни по значку и выбери решение.</span>
-            </div>
-            <div class="tile">
-              <b>🌈 Красота мира</b>
-              <span>Чем выше «Экология», тем ярче небо, чище вода, больше птиц и зелени.</span>
-            </div>
-            <div class="tile">
-              <b>📱 Любое устройство</b>
-              <span>Игра сама подстраивается под вертикальный и горизонтальный экран. Без интернета, без тяжёлых библиотек.</span>
-            </div>
-          </div>
-          <p style="margin:12px 0 0 0; font-size:12px; color: var(--muted);">
-            Подсказка: если не хочется “торопиться” — просто играй в своём темпе. Рейтинга нет 😊
-          </p>
-        </div>
-        <div class="modalActions">
-          <div class="btn" id="btnStart">Поехали!</div>
-        </div>
-      </div>
     </div>
-  </div>
-</div>
+
+    <div id="start-screen">
+        <h1>Эко-Тропа</h1>
+        <p>Сортируй мусор, спасай лес!</p>
+        <button class="btn" id="start-btn">Начать путь</button>
+    </div>
+
+    <div id="game-over-screen" class="hidden">
+        <h1>Игра окончена</h1>
+        <p id="final-score">Твой счет: 0</p>
+        <button class="btn" id="restart-btn">Попробовать снова</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
 
 <script>
-(() => {
-  // =============================
-  // Utility
-  // =============================
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
-  const now = () => performance.now();
+/**
+ * КОНФИГУРАЦИЯ И РЕСУРСЫ
+ */
+const ASSETS_PATH = 'img/';
+const TYPES = {
+    ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
+    PAPER:   { id: 'paper',   color: '#2196F3', binImg: 'bin_paper.png',   prefix: 'trash_newspaper' },
+    PLASTIC: { id: 'plastic', color: '#FF9800', binImg: 'bin_plastic.png', prefix: 'trash_bottle' },
+    METAL:   { id: 'metal',   color: '#9E9E9E', binImg: 'bin_met.png',     prefix: 'trash_can' },
+    GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
+};
 
-  // =============================
-  // Canvas setup
-  // =============================
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d', { alpha: true });
+const DECOR_TYPES = [
+    { prefix: 'tree', count: 5 },
+    { prefix: 'bush', count: 5 },
+    { prefix: 'flower', count: 5 }
+];
 
-  const main = document.getElementById('main');
+/**
+ * АУДИО СИСТЕМА (Web Audio API)
+ * Генерирует звуки без внешних файлов
+ */
+const AudioSys = {
+    ctx: null,
+    init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    },
+    playTone(freq, type, duration) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    },
+    playSuccess() { this.playTone(600, 'sine', 0.2); setTimeout(() => this.playTone(900, 'sine', 0.4), 100); },
+    playError() { this.playTone(150, 'sawtooth', 0.4); },
+    playPop() { this.playTone(400, 'triangle', 0.1); }
+};
 
-  const ui = {
-    ecoLabel: document.getElementById('ecoLabel'),
-    dotEco: document.getElementById('dotEco'),
-    zoneLabel: document.getElementById('zoneLabel'),
-    ctrlLabel: document.getElementById('ctrlLabel'),
-    missionTitle: document.getElementById('missionTitle'),
-    missionText: document.getElementById('missionText'),
-    hintBox: document.getElementById('hintBox'),
-    toast: document.getElementById('toast'),
-    overlay: document.getElementById('overlay')
-  };
+/**
+ * МЕНЕДЖЕР РЕСУРСОВ
+ * Загружает картинки и создает заглушки при ошибках
+ */
+const Loader = {
+    images: {},
+    loadImg(key, src) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                this.images[key] = { img: img, loaded: true };
+                resolve();
+            };
+            img.onerror = () => {
+                // Если картинки нет, помечаем как false, будем рисовать заглушку
+                this.images[key] = { img: null, loaded: false };
+                resolve();
+            };
+        });
+    },
+    async init() {
+        const promises = [];
+        // Фон
+        promises.push(this.loadImg('bg', ASSETS_PATH + 'bg_forest.png')); // Попробуй .jpg если png нет
+        
+        // Баки
+        for (let key in TYPES) {
+            promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
+        }
+        
+        // Мусор (1-5)
+        for (let key in TYPES) {
+            for (let i = 1; i <= 5; i++) {
+                promises.push(this.loadImg(`${TYPES[key].prefix}${i}`, `${ASSETS_PATH}${TYPES[key].prefix}${i}.png`));
+            }
+        }
 
-  const btnHelp = document.getElementById('btnHelp');
-  const btnReset = document.getElementById('btnReset');
-  const btnClose = document.getElementById('btnClose');
-  const btnStart = document.getElementById('btnStart');
+        // Декор (1-5)
+        DECOR_TYPES.forEach(d => {
+            for (let i = 1; i <= 5; i++) {
+                promises.push(this.loadImg(`${d.prefix}${i}`, `${ASSETS_PATH}${d.prefix}${i}.png`));
+            }
+        });
 
-  // =============================
-  // Game data
-  // =============================
-  const ZONES = [
-    { name: "Лес",     tip: "Сортируй отходы и сажай деревья — лес станет гуще.", bg: { hills: 0.85, city: 0.05, water: 0.20 } },
-    { name: "Река",    tip: "Очищай воду и береги берега — появятся рыбы и блеск воды.", bg: { hills: 0.60, city: 0.08, water: 0.75 } },
-    { name: "Город",   tip: "Снижая дым и улучшая транспорт, ты очищаешь воздух.", bg: { hills: 0.25, city: 0.85, water: 0.25 } },
-    { name: "Степь",   tip: "Береги травы и животных — степь зацветёт.", bg: { hills: 0.35, city: 0.10, water: 0.15 } },
-    { name: "Горы",    tip: "Чистая энергия и порядок на тропах — горы станут ярче.", bg: { hills: 1.00, city: 0.05, water: 0.35 } }
-  ];
+        await Promise.all(promises);
+    },
+    get(key) { return this.images[key]; }
+};
 
-  const TRASH_TYPES = [
-    { id:"plastic", label:"Пластик", icon:"🧴", color:"#6fe0ff" },
-    { id:"paper",   label:"Бумага",  icon:"📰", color:"#ffe08a" },
-    { id:"metal",   label:"Металл",  icon:"🥫", color:"#cdd7ff" },
-    { id:"organic", label:"Органика",icon:"🍌", color:"#90ffb0" }
-  ];
+/**
+ * ИГРОВАЯ ЛОГИКА
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let width, height, cx, cy;
 
-  const TRASH_ITEMS = [
-    { type:"plastic", name:"Бутылка" },
-    { type:"plastic", name:"Пакет" },
-    { type:"paper",   name:"Газета" },
-    { type:"paper",   name:"Картон" },
-    { type:"metal",   name:"Банка" },
-    { type:"metal",   name:"Фольга" },
-    { type:"organic", name:"Очистки" },
-    { type:"organic", name:"Огрызок" },
-  ];
-
-  const EVENTS = [
-    { id:"smoke",   title:"Дым над маршрутом", desc:"Снизим выбросы: фильтры и чистая энергия.", fixes:[
-      { label:"Поставить фильтры", eco:+9,  msg:"Фильтры установлены — воздух чище." },
-      { label:"Перейти на солнце", eco:+12, msg:"Солнечная энергия — меньше дыма." },
-      { label:"Проверить техосмотр", eco:+8, msg:"Техника исправна — выбросов меньше." },
-    ]},
-    { id:"river",   title:"Грязная река", desc:"Очистим воду и берега — вернём прозрачность.", fixes:[
-      { label:"Собрать мусор", eco:+10, msg:"Мусор убран — вода чище." },
-      { label:"Фильтрация стоков", eco:+12, msg:"Фильтрация работает — река оживает." },
-      { label:"Уборка берега", eco:+8, msg:"Берег чистый — природе легче." },
-    ]},
-    { id:"cut",     title:"Вырубка леса", desc:"Поддержим лес: посадка и бережное использование.", fixes:[
-      { label:"Посадить деревья", eco:+12, msg:"Саженцы прижились — лес вернулся." },
-      { label:"Охрана леса", eco:+9, msg:"Патруль — меньше незаконных рубок." },
-      { label:"Эко-просвещение", eco:+8, msg:"Люди бережнее относятся к лесу." },
-    ]},
-    { id:"litter",  title:"Свалка у путей", desc:"Сортировка и вывоз — чтобы не разлеталось по ветру.", fixes:[
-      { label:"Сортировать", eco:+10, msg:"Отходы рассортированы — меньше на полигон." },
-      { label:"Вывезти на переработку", eco:+12, msg:"Переработка приняла отходы." },
-      { label:"Поставить урны", eco:+8, msg:"Урны появились — мусора меньше." },
-    ]},
-  ];
-
-  // =============================
-  // State
-  // =============================
-  const state = {
-    w: 0, h: 0, dpr: 1,
-    t0: now(),
-    time: 0,
-    running: true,
-    eco: 50,         // 0..100
-    zoneIndex: 0,
-    zoneProgress: 0, // seconds inside zone
-    zoneDuration: 75, // seconds each zone (soft; events shorten it)
-    speed: 110,      // px/s parallax base
-    skyPulse: 0,
-    toastUntil: 0,
-    hintUntil: 0,
-    mode: "travel", // travel | sorting | fixing | zoneTransition | finished
-    // Sorting mini-game
-    trash: [],
+// Состояние игры
+let gameState = {
+    score: 0,
+    lives: 5,
+    speed: 1, // Множитель скорости
+    isRunning: false,
     bins: [],
-    draggingId: null,
-    dragOffset: {x:0,y:0},
-    // Active eco event icon
-    activeEvent: null, // {x,y,r,eventId,spawnAt}
-    eventModal: null,  // {event, optionsRects}
-    // VFX particles (subtle)
+    trash: [],
+    decor: [],
     particles: [],
-  };
+    lastTime: 0,
+    spawnTimer: 0,
+    decorTimer: 0
+};
 
-  // =============================
-  // Responsive resize
-  // =============================
-  function resize(){
-    const rect = main.getBoundingClientRect();
-    state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    state.w = Math.floor(rect.width);
-    state.h = Math.floor(rect.height);
-    canvas.width  = Math.floor(state.w * state.dpr);
-    canvas.height = Math.floor(state.h * state.dpr);
-    canvas.style.width = state.w + "px";
-    canvas.style.height = state.h + "px";
-    ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
+// --- Классы ---
 
-    ui.ctrlLabel.textContent = ("ontouchstart" in window) ? "Тап/перетаскивание" : "Клик/перетаскивание";
-
-    layoutBins();
-  }
-
-  window.addEventListener('resize', resize, { passive:true });
-
-  // =============================
-  // UI helpers
-  // =============================
-  function setToast(text){
-    ui.toast.textContent = text;
-    ui.toast.classList.add('show');
-    state.toastUntil = state.time + 2.4;
-  }
-  function setHint(text){
-    ui.hintBox.textContent = text;
-    state.hintUntil = state.time + 4.0;
-  }
-  function updateEcoUI(){
-    const e = Math.round(state.eco);
-    ui.ecoLabel.textContent = `Экология: ${e}%`;
-    ui.dotEco.classList.remove('good','warn','bad');
-    if (e >= 75) ui.dotEco.classList.add('good');
-    else if (e >= 45) ui.dotEco.classList.add('warn');
-    else ui.dotEco.classList.add('bad');
-  }
-  function updateZoneUI(){
-    const z = ZONES[state.zoneIndex];
-    ui.zoneLabel.textContent = `Зона: ${z.name}`;
-    ui.missionTitle.textContent = `Зона «${z.name}»`;
-    ui.missionText.textContent = z.tip;
-  }
-
-  // =============================
-  // Color transform by eco
-  // =============================
-  function ecoTint(){
-    // 0..100 -> 0..1
-    const t = clamp(state.eco / 100, 0, 1);
-    // world saturation & brightness
-    return {
-      t,
-      haze: lerp(0.55, 0.12, t),   // gray overlay
-      sky:  lerp(0.35, 0.95, t),
-      grass:lerp(0.35, 0.95, t),
-      water:lerp(0.30, 0.92, t),
-    };
-  }
-
-  // =============================
-  // Background drawing (parallax)
-  // =============================
-  function drawBackground(dt){
-    const {w,h} = state;
-    const z = ZONES[state.zoneIndex];
-    const tint = ecoTint();
-
-    // Sky gradient
-    const g = ctx.createLinearGradient(0,0,0,h);
-    const skyTop = `rgba(${Math.round(40* tint.sky)}, ${Math.round(90* tint.sky)}, ${Math.round(160* tint.sky)}, 1)`;
-    const skyMid = `rgba(${Math.round(40* tint.sky)}, ${Math.round(120* tint.sky)}, ${Math.round(190* tint.sky)}, 1)`;
-    g.addColorStop(0, skyTop);
-    g.addColorStop(0.55, skyMid);
-    g.addColorStop(1, `rgba(15,27,45,1)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,w,h);
-
-    // Subtle sun glow
-    const sunX = w*0.78, sunY = h*0.16;
-    ctx.globalAlpha = 0.20 + 0.25*tint.t;
-    const sg = ctx.createRadialGradient(sunX,sunY, 0, sunX,sunY, Math.min(w,h)*0.35);
-    sg.addColorStop(0, "rgba(255,255,255,0.9)");
-    sg.addColorStop(0.35, "rgba(255,240,180,0.35)");
-    sg.addColorStop(1, "rgba(255,240,180,0)");
-    ctx.fillStyle = sg;
-    ctx.beginPath();
-    ctx.arc(sunX,sunY, Math.min(w,h)*0.35, 0, Math.PI*2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // Moving clouds
-    const cloudY = h*0.18;
-    const cloudSpeed = state.speed * 0.15;
-    const cloudOffset = (state.time*cloudSpeed) % (w*1.3);
-    drawCloud(w - cloudOffset, cloudY, 1.0, tint.t);
-    drawCloud(w*0.55 - cloudOffset*0.7, cloudY*1.25, 0.8, tint.t);
-    drawCloud(w*1.15 - cloudOffset*1.05, cloudY*0.8, 0.9, tint.t);
-
-    // Far hills
-    const farSpeed = state.speed*0.25;
-    const farOff = (state.time*farSpeed) % (w*1.6);
-    drawHills(-farOff, h*0.60, h*0.18, `rgba(20,70,90,${0.55 + 0.25*tint.t})`);
-    drawHills(w*1.6 - farOff, h*0.60, h*0.18, `rgba(20,70,90,${0.55 + 0.25*tint.t})`);
-
-    // Mid hills/mountains
-    const midSpeed = state.speed*0.45;
-    const midOff = (state.time*midSpeed) % (w*1.4);
-    const hillAlpha = 0.65 + 0.25*tint.t;
-    drawMountains(-midOff, h*0.70, h*0.28*z.bg.hills, `rgba(30,95,80,${hillAlpha})`, `rgba(250,250,255,${0.10 + 0.18*tint.t})`);
-    drawMountains(w*1.4 - midOff, h*0.70, h*0.28*z.bg.hills, `rgba(30,95,80,${hillAlpha})`, `rgba(250,250,255,${0.10 + 0.18*tint.t})`);
-
-    // City silhouettes (for city zone)
-    if (z.bg.city > 0.2){
-      const citySpeed = state.speed*0.55;
-      const cityOff = (state.time*citySpeed) % (w*1.2);
-      drawCity(-cityOff, h*0.74, z.bg.city, tint.t);
-      drawCity(w*1.2 - cityOff, h*0.74, z.bg.city, tint.t);
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 10;
+        this.vy = (Math.random() - 0.5) * 10;
+        this.life = 1.0;
+        this.color = color;
     }
-
-    // Water band (for river/mountains)
-    if (z.bg.water > 0.25){
-      drawRiver(h*0.78, z.bg.water, tint.t);
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.05;
     }
-
-    // Foreground ground
-    const groundY = h*0.80;
-    const fg = ctx.createLinearGradient(0,groundY,0,h);
-    const g1 = `rgba(${Math.round(20 + 40*tint.grass)}, ${Math.round(60 + 80*tint.grass)}, ${Math.round(35 + 55*tint.grass)}, 1)`;
-    const g2 = `rgba(${Math.round(10 + 30*tint.grass)}, ${Math.round(30 + 55*tint.grass)}, ${Math.round(20 + 35*tint.grass)}, 1)`;
-    fg.addColorStop(0, g1);
-    fg.addColorStop(1, g2);
-    ctx.fillStyle = fg;
-    ctx.fillRect(0, groundY, w, h-groundY);
-
-    // Grass strokes (parallax)
-    const grassSpeed = state.speed*0.9;
-    const grassOff = (state.time*grassSpeed) % 120;
-    ctx.globalAlpha = 0.18 + 0.20*tint.t;
-    for (let x=-grassOff; x<w+120; x+=120){
-      drawGrassCluster(x, groundY + 6, 1.0, tint.t);
-    }
-    ctx.globalAlpha = 1;
-
-    // Haze overlay (pollution)
-    ctx.globalAlpha = tint.haze;
-    const haze = ctx.createLinearGradient(0,0,0,h);
-    haze.addColorStop(0,"rgba(190,200,210,0.22)");
-    haze.addColorStop(0.6,"rgba(140,150,160,0.18)");
-    haze.addColorStop(1,"rgba(80,90,100,0.12)");
-    ctx.fillStyle = haze;
-    ctx.fillRect(0,0,w,h);
-    ctx.globalAlpha = 1;
-
-    // Birds appear with eco
-    drawBirds(tint.t);
-
-    // Light particles (pollen) with eco
-    spawnParticles(dt, tint.t);
-    drawParticles(dt);
-  }
-
-  function drawCloud(x,y,scale, ecoT){
-    const a = 0.16 + 0.20*ecoT;
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.scale(scale,scale);
-    ctx.fillStyle = `rgba(255,255,255,${a})`;
-    roundBlob(0,0, 84, 30);
-    roundBlob(-36, 10, 62, 24);
-    roundBlob(42, 14, 54, 22);
-    ctx.restore();
-
-    function roundBlob(cx,cy, w,h){
-      ctx.beginPath();
-      ctx.ellipse(cx,cy, w/2,h/2, 0, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-
-  function drawHills(x, y, amp, color){
-    ctx.save();
-    ctx.translate(x,0);
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(-40, y+amp);
-    const w = state.w*1.6 + 80;
-    for (let i=0; i<=12; i++){
-      const px = (w/12)*i;
-      const py = y + Math.sin((i*0.7) + state.time*0.15)*amp;
-      ctx.quadraticCurveTo(px - w/24, py, px, py);
-    }
-    ctx.lineTo(w+40, state.h);
-    ctx.lineTo(-40, state.h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawMountains(x, baseY, height, color, snowColor){
-    ctx.save();
-    ctx.translate(x,0);
-    ctx.fillStyle = color;
-
-    const w = state.w*1.4 + 80;
-    const peaks = 6;
-    for (let i=0; i<peaks; i++){
-      const px = (w/(peaks-1))*i;
-      const py = baseY - height*(0.6 + 0.5*Math.sin(i*1.2 + 0.5));
-      const left = px - w/peaks*0.55;
-      const right = px + w/peaks*0.55;
-
-      ctx.beginPath();
-      ctx.moveTo(left, baseY+20);
-      ctx.lineTo(px, py);
-      ctx.lineTo(right, baseY+20);
-      ctx.closePath();
-      ctx.fill();
-
-      // Snow cap
-      ctx.fillStyle = snowColor;
-      ctx.beginPath();
-      ctx.moveTo(px - (right-left)*0.16, py + height*0.10);
-      ctx.lineTo(px, py);
-      ctx.lineTo(px + (right-left)*0.16, py + height*0.10);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = color;
-    }
-
-    ctx.restore();
-  }
-
-  function drawCity(x, baseY, intensity, ecoT){
-    ctx.save();
-    ctx.translate(x,0);
-    const a = 0.22 + 0.25*intensity;
-    const smoke = 1 - ecoT; // more smoke when low eco
-    ctx.fillStyle = `rgba(20,30,45,${a})`;
-    const w = state.w*1.2 + 80;
-
-    // Buildings
-    for (let i=0; i<18; i++){
-      const bw = 24 + (i%5)*12;
-      const bh = (40 + (i%7)*18) * (0.6 + 0.6*intensity);
-      const bx = (w/18)*i;
-      const by = baseY - bh;
-      roundedRect(bx, by, bw, bh, 6);
-      ctx.fill();
-
-      // Windows (more when eco high)
-      ctx.fillStyle = `rgba(255,225,160,${0.06 + 0.10*ecoT})`;
-      for (let r=0; r<4; r++){
-        for (let c=0; c<2; c++){
-          ctx.fillRect(bx+6+c*10, by+8+r*14, 5, 7);
-        }
-      }
-      ctx.fillStyle = `rgba(20,30,45,${a})`;
-    }
-
-    // Smoke stacks
-    if (intensity > 0.4){
-      const sa = 0.10 + 0.25*smoke;
-      ctx.fillStyle = `rgba(180,190,200,${sa})`;
-      for (let i=0; i<4; i++){
-        const sx = w*(0.15 + i*0.2);
-        const sy = baseY - 90 - i*6;
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
         ctx.beginPath();
-        ctx.ellipse(sx, sy, 40, 18, 0, 0, Math.PI*2);
+        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
         ctx.fill();
-      }
+        ctx.globalAlpha = 1;
+    }
+}
+
+class Bin {
+    constructor(typeObj, index, total) {
+        this.type = typeObj;
+        // Распределяем баки по ширине
+        const margin = 20;
+        const availableW = width - (margin * 2);
+        const binW = availableW / total;
+        
+        this.w = Math.min(80, binW - 10);
+        this.h = this.w * 1.2;
+        this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
+        this.y = 20;
+        this.scale = 1;
     }
 
-    ctx.restore();
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-  }
-
-  function drawRiver(y, intensity, ecoT){
-    const {w,h} = state;
-    const a = 0.12 + 0.14*intensity;
-    const sparkle = 0.05 + 0.16*ecoT;
-    ctx.save();
-    // River body
-    ctx.globalAlpha = 1;
-    const rg = ctx.createLinearGradient(0,y,0,h);
-    rg.addColorStop(0, `rgba(90,170,210,${a + 0.12*ecoT})`);
-    rg.addColorStop(1, `rgba(20,70,110,${a + 0.10*ecoT})`);
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.bezierCurveTo(w*0.20, y+30, w*0.45, y-10, w*0.62, y+25);
-    ctx.bezierCurveTo(w*0.78, y+60, w*0.95, y+20, w, y+45);
-    ctx.lineTo(w,h);
-    ctx.lineTo(0,h);
-    ctx.closePath();
-    ctx.fill();
-
-    // Sparkles
-    ctx.globalAlpha = sparkle;
-    for (let i=0; i<18; i++){
-      const sx = (w/18)*i + (Math.sin(state.time*0.7+i)*10);
-      const sy = y + 20 + (i%5)*10 + (Math.sin(state.time*1.3+i*0.8)*6);
-      ctx.fillStyle = "rgba(255,255,255,1)";
-      ctx.beginPath();
-      ctx.ellipse(sx, sy, 12, 2.2, -0.2, 0, Math.PI*2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function drawGrassCluster(x,y,scale, ecoT){
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.scale(scale,scale);
-    ctx.strokeStyle = `rgba(210,255,220,${0.12 + 0.15*ecoT})`;
-    ctx.lineWidth = 2;
-    for (let i=0;i<10;i++){
-      ctx.beginPath();
-      const bx = i*9;
-      ctx.moveTo(bx, 42);
-      ctx.quadraticCurveTo(bx+2, 25 - i*0.8, bx+5, 8 + (i%3)*2);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function drawBirds(ecoT){
-    if (ecoT < 0.55) return;
-    const {w,h} = state;
-    const count = Math.floor(3 + ecoT*6);
-    ctx.save();
-    ctx.globalAlpha = 0.10 + 0.14*ecoT;
-    ctx.strokeStyle = "rgba(255,255,255,1)";
-    ctx.lineWidth = 2;
-    const t = state.time*0.35;
-    for (let i=0;i<count;i++){
-      const x = (w*(0.15 + i*0.12) + Math.sin(t+i)*70) % (w+60) - 30;
-      const y = h*(0.18 + (i%4)*0.05) + Math.cos(t*1.2+i)*10;
-      ctx.beginPath();
-      ctx.arc(x, y, 8, Math.PI*1.1, Math.PI*1.7);
-      ctx.arc(x+12, y, 8, Math.PI*1.3, Math.PI*1.9);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // =============================
-  // Particles
-  // =============================
-  function spawnParticles(dt, ecoT){
-    if (ecoT < 0.45) return;
-    const want = 10 + ecoT*18;
-    if (state.particles.length > 120) return;
-    if (Math.random() < (dt*want/60)){
-      state.particles.push({
-        x: Math.random()*state.w,
-        y: state.h*(0.35 + Math.random()*0.45),
-        r: 1.2 + Math.random()*2.2,
-        vx: 10 + Math.random()*18,
-        vy: -6 + Math.random()*12,
-        a: 0.05 + Math.random()*0.10,
-        life: 0,
-        max: 5 + Math.random()*5
-      });
-    }
-  }
-  function drawParticles(dt){
-    for (let i=state.particles.length-1;i>=0;i--){
-      const p = state.particles[i];
-      p.life += dt;
-      p.x += p.vx*dt;
-      p.y += p.vy*dt + Math.sin((state.time*1.2)+p.x*0.01)*0.15;
-      const alpha = p.a * (1 - p.life/p.max);
-      ctx.fillStyle = `rgba(255,255,255,${Math.max(0,alpha)})`;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-      ctx.fill();
-      if (p.life > p.max || p.x > state.w+30) state.particles.splice(i,1);
-    }
-  }
-
-  // =============================
-  // Train drawing
-  // =============================
-  function drawTrain(){
-    const {w,h} = state;
-    const groundY = h*0.80;
-    const trainY = groundY - 42;
-    const trainX = w*0.18;
-
-    // shadow
-    ctx.save();
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = "rgba(0,0,0,1)";
-    ctx.beginPath();
-    ctx.ellipse(trainX+90, groundY+10, 120, 16, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-
-    // car body
-    const ecoT = clamp(state.eco/100,0,1);
-    const body = ctx.createLinearGradient(trainX, trainY, trainX, trainY+70);
-    body.addColorStop(0, `rgba(${Math.round(80+60*ecoT)}, ${Math.round(140+80*ecoT)}, ${Math.round(160+70*ecoT)}, 1)`);
-    body.addColorStop(1, `rgba(${Math.round(30+40*ecoT)}, ${Math.round(70+50*ecoT)}, ${Math.round(95+40*ecoT)}, 1)`);
-
-    ctx.fillStyle = body;
-    roundedRect(trainX, trainY, 260, 72, 20);
-    ctx.fill();
-
-    // stripe
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = `rgba(255,255,255,${0.25 + 0.25*ecoT})`;
-    roundedRect(trainX+12, trainY+22, 236, 12, 10);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // windows
-    ctx.fillStyle = `rgba(210,245,255,${0.55 + 0.25*ecoT})`;
-    for (let i=0;i<5;i++){
-      roundedRect(trainX+32+i*44, trainY+14, 30, 18, 8);
-      ctx.fill();
+    checkHit(x, y) {
+        return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h;
     }
 
-    // door
-    ctx.fillStyle = `rgba(255,255,255,${0.18 + 0.20*ecoT})`;
-    roundedRect(trainX+224, trainY+12, 22, 52, 10);
-    ctx.fill();
-
-    // head + light
-    ctx.fillStyle = `rgba(255,255,255,${0.10})`;
-    roundedRect(trainX-24, trainY+14, 36, 46, 18);
-    ctx.fill();
-    const lightA = 0.10 + 0.18*ecoT;
-    const lg = ctx.createRadialGradient(trainX-8, trainY+36, 0, trainX-8, trainY+36, 70);
-    lg.addColorStop(0, `rgba(255,240,200,${lightA})`);
-    lg.addColorStop(1, "rgba(255,240,200,0)");
-    ctx.fillStyle = lg;
-    ctx.beginPath();
-    ctx.arc(trainX-8, trainY+36, 70, 0, Math.PI*2);
-    ctx.fill();
-
-    // wheels
-    const wheelY = trainY+74;
-    for (let i=0;i<3;i++){
-      const wx = trainX+70+i*70;
-      drawWheel(wx, wheelY, 16, ecoT);
-    }
-
-    // little leaf emblem
-    drawLeaf(trainX+18, trainY+50, 10, ecoT);
-
-    ctx.restore();
-
-    function drawWheel(x,y,r, ecoT){
-      ctx.save();
-      ctx.translate(x,y);
-      ctx.fillStyle = `rgba(20,25,35,0.9)`;
-      ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = `rgba(255,255,255,${0.15+0.15*ecoT})`;
-      ctx.beginPath(); ctx.arc(0,0,r*0.55,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle = `rgba(255,255,255,${0.10+0.18*ecoT})`;
-      ctx.lineWidth = 2;
-      const rot = state.time*4.2;
-      for (let i=0;i<5;i++){
-        const a = rot + i*(Math.PI*2/5);
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(a)*r*0.2, Math.sin(a)*r*0.2);
-        ctx.lineTo(Math.cos(a)*r*0.95, Math.sin(a)*r*0.95);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    function drawLeaf(x,y,s, ecoT){
-      ctx.save();
-      ctx.translate(x,y);
-      ctx.rotate(-0.4);
-      ctx.fillStyle = `rgba(120,255,190,${0.45+0.35*ecoT})`;
-      ctx.beginPath();
-      ctx.ellipse(0,0, s*1.1,s*0.7, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = `rgba(255,255,255,${0.18+0.22*ecoT})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-s*0.7,0);
-      ctx.quadraticCurveTo(0,-s*0.25, s*0.7,0);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-  }
-
-  // =============================
-  // Sorting mini-game
-  // =============================
-  function layoutBins(){
-    const {w,h} = state;
-    const portrait = h >= w;
-    const pad = 12;
-
-    state.bins = [];
-
-    const binCount = 4;
-    if (!portrait){
-      // horizontal: bins on the right
-      const bw = Math.min(230, w*0.25);
-      const bh = 64;
-      const startX = w - bw - pad;
-      const startY = h*0.35;
-      const gap = 12;
-
-      for (let i=0;i<binCount;i++){
-        state.bins.push({
-          type: TRASH_TYPES[i].id,
-          x: startX, y: startY + i*(bh+gap),
-          w: bw, h: bh,
-          icon: TRASH_TYPES[i].icon,
-          label: TRASH_TYPES[i].label,
-          color: TRASH_TYPES[i].color
-        });
-      }
-    } else {
-      // vertical: bins in a row at bottom
-      const bh = Math.min(78, h*0.12);
-      const bw = Math.floor((w - pad*2 - 10*3)/4);
-      const y = h - bh - pad;
-      for (let i=0;i<binCount;i++){
-        state.bins.push({
-          type: TRASH_TYPES[i].id,
-          x: pad + i*(bw+10),
-          y: y,
-          w: bw, h: bh,
-          icon: TRASH_TYPES[i].icon,
-          label: TRASH_TYPES[i].label,
-          color: TRASH_TYPES[i].color
-        });
-      }
-    }
-  }
-
-  function startSorting(){
-    state.mode = "sorting";
-    state.draggingId = null;
-    state.trash = [];
-    // Spawn 5 items
-    const {w,h} = state;
-    const portrait = h >= w;
-    const areaX = portrait ? w*0.08 : w*0.28;
-    const areaW = portrait ? w*0.84 : w*0.40;
-    const topY  = portrait ? h*0.22 : h*0.24;
-    for (let i=0;i<5;i++){
-      const item = TRASH_ITEMS[Math.floor(Math.random()*TRASH_ITEMS.length)];
-      state.trash.push({
-        id: "t"+Math.random().toString(16).slice(2),
-        type: item.type,
-        name: item.name,
-        x: areaX + Math.random()*areaW,
-        y: topY + i*46,
-        r: 22,
-        vx: 0, vy: 0,
-        wob: Math.random()*10,
-        done: false
-      });
-    }
-    setHint("♻ Перетащи предмет в правильный контейнер.");
-    setToast("Сортировка в вагоне");
-  }
-
-  function drawBins(){
-    for (const b of state.bins){
-      ctx.save();
-      ctx.globalAlpha = 0.95;
-      // background
-      const bg = ctx.createLinearGradient(b.x, b.y, b.x, b.y+b.h);
-      bg.addColorStop(0, "rgba(255,255,255,0.18)");
-      bg.addColorStop(1, "rgba(255,255,255,0.08)");
-      ctx.fillStyle = bg;
-      roundedRect(b.x, b.y, b.w, b.h, 18);
-      ctx.fill();
-
-      // border glow
-      ctx.strokeStyle = "rgba(255,255,255,0.14)";
-      ctx.lineWidth = 1.2;
-      roundedRect(b.x, b.y, b.w, b.h, 18);
-      ctx.stroke();
-
-      // color tag
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = b.color + "cc";
-      roundedRect(b.x+10, b.y+10, 10, b.h-20, 8);
-      ctx.fill();
-
-      // icon & label
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.font = "20px system-ui, -apple-system, Segoe UI";
-      ctx.fillText(b.icon, b.x+28, b.y+36);
-      ctx.font = "12px system-ui, -apple-system, Segoe UI";
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.fillText(b.label, b.x+56, b.y+28);
-      ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.fillText("контейнер", b.x+56, b.y+46);
-
-      ctx.restore();
-    }
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-  }
-
-  function drawTrash(dt){
-    // Soft float
-    for (const t of state.trash){
-      if (t.done) continue;
-      t.y += Math.sin(state.time*1.2 + t.wob)*0.15;
-    }
-
-    for (const t of state.trash){
-      if (t.done) continue;
-
-      ctx.save();
-      const isDrag = state.draggingId === t.id;
-      const ecoT = clamp(state.eco/100,0,1);
-      ctx.globalAlpha = isDrag ? 1 : 0.95;
-
-      // card
-      const w = 180, h = 46;
-      const x = t.x - w/2, y = t.y - h/2;
-      const bg = ctx.createLinearGradient(x,y,x,y+h);
-      bg.addColorStop(0, "rgba(255,255,255,0.18)");
-      bg.addColorStop(1, "rgba(255,255,255,0.10)");
-      ctx.fillStyle = bg;
-      roundedRect(x,y,w,h, 18);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.12)";
-      ctx.lineWidth = 1;
-      roundedRect(x,y,w,h, 18);
-      ctx.stroke();
-
-      // type badge
-      const tt = TRASH_TYPES.find(q=>q.id===t.type);
-      ctx.fillStyle = (tt?.color || "#ffffff") + "cc";
-      roundedRect(x+10, y+12, 24, 22, 10);
-      ctx.fill();
-      ctx.font = "14px system-ui";
-      ctx.fillStyle = "rgba(0,0,0,0.75)";
-      ctx.fillText(tt?.icon || "♻", x+16, y+28);
-
-      // label
-      ctx.font = "12.5px system-ui";
-      ctx.fillStyle = "rgba(255,255,255,0.90)";
-      ctx.fillText(t.name, x+44, y+26);
-      ctx.font = "11px system-ui";
-      ctx.fillStyle = `rgba(255,255,255,${0.65 + 0.10*ecoT})`;
-      ctx.fillText(tt?.label || "", x+44, y+40);
-
-      // drag glow
-      if (isDrag){
-        ctx.globalAlpha = 0.35;
-        ctx.strokeStyle = "rgba(120,200,255,1)";
-        ctx.lineWidth = 2;
-        roundedRect(x-2,y-2,w+4,h+4, 20);
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-  }
-
-  function checkTrashDrop(item){
-    // If center of item inside any bin
-    for (const b of state.bins){
-      if (item.x >= b.x && item.x <= b.x+b.w && item.y >= b.y && item.y <= b.y+b.h){
-        if (item.type === b.type){
-          item.done = true;
-          state.eco = clamp(state.eco + 4, 0, 100);
-          updateEcoUI();
-          setToast("Отлично! Отправили в переработку ♻");
+    draw(ctx) {
+        const res = Loader.get(`bin_${this.type.id}`);
+        if (res && res.loaded) {
+            ctx.drawImage(res.img, this.x, this.y, this.w, this.h);
         } else {
-          state.eco = clamp(state.eco - 2, 0, 100);
-          updateEcoUI();
-          setToast("Почти! Это другой контейнер 🙂");
-          // bounce back a bit
-          item.y -= 12;
+            // Заглушка
+            ctx.fillStyle = this.type.color;
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+            ctx.strokeStyle = 'white';
+            ctx.strokeRect(this.x, this.y, this.w, this.h);
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.fillText(this.type.id.toUpperCase(), this.x + 5, this.y + 20);
         }
-        return;
-      }
     }
-  }
-
-  function sortingDone(){
-    return state.trash.length>0 && state.trash.every(t=>t.done);
-  }
-
-  // =============================
-  // Eco event icons & modal
-  // =============================
-  function maybeSpawnEvent(){
-    if (state.mode !== "travel") return;
-    if (state.activeEvent) return;
-
-    // Chance grows if eco low (more problems) and time passes
-    const ecoT = clamp(state.eco/100,0,1);
-    const base = 0.004 + (1-ecoT)*0.010; // per frame-ish
-    if (Math.random() < base){
-      const e = EVENTS[Math.floor(Math.random()*EVENTS.length)];
-      const {w,h} = state;
-      // place near horizon area
-      const x = w*(0.45 + Math.random()*0.45);
-      const y = h*(0.45 + Math.random()*0.25);
-      state.activeEvent = { x, y, r: 22, eventId: e.id, spawnAt: state.time };
-      setHint("🌿 На маршруте проблема! Нажми на значок, чтобы выбрать решение.");
-    }
-  }
-
-  function drawEventIcon(){
-    if (!state.activeEvent) return;
-
-    const ev = EVENTS.find(x=>x.id===state.activeEvent.eventId);
-    const {x,y,r} = state.activeEvent;
-    const ecoT = clamp(state.eco/100,0,1);
-    const pulse = 0.35 + 0.25*Math.sin(state.time*3.2);
-    ctx.save();
-    // glow
-    ctx.globalAlpha = 0.22 + 0.18*pulse;
-    const gg = ctx.createRadialGradient(x,y, 0, x,y, 64);
-    gg.addColorStop(0, `rgba(120,200,255,${0.55 + 0.25*ecoT})`);
-    gg.addColorStop(1, "rgba(120,200,255,0)");
-    ctx.fillStyle = gg;
-    ctx.beginPath(); ctx.arc(x,y, 64, 0, Math.PI*2); ctx.fill();
-
-    // badge
-    ctx.globalAlpha = 0.95;
-    const bg = ctx.createLinearGradient(x-r,y-r,x-r,y+r);
-    bg.addColorStop(0,"rgba(255,255,255,0.20)");
-    bg.addColorStop(1,"rgba(255,255,255,0.10)");
-    ctx.fillStyle = bg;
-    roundedRect(x-r, y-r, r*2, r*2, 16);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.14)";
-    ctx.lineWidth = 1.2;
-    roundedRect(x-r, y-r, r*2, r*2, 16);
-    ctx.stroke();
-
-    // icon
-    ctx.globalAlpha = 1;
-    ctx.font = "18px system-ui";
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    const icon = ev.id==="smoke" ? "🌫" : ev.id==="river" ? "🌊" : ev.id==="cut" ? "🌲" : "🗑";
-    ctx.fillText(icon, x-9, y+7);
-
-    ctx.restore();
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-  }
-
-  function openEventModal(){
-    if (!state.activeEvent) return;
-    const ev = EVENTS.find(e=>e.id===state.activeEvent.eventId);
-    if (!ev) return;
-
-    state.mode = "fixing";
-    state.eventModal = { event: ev, rects: [] };
-    setHint("Выбери решение (тап/клик).");
-  }
-
-  function drawEventModal(){
-    if (state.mode !== "fixing" || !state.eventModal) return;
-
-    const {w,h} = state;
-    const ev = state.eventModal.event;
-
-    // dim backdrop
-    ctx.save();
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = "rgba(0,0,0,1)";
-    ctx.fillRect(0,0,w,h);
-    ctx.restore();
-
-    const mw = Math.min(560, w*0.92);
-    const mh = Math.min(320, h*0.62);
-    const mx = (w-mw)/2, my = (h-mh)/2;
-
-    // panel
-    const bg = ctx.createLinearGradient(mx,my,mx,my+mh);
-    bg.addColorStop(0,"rgba(255,255,255,0.18)");
-    bg.addColorStop(1,"rgba(255,255,255,0.10)");
-    ctx.fillStyle = bg;
-    roundedRect(mx,my,mw,mh, 26);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.14)";
-    ctx.lineWidth = 1.2;
-    roundedRect(mx,my,mw,mh, 26);
-    ctx.stroke();
-
-    // title
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "bold 16px system-ui";
-    ctx.fillText(ev.title, mx+18, my+34);
-    ctx.font = "12.5px system-ui";
-    ctx.fillStyle = "rgba(255,255,255,0.72)";
-    wrapText(ev.desc, mx+18, my+56, mw-36, 16);
-
-    // options buttons
-    state.eventModal.rects = [];
-    const btnH = 48;
-    const gap = 10;
-    let y = my + 120;
-    for (let i=0;i<ev.fixes.length;i++){
-      const fx = ev.fixes[i];
-      const bx = mx + 18;
-      const bw = mw - 36;
-
-      const bbg = ctx.createLinearGradient(bx,y,bx,y+btnH);
-      bbg.addColorStop(0,"rgba(255,255,255,0.16)");
-      bbg.addColorStop(1,"rgba(255,255,255,0.08)");
-      ctx.fillStyle = bbg;
-      roundedRect(bx,y,bw,btnH, 18);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.12)";
-      ctx.lineWidth = 1;
-      roundedRect(bx,y,bw,btnH, 18);
-      ctx.stroke();
-
-      // left marker
-      const ecoGain = fx.eco;
-      ctx.fillStyle = ecoGain >= 11 ? "rgba(105,255,190,0.75)" : "rgba(255,210,120,0.75)";
-      roundedRect(bx+10, y+10, 10, btnH-20, 8);
-      ctx.fill();
-
-      // text
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.font = "13.5px system-ui";
-      ctx.fillText(fx.label, bx+30, y+30);
-      ctx.fillStyle = "rgba(255,255,255,0.62)";
-      ctx.font = "12px system-ui";
-      ctx.fillText(`Экология +${ecoGain}%`, bx+bw-120, y+30);
-
-      state.eventModal.rects.push({x:bx,y,w:bw,h:btnH, idx:i});
-      y += btnH + gap;
-    }
-
-    // close hint
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = "12px system-ui";
-    ctx.fillText("Нажми вне окна — закрыть", mx+18, my+mh-16);
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-
-    function wrapText(text, x, y, maxWidth, lineHeight) {
-      const words = text.split(' ');
-      let line = '';
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && n > 0) {
-          ctx.fillText(line, x, y);
-          line = words[n] + ' ';
-          y += lineHeight;
-        } else line = testLine;
-      }
-      ctx.fillText(line, x, y);
-    }
-  }
-
-  function applyFix(idx){
-    const ev = state.eventModal?.event;
-    if (!ev) return;
-    const fx = ev.fixes[idx];
-    if (!fx) return;
-
-    state.eco = clamp(state.eco + fx.eco, 0, 100);
-    updateEcoUI();
-    setToast(fx.msg);
-
-    // remove event
-    state.activeEvent = null;
-    state.eventModal = null;
-    state.mode = "travel";
-
-    // Slightly speed up zone completion reward (reduce remaining duration)
-    state.zoneProgress += 8;
-
-    setHint("Маршрут стал чище. Продолжаем путешествие 🚆");
-  }
-
-  // =============================
-  // Zone transitions
-  // =============================
-  function nextZone(){
-    state.mode = "zoneTransition";
-    state.transition = { at: state.time, dur: 2.2 };
-    setToast(`Переезд в зону «${ZONES[(state.zoneIndex+1)%ZONES.length].name}»`);
-  }
-
-  function drawZoneTransition(){
-    if (state.mode !== "zoneTransition" || !state.transition) return;
-    const {w,h} = state;
-    const t = clamp((state.time - state.transition.at)/state.transition.dur, 0, 1);
-    const e = easeOut(t);
-
-    ctx.save();
-    ctx.globalAlpha = 0.35*e;
-    ctx.fillStyle = "rgba(255,255,255,1)";
-    ctx.fillRect(0,0,w,h);
-    ctx.globalAlpha = 0.65*e;
-    ctx.fillStyle = "rgba(0,0,0,1)";
-    ctx.fillRect(0,0,w,h);
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "bold 18px system-ui";
-    const name = ZONES[(state.zoneIndex+1)%ZONES.length].name;
-    ctx.fillText(`Зона: ${name}`, w/2 - ctx.measureText(`Зона: ${name}`).width/2, h/2 - 10);
-
-    ctx.font = "12.5px system-ui";
-    ctx.fillStyle = "rgba(255,255,255,0.70)";
-    const msg = "Пейзаж меняется…";
-    ctx.fillText(msg, w/2 - ctx.measureText(msg).width/2, h/2 + 16);
-
-    ctx.restore();
-
-    if (t >= 1){
-      state.zoneIndex = (state.zoneIndex + 1) % ZONES.length;
-      state.zoneProgress = 0;
-      updateZoneUI();
-      state.transition = null;
-      state.mode = "travel";
-      setHint(ZONES[state.zoneIndex].tip);
-    }
-  }
-
-  function finishJourney(){
-    state.mode = "finished";
-    setToast("Путешествие завершено 💚");
-    setHint("Можно начать заново — и попробовать сделать мир ещё чище.");
-  }
-
-  function drawFinished(){
-    if (state.mode !== "finished") return;
-    const {w,h} = state;
-    ctx.save();
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = "rgba(0,0,0,1)";
-    ctx.fillRect(0,0,w,h);
-    ctx.restore();
-
-    const mw = Math.min(600, w*0.92);
-    const mh = Math.min(260, h*0.55);
-    const mx = (w-mw)/2, my = (h-mh)/2;
-
-    ctx.save();
-    const bg = ctx.createLinearGradient(mx,my,mx,my+mh);
-    bg.addColorStop(0,"rgba(255,255,255,0.18)");
-    bg.addColorStop(1,"rgba(255,255,255,0.10)");
-    ctx.fillStyle = bg;
-    roundedRect(mx,my,mw,mh, 26);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.14)";
-    ctx.lineWidth = 1.2;
-    roundedRect(mx,my,mw,mh, 26);
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "bold 18px system-ui";
-    const title = "Спасибо за заботу о природе!";
-    ctx.fillText(title, mx+22, my+44);
-
-    ctx.font = "13px system-ui";
-    ctx.fillStyle = "rgba(255,255,255,0.72)";
-    const eco = Math.round(state.eco);
-    const line1 = `Итог: Экология ${eco}%`;
-    ctx.fillText(line1, mx+22, my+78);
-
-    ctx.font = "12.5px system-ui";
-    ctx.fillStyle = "rgba(255,255,255,0.68)";
-    ctx.fillText("Маленькие действия в пути — большие изменения в жизни.", mx+22, my+104);
-
-    // button (virtual)
-    const bx = mx+22, by = my+mh-62, bw = mw-44, bh = 44;
-    const bbg2 = ctx.createLinearGradient(bx,by,bx,by+bh);
-    bbg2.addColorStop(0,"rgba(120,200,255,0.22)");
-    bbg2.addColorStop(1,"rgba(105,255,190,0.16)");
-    ctx.fillStyle = bbg2;
-    roundedRect(bx,by,bw,bh, 18);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.16)";
-    ctx.strokeRect(bx+0.5,by+0.5,bw-1,bh-1);
-
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "bold 13.5px system-ui";
-    const txt = "Начать заново";
-    ctx.fillText(txt, bx + bw/2 - ctx.measureText(txt).width/2, by+28);
-
-    state.finishedBtn = {x:bx,y:by,w:bw,h:bh};
-
-    ctx.restore();
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-  }
-
-  // =============================
-  // Input (mouse + touch)
-  // =============================
-  function getPos(evt){
-    const rect = canvas.getBoundingClientRect();
-    const isTouch = evt.touches && evt.touches.length;
-    const cx = isTouch ? evt.touches[0].clientX : evt.clientX;
-    const cy = isTouch ? evt.touches[0].clientY : evt.clientY;
-    return { x: (cx - rect.left), y: (cy - rect.top) };
-  }
-
-  function hitRoundedRect(px,py, rx,ry,rw,rh, rr){
-    // approximate with rect for simplicity (good enough)
-    return (px>=rx && px<=rx+rw && py>=ry && py<=ry+rh);
-  }
-
-  function onDown(evt){
-    if (!state.running) return;
-    const p = getPos(evt);
-
-    // If in fixing mode -> choose option or close
-    if (state.mode === "fixing" && state.eventModal){
-      // click outside modal to close
-      const rects = state.eventModal.rects || [];
-      // check buttons
-      for (const r of rects){
-        if (p.x>=r.x && p.x<=r.x+r.w && p.y>=r.y && p.y<=r.y+r.h){
-          applyFix(r.idx);
-          evt.preventDefault();
-          return;
-        }
-      }
-      // click outside => close
-      state.eventModal = null;
-      state.mode = "travel";
-      evt.preventDefault();
-      return;
-    }
-
-    // Finished screen
-    if (state.mode === "finished" && state.finishedBtn){
-      const b = state.finishedBtn;
-      if (p.x>=b.x && p.x<=b.x+b.w && p.y>=b.y && p.y<=b.y+b.h){
-        resetGame();
-        evt.preventDefault();
-        return;
-      }
-    }
-
-    // If sorting mode -> pick trash
-    if (state.mode === "sorting"){
-      // iterate from topmost
-      for (let i=state.trash.length-1;i>=0;i--){
-        const t = state.trash[i];
-        if (t.done) continue;
-        const w = 180, h = 46;
-        const x = t.x - w/2, y = t.y - h/2;
-        if (p.x>=x && p.x<=x+w && p.y>=y && p.y<=y+h){
-          state.draggingId = t.id;
-          state.dragOffset.x = t.x - p.x;
-          state.dragOffset.y = t.y - p.y;
-          evt.preventDefault();
-          return;
-        }
-      }
-    }
-
-    // If travel mode -> click on event icon
-    if (state.mode === "travel" && state.activeEvent){
-      const dx = p.x - state.activeEvent.x;
-      const dy = p.y - state.activeEvent.y;
-      if (dx*dx + dy*dy <= (state.activeEvent.r+10)*(state.activeEvent.r+10)){
-        openEventModal();
-        evt.preventDefault();
-        return;
-      }
-    }
-  }
-
-  function onMove(evt){
-    if (state.mode !== "sorting" || !state.draggingId) return;
-    const p = getPos(evt);
-    const t = state.trash.find(x=>x.id===state.draggingId);
-    if (!t) return;
-    t.x = p.x + state.dragOffset.x;
-    t.y = p.y + state.dragOffset.y;
-    evt.preventDefault();
-  }
-
-  function onUp(evt){
-    if (state.mode !== "sorting" || !state.draggingId) return;
-    const t = state.trash.find(x=>x.id===state.draggingId);
-    if (t) checkTrashDrop(t);
-    state.draggingId = null;
-
-    // if all done -> back to travel
-    if (sortingDone()){
-      state.mode = "travel";
-      // reward a bit
-      state.eco = clamp(state.eco + 6, 0, 100);
-      updateEcoUI();
-      setToast("Вагон чистый — спасибо! ✨");
-      setHint("Продолжаем маршрут. Иногда появляются экособытия — нажимай на значок.");
-      state.zoneProgress += 10; // progress boost
-    }
-    evt.preventDefault();
-  }
-
-  canvas.addEventListener('mousedown', onDown);
-  window.addEventListener('mousemove', onMove);
-  window.addEventListener('mouseup', onUp);
-
-  canvas.addEventListener('touchstart', onDown, {passive:false});
-  window.addEventListener('touchmove', onMove, {passive:false});
-  window.addEventListener('touchend', onUp, {passive:false});
-
-  // =============================
-  // Main loop
-  // =============================
-  function tick(){
-    const t = now();
-    const dt = Math.min(0.033, (t - state.t0) / 1000);
-    state.t0 = t;
-    if (state.running) state.time += dt;
-
-    // toast timeout
-    if (state.toastUntil && state.time > state.toastUntil){
-      ui.toast.classList.remove('show');
-      state.toastUntil = 0;
-    }
-    // hint fade by replacing to default after timeout
-    if (state.hintUntil && state.time > state.hintUntil){
-      // keep last hint; no auto-clear
-      state.hintUntil = 0;
-    }
-
-    // zone progress
-    if (state.mode === "travel"){
-      state.zoneProgress += dt;
-      // occasional sorting
-      if (Math.random() < 0.0035 && !state.activeEvent){
-        startSorting();
-      } else {
-        maybeSpawnEvent();
-      }
-      if (state.zoneProgress >= state.zoneDuration){
-        if (state.zoneIndex === ZONES.length-1){
-          finishJourney();
+}
+
+// Базовый класс для 3D объектов
+class Prop {
+    constructor(isTrash = false) {
+        // Все спавнится в центре (Vanishing point)
+        this.x = cx;
+        this.y = cy;
+        this.z = 0.01; // Глубина (0 - далеко, 1 - близко)
+        this.isTrash = isTrash;
+        this.markedForDeletion = false;
+        
+        if (isTrash) {
+            // Мусор летит строго вниз и чуть в стороны рандомно
+            this.angle = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+            this.speedZ = 0.005; 
         } else {
-          nextZone();
+            // Декор разлетается во все стороны, кроме низа (где мусор)
+            // Угол от PI (лево) до 2PI (право) через верх
+            this.angle = Math.PI + (Math.random() * Math.PI);
+            this.speedZ = 0.008; // Декор движется быстрее для эффекта скорости
         }
-      }
+        
+        // Вектор движения на плоскости экрана
+        this.vx = Math.cos(this.angle) * width * 0.8; 
+        this.vy = Math.sin(this.angle) * height * 0.8;
     }
 
-    // draw
-    ctx.clearRect(0,0,state.w,state.h);
-    drawBackground(dt);
-    drawTrain();
+    update(dt) {
+        // Увеличиваем Z (приближение)
+        this.z += this.speedZ * gameState.speed * (dt / 16);
 
-    if (state.mode === "travel"){
-      drawEventIcon();
+        if (this.z >= 1 && !this.isTrash) this.markedForDeletion = true;
+        // Мусор удаляем только если ушел за низ
+        if (this.isTrash && (cy + this.vy * this.z) > height + 100) {
+             this.markedForDeletion = true;
+             handleMiss();
+        }
     }
-    if (state.mode === "sorting"){
-      drawBins();
-      drawTrash(dt);
+
+    getScreenPos() {
+        return {
+            x: cx + this.vx * this.z,
+            y: cy + this.vy * this.z,
+            scale: this.z
+        };
     }
-    drawEventModal();
-    drawZoneTransition();
-    drawFinished();
+}
 
-    requestAnimationFrame(tick);
-  }
+class Trash extends Prop {
+    constructor() {
+        super(true);
+        // Выбираем тип
+        const keys = Object.keys(TYPES);
+        const randomKey = keys[Math.floor(Math.random() * keys.length)];
+        this.type = TYPES[randomKey];
+        // Выбираем скин 1-5
+        this.skinId = Math.floor(Math.random() * 5) + 1;
+        
+        this.isDragging = false;
+        this.dragX = 0;
+        this.dragY = 0;
+        this.radius = 40; // Размер хитбокса
+    }
 
-  // =============================
-  // Controls
-  // =============================
-  function resetGame(){
-    state.eco = 50;
-    state.zoneIndex = 0;
-    state.zoneProgress = 0;
-    state.mode = "travel";
-    state.trash = [];
-    state.draggingId = null;
-    state.activeEvent = null;
-    state.eventModal = null;
-    state.particles = [];
-    state.finishedBtn = null;
-    updateEcoUI();
-    updateZoneUI();
-    layoutBins();
-    setToast("Поезд отправляется 🚆");
-    setHint("Подсказка: иногда будет сортировка ♻ и экособытия 🌿");
-  }
+    update(dt) {
+        if (!this.isDragging) {
+            super.update(dt);
+        }
+    }
 
-  btnHelp.addEventListener('click', () => {
-    ui.overlay.style.display = "flex";
-  });
-  btnClose.addEventListener('click', () => {
-    ui.overlay.style.display = "none";
-  });
-  btnStart.addEventListener('click', () => {
-    ui.overlay.style.display = "none";
-    setToast("Поехали! 🚆💚");
-  });
-  btnReset.addEventListener('click', () => {
-    resetGame();
-  });
+    draw(ctx) {
+        const pos = this.getScreenPos();
+        let drawX = this.isDragging ? this.dragX : pos.x;
+        let drawY = this.isDragging ? this.dragY : pos.y;
+        let scale = this.isDragging ? 1.2 : pos.scale; // При драге увеличиваем
+        
+        let size = 80 * scale;
 
-  // Close overlay by clicking outside modal
-  ui.overlay.addEventListener('click', (e) => {
-    if (e.target === ui.overlay) ui.overlay.style.display = "none";
-  });
+        const imgKey = `${this.type.prefix}${this.skinId}`;
+        const res = Loader.get(imgKey);
 
-  // prevent scroll “rubber band” on mobile inside game
-  document.addEventListener('touchmove', (e) => {
-    if (e.target === canvas) e.preventDefault();
-  }, { passive:false });
+        ctx.save();
+        ctx.translate(drawX, drawY);
+        
+        if (res && res.loaded) {
+            ctx.drawImage(res.img, -size/2, -size/2, size, size);
+        } else {
+            // Заглушка
+            ctx.fillStyle = this.type.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, size/2, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.font = `${Math.floor(14*scale)}px Arial`;
+            ctx.fillText(this.type.id[0].toUpperCase(), 0, 5);
+        }
+        ctx.restore();
+    }
+}
 
-  // =============================
-  // Init
-  // =============================
-  function start(){
+class Decor extends Prop {
+    constructor() {
+        super(false);
+        const types = DECOR_TYPES;
+        const t = types[Math.floor(Math.random() * types.length)];
+        this.skinId = Math.floor(Math.random() * 5) + 1;
+        this.prefix = t.prefix;
+    }
+
+    draw(ctx) {
+        const pos = this.getScreenPos();
+        let size = 150 * pos.scale;
+        
+        const imgKey = `${this.prefix}${this.skinId}`;
+        const res = Loader.get(imgKey);
+
+        if (res && res.loaded) {
+            ctx.drawImage(res.img, pos.x - size/2, pos.y - size/2, size, size);
+        } else {
+            // Для декора без картинок просто рисуем зеленые круги
+            ctx.globalAlpha = pos.scale;
+            ctx.fillStyle = '#2E7D32';
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, size/2, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+}
+
+// --- Управление ---
+
+let dragItem = null;
+
+function handleInputStart(x, y) {
+    if (!gameState.isRunning) return;
+    
+    // Ищем мусор, в который попали. Начинаем с самого "ближнего" (последний в массиве)
+    for (let i = gameState.trash.length - 1; i >= 0; i--) {
+        const t = gameState.trash[i];
+        const pos = t.getScreenPos();
+        const size = 80 * pos.scale;
+        
+        // Простая проверка дистанции
+        const dx = x - pos.x;
+        const dy = y - pos.y;
+        if (Math.sqrt(dx*dx + dy*dy) < size/2) {
+            dragItem = t;
+            t.isDragging = true;
+            t.dragX = x;
+            t.dragY = y;
+            AudioSys.playPop();
+            break;
+        }
+    }
+}
+
+function handleInputMove(x, y) {
+    if (dragItem) {
+        dragItem.dragX = x;
+        dragItem.dragY = y;
+    }
+}
+
+function handleInputEnd(x, y) {
+    if (dragItem) {
+        // Проверяем попадание в бак
+        let hitBin = null;
+        for (let bin of gameState.bins) {
+            if (bin.checkHit(x, y)) {
+                hitBin = bin;
+                break;
+            }
+        }
+
+        if (hitBin) {
+            if (hitBin.type.id === dragItem.type.id) {
+                // ПРАВИЛЬНО
+                gameState.score += 10;
+                AudioSys.playSuccess();
+                createParticles(x, y, hitBin.type.color);
+            } else {
+                // ОШИБКА
+                gameState.score = Math.max(0, gameState.score - 5);
+                AudioSys.playError();
+                createParticles(x, y, '#555');
+                triggerShake();
+            }
+            // Удаляем мусор
+            dragItem.markedForDeletion = true;
+        } else {
+            // Отпустили мимо - возвращаем в поток
+            dragItem.isDragging = false;
+        }
+        
+        updateHUD();
+        dragItem = null;
+    }
+}
+
+// --- События ---
+
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousedown', e => handleInputStart(e.clientX, e.clientY));
+canvas.addEventListener('mousemove', e => handleInputMove(e.clientX, e.clientY));
+canvas.addEventListener('mouseup', e => handleInputEnd(e.clientX, e.clientY));
+
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    handleInputStart(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive: false});
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    handleInputMove(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive: false});
+canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    // Touchend не имеет clientX, берем из changedTouches
+    handleInputEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+});
+
+// Кнопки
+document.getElementById('start-btn').onclick = startGame;
+document.getElementById('restart-btn').onclick = startGame;
+
+// --- Игровой Цикл ---
+
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    cx = width / 2;
+    cy = height / 3; // Точка схода чуть выше центра (горизонт)
+    
+    // Пересчет позиций баков при ресайзе
+    if (gameState.bins.length > 0) {
+        gameState.bins = []; 
+        createBins();
+    }
+}
+
+function createBins() {
+    let i = 0;
+    const count = Object.keys(TYPES).length;
+    for (let key in TYPES) {
+        gameState.bins.push(new Bin(TYPES[key], i++, count));
+    }
+}
+
+function createParticles(x, y, color) {
+    for(let i=0; i<10; i++) {
+        gameState.particles.push(new Particle(x, y, color));
+    }
+}
+
+function handleMiss() {
+    gameState.lives--;
+    AudioSys.playError();
+    triggerShake();
+    updateHUD();
+    if (gameState.lives <= 0) gameOver();
+}
+
+let shakeTimer = 0;
+function triggerShake() { shakeTimer = 10; }
+
+function updateHUD() {
+    document.getElementById('score-el').textContent = `Очки: ${gameState.score}`;
+    document.getElementById('lives-el').textContent = `Жизни: ${gameState.lives}`;
+}
+
+function gameOver() {
+    gameState.isRunning = false;
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').textContent = `Итоговый счет: ${gameState.score}`;
+}
+
+function startGame() {
+    AudioSys.init();
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-over-screen').classList.add('hidden');
+    
+    gameState = {
+        score: 0,
+        lives: 5,
+        speed: 1,
+        isRunning: true,
+        bins: [],
+        trash: [],
+        decor: [],
+        particles: [],
+        lastTime: performance.now(),
+        spawnTimer: 0,
+        decorTimer: 0
+    };
+    
+    createBins();
+    updateHUD();
     resize();
-    updateEcoUI();
-    updateZoneUI();
-    ui.overlay.style.display = "flex";
-    setHint("Нажми «Поехали!» или просто закрой правила.");
-    requestAnimationFrame(tick);
-  }
+    requestAnimationFrame(loop);
+}
 
-  start();
+function loop(time) {
+    if (!gameState.isRunning) return;
 
-})();
+    const dt = time - gameState.lastTime;
+    gameState.lastTime = time;
+
+    // Очистка
+    ctx.clearRect(0, 0, width, height);
+
+    // Рисуем Фон
+    const bgRes = Loader.get('bg');
+    if (bgRes && bgRes.loaded) {
+        // Растягиваем фон
+        ctx.drawImage(bgRes.img, 0, 0, width, height);
+    } else {
+        // Градиент неба и травы если фона нет
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, '#87CEEB');
+        grad.addColorStop(0.3, '#87CEEB');
+        grad.addColorStop(0.3, '#4CAF50');
+        grad.addColorStop(1, '#2E7D32');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
+    }
+
+    // Тряска экрана
+    if (shakeTimer > 0) {
+        ctx.save();
+        ctx.translate((Math.random()-0.5)*10, (Math.random()-0.5)*10);
+        shakeTimer--;
+    }
+
+    // Логика спавна
+    gameState.spawnTimer += dt;
+    gameState.decorTimer += dt;
+    
+    // Усложнение
+    gameState.speed = 1 + (gameState.score / 100);
+
+    // Спавн мусора (зависит от скорости)
+    if (gameState.spawnTimer > 2000 / gameState.speed) {
+        gameState.trash.push(new Trash());
+        gameState.spawnTimer = 0;
+    }
+    // Спавн декора (чаще)
+    if (gameState.decorTimer > 500 / gameState.speed) {
+        gameState.decor.push(new Decor());
+        gameState.decorTimer = 0;
+    }
+
+    // Обновление и отрисовка декора (позади мусора)
+    gameState.decor.forEach(d => d.update(dt));
+    gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
+    gameState.decor.sort((a,b) => a.z - b.z); // Сортировка по Z (Painter's algo)
+    gameState.decor.forEach(d => d.draw(ctx));
+
+    // Обновление и отрисовка мусора
+    gameState.trash.forEach(t => t.update(dt));
+    gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
+    // Мусор тоже сортируем, но драг-элемент всегда сверху
+    gameState.trash.sort((a,b) => {
+        if (a.isDragging) return 1;
+        if (b.isDragging) return -1;
+        return a.z - b.z;
+    });
+    gameState.trash.forEach(t => t.draw(ctx));
+
+    // Баки (Интерфейс)
+    gameState.bins.forEach(b => b.draw(ctx));
+
+    // Частицы
+    gameState.particles.forEach(p => p.update());
+    gameState.particles = gameState.particles.filter(p => p.life > 0);
+    gameState.particles.forEach(p => p.draw(ctx));
+
+    if (shakeTimer > 0) ctx.restore();
+
+    requestAnimationFrame(loop);
+}
+
+// Запуск загрузки
+Loader.init().then(() => {
+    resize();
+    console.log("Assets loaded");
+});
+
 </script>
 </body>
 </html>
