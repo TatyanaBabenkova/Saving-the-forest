@@ -97,6 +97,7 @@
 /**
  * НАСТРОЙКИ
  */
+// ВАЖНО: Папка теперь IMG (большими буквами)
 const ASSETS_PATH = 'IMG/';
 const HORIZON_Y = 0.42; 
 
@@ -108,10 +109,9 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-// УВЕЛИЧИЛ МАСШТАБЫ ДЕКОРА
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 3.5 },   // Деревья ОЧЕНЬ большие
-    { prefix: 'bush', count: 5, scale: 2.0 },   // Кусты большие
+    { prefix: 'tree', count: 5, scale: 3.5 },   
+    { prefix: 'bush', count: 5, scale: 2.0 },   
     { prefix: 'flower', count: 5, scale: 1.0 }  
 ];
 
@@ -183,30 +183,26 @@ let gameState = {
 
 class Prop {
     constructor(isTrash) {
-        this.z = 0; 
         this.isTrash = isTrash;
         this.markedForDeletion = false;
         this.baseSpeed = isTrash ? 0.003 : 0.002; 
         
         if (isTrash) {
+            // МУСОР: Начинает с 0 (горизонт)
+            this.z = 0; 
             this.startX = cx + (Math.random() - 0.5) * 50; 
             this.startY = cy;
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.6); 
             this.targetY = height + 150; 
         } else {
-            // ДЕКОР
+            // ДЕКОР: Начинает чуть ближе (0.15), чтобы быть сразу видимым
+            this.z = 0.15; 
             const side = Math.random() > 0.5 ? 1 : -1;
-            // Старт ближе к центру
             const offsetStart = 10 + Math.random() * 50;
             this.startX = cx + (side * offsetStart);
             this.startY = cy;
-            
-            // ЦЕЛЬ (Траектория):
-            // Раньше было width * 2.0 (очень широко).
-            // Теперь 0.9 — они пролетают ближе к центру, сужая туннель.
+            // Летят ближе к центру
             this.targetX = cx + (side * width * 0.9); 
-            
-            // Но чтобы они точно ушли вниз
             this.targetY = height + 300;
         }
     }
@@ -215,18 +211,14 @@ class Prop {
         this.z += this.baseSpeed * gameState.speed * (dt / 16);
     }
 
-    // Проверка, ушел ли объект за экран
     checkVisibility(x, y, size) {
         if (this.isTrash) {
-            // Мусор удаляем, если он улетел ниже экрана
             if (y > height + size) {
                 this.markedForDeletion = true;
                 handleMiss();
             }
         } else {
-            // Декор удаляем ТОЛЬКО если он физически ушел за границы экрана
-            // (Слева ИЛИ Справа ИЛИ Снизу)
-            // Это решает проблему "зависания" на краях
+            // Декор удаляем только когда ушел за экран полностью
             if (y > height + size || x < -size || x > width + size) {
                 this.markedForDeletion = true;
             }
@@ -255,7 +247,7 @@ class Trash extends Prop {
         if (!this.isDragging) {
             super.update(dt);
             const pos = this.getScreenPos();
-            const size = 350 * pos.scale;
+            const size = 220 * pos.scale; // Используем тот же размер для расчета выхода
             this.checkVisibility(pos.x, pos.y, size);
         }
     }
@@ -268,7 +260,9 @@ class Trash extends Prop {
         
         if (finalScale < 0.02) return;
 
-        let size = 350 * finalScale; 
+        // === ИЗМЕНЕН РАЗМЕР МУСОРА ===
+        // Уменьшил с 350 до 220, чтобы не перекрывал экран
+        let size = 220 * finalScale; 
 
         const res = Loader.get(`${this.type.prefix}${this.skinId}`);
         ctx.save();
@@ -310,16 +304,17 @@ class Decor extends Prop {
         super.update(dt);
         const pos = this.getScreenPos();
         // Рассчитываем размер для корректной проверки выхода за экран
-        // Увеличил базовый множитель до 500 для гигантских деревьев
         const size = 500 * pos.scale * this.baseScale;
         this.checkVisibility(pos.x, pos.y, size);
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
+        // Так как Z начинается с 0.15, scale сразу будет не 0
         if (pos.scale < 0.01) return;
 
         // === ГИГАНТСКИЙ ЛЕС ===
+        // Оставил большим, но так как старт ближе, они сразу видны
         let size = 500 * pos.scale * this.baseScale;
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
@@ -393,7 +388,8 @@ function handleStart(x, y) {
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
-        const size = 350 * pos.scale; 
+        // Хитбокс уменьшен пропорционально размеру картинки (220)
+        const size = 220 * pos.scale; 
         const dx = x - pos.x;
         const dy = y - pos.y;
         
@@ -525,9 +521,9 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    // === СПАВН ДЕКОРА ===
-    // Уменьшил таймер с 350 до 120. Теперь они появляются очень часто.
-    if (gameState.decorTimer > 120) { 
+    // === СПАВН ДЕКОРА (ЕЩЕ БОЛЬШЕ ДЕРЕВЬЕВ) ===
+    // Уменьшил таймер до 50 (было 120, а до этого 350). Очень густой лес.
+    if (gameState.decorTimer > 50) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
@@ -535,8 +531,6 @@ function loop(time) {
     gameState.decor.forEach(d => d.update(dt));
     gameState.trash.forEach(t => t.update(dt));
     
-    // Фильтр теперь использует флаг markedForDeletion, 
-    // который ставится только при полном уходе за экран
     gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
