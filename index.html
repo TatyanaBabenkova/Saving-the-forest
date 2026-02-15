@@ -28,10 +28,10 @@
             justify-content: space-between;
         }
         .hud {
-            padding: 15px;
+            padding: 20px;
             color: white;
             text-shadow: 2px 2px 4px black;
-            font-size: 24px;
+            font-size: 32px; /* Увеличил шрифт очков */
             font-weight: bold;
             display: flex;
             justify-content: space-between;
@@ -55,18 +55,18 @@
         .btn {
             background: #4CAF50;
             border: none;
-            padding: 15px 40px;
+            padding: 20px 60px;
             color: white;
-            font-size: 24px;
+            font-size: 30px;
             cursor: pointer;
-            border-radius: 10px;
-            margin-top: 20px;
+            border-radius: 15px;
+            margin-top: 30px;
             transition: transform 0.1s;
             font-weight: bold;
-            box-shadow: 0 4px 0 #2E7D32;
+            box-shadow: 0 6px 0 #2E7D32;
         }
-        .btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #2E7D32; }
-        h1 { font-size: 48px; margin-bottom: 10px; text-align: center; text-shadow: 0 5px 10px rgba(0,0,0,0.5); }
+        .btn:active { transform: scale(0.95); box-shadow: 0 3px 0 #2E7D32; }
+        h1 { font-size: 60px; margin-bottom: 20px; text-align: center; text-shadow: 0 5px 10px rgba(0,0,0,0.5); }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -81,13 +81,13 @@
 
     <div id="start-screen">
         <h1>Эко-Тропа</h1>
-        <p>Сортируй мусор, иди вперед!</p>
+        <p style="font-size: 24px;">Сортируй мусор, спасай лес!</p>
         <button class="btn" id="start-btn">В Путь</button>
     </div>
 
     <div id="game-over-screen" class="hidden">
         <h1>Конец игры</h1>
-        <p id="final-score">Твой счет: 0</p>
+        <p id="final-score" style="font-size: 30px;">Твой счет: 0</p>
         <button class="btn" id="restart-btn">Заново</button>
     </div>
 
@@ -98,7 +98,6 @@
  * НАСТРОЙКИ
  */
 const ASSETS_PATH = 'IMG/';
-// Настройка перспективы (0.42 - линия горизонта на твоем фоне)
 const HORIZON_Y = 0.42; 
 
 const TYPES = {
@@ -110,9 +109,9 @@ const TYPES = {
 };
 
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 2.5 },   // Деревья большие
-    { prefix: 'bush', count: 5, scale: 1.5 },   // Кусты поменьше
-    { prefix: 'flower', count: 5, scale: 0.8 }  // Цветы маленькие
+    { prefix: 'tree', count: 5, scale: 2.5 },   
+    { prefix: 'bush', count: 5, scale: 1.5 },   
+    { prefix: 'flower', count: 5, scale: 0.8 }  
 ];
 
 /**
@@ -183,25 +182,23 @@ let gameState = {
 
 class Prop {
     constructor(isTrash) {
-        this.z = 0; // Прогресс от 0 (горизонт) до 1+ (экран)
+        this.z = 0; 
         this.isTrash = isTrash;
         this.markedForDeletion = false;
-        // Базовая скорость
         this.baseSpeed = isTrash ? 0.003 : 0.002; 
         
         if (isTrash) {
-            // МУСОР: Летит из центра на игрока
             this.startX = cx + (Math.random() - 0.5) * 50; 
             this.startY = cy;
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.6); 
             this.targetY = height + 150; 
         } else {
-            // ДЕКОР: Спавнится и улетает в бок
             const side = Math.random() > 0.5 ? 1 : -1;
             const offsetStart = 20 + Math.random() * 100;
             this.startX = cx + (side * offsetStart);
             this.startY = cy;
-            this.targetX = cx + (side * width * 1.8); // Сильно в бок
+            // Увеличил разлет декора в стороны, чтобы они не лезли в центр
+            this.targetX = cx + (side * width * 2.0); 
             this.targetY = height + 200;
         }
     }
@@ -218,7 +215,6 @@ class Prop {
     getScreenPos() {
         const curX = this.startX + (this.targetX - this.startX) * this.z;
         const curY = this.startY + (this.targetY - this.startY) * this.z;
-        // Квадратичный масштаб для 3D эффекта
         const scale = Math.pow(this.z, 2);
         return { x: curX, y: curY, scale: scale };
     }
@@ -243,17 +239,18 @@ class Trash extends Prop {
         let drawX = this.isDragging ? this.dragX : pos.x;
         let drawY = this.isDragging ? this.dragY : pos.y;
         let finalScale = this.isDragging ? 1.0 : pos.scale;
-        if (finalScale < 0.05) return;
+        
+        // Показываем объект раньше
+        if (finalScale < 0.02) return;
 
-        // === ИЗМЕНЕНИЕ РАЗМЕРА МУСОРА ===
-        // Базовый размер увеличен до 250
-        let size = 250 * finalScale; 
+        // === ГИГАНТСКИЙ МУСОР (350px) ===
+        // Чтобы было удобно хватать
+        let size = 350 * finalScale; 
 
         const res = Loader.get(`${this.type.prefix}${this.skinId}`);
         ctx.save();
         ctx.translate(drawX, drawY);
         
-        // Тень
         if (!this.isDragging) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
@@ -264,14 +261,13 @@ class Trash extends Prop {
         if (res && res.loaded) {
             ctx.drawImage(res.img, -size/2, -size/2, size, size);
         } else {
-            // Заглушка увеличенная
             ctx.fillStyle = this.type.color;
             ctx.beginPath();
             ctx.arc(0, 0, size/2.5, 0, Math.PI*2);
             ctx.fill();
             ctx.fillStyle = 'white';
-            ctx.font = `${Math.ceil(20*finalScale)}px Arial`;
-            ctx.fillText(this.type.id[0].toUpperCase(), -5, 8);
+            ctx.font = `${Math.ceil(40*finalScale)}px Arial`; // Шрифт больше
+            ctx.fillText(this.type.id[0].toUpperCase(), -10, 15);
         }
         ctx.restore();
     }
@@ -289,15 +285,14 @@ class Decor extends Prop {
 
     draw(ctx) {
         const pos = this.getScreenPos();
-        if (pos.scale < 0.02) return;
+        if (pos.scale < 0.01) return;
 
-        // === ИЗМЕНЕНИЕ РАЗМЕРА ДЕКОРА ===
-        // Базовый множитель увеличен с 150 до 400!
-        let size = 400 * pos.scale * this.baseScale;
+        // === ОГРОМНЫЕ ДЕРЕВЬЯ (1200px) ===
+        // Теперь они будут реального размера, пролетая мимо
+        let size = 1200 * pos.scale * this.baseScale;
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
-            // Рисуем так, чтобы низ картинки совпадал с точкой Y
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
             ctx.globalAlpha = pos.scale;
@@ -316,20 +311,31 @@ class Bin {
         const margin = 20;
         const availableW = width - (margin * 2);
         const binW = availableW / total;
-        this.w = Math.min(90, binW - 5); // Чуть шире баки
-        this.h = this.w * 1.2;
+        
+        // === БОЛЬШИЕ БАКИ ===
+        // Увеличил макс ширину с 90 до 160
+        this.w = Math.min(160, binW - 5); 
+        this.h = this.w * 1.3; // Чуть выше пропорция
+        
+        // Центрируем с учетом новой ширины
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-        this.y = 10;
+        this.y = 15;
     }
     checkHit(x, y) { return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h; }
     draw(ctx) {
         const res = Loader.get(`bin_${this.type.id}`);
         if (res && res.loaded) ctx.drawImage(res.img, this.x, this.y, this.w, this.h);
         else {
+            // Фолбэк для баков тоже крупнее
             ctx.fillStyle = this.type.color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
             ctx.strokeRect(this.x, this.y, this.w, this.h);
+            // Текст на заглушке
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText(this.type.id.toUpperCase(), this.x + this.w/2, this.y + this.h/2);
         }
     }
 }
@@ -337,15 +343,15 @@ class Bin {
 class Particle {
     constructor(x, y, color) {
         this.x = x; this.y = y;
-        this.vx = (Math.random() - 0.5) * 15;
-        this.vy = (Math.random() - 0.5) * 15;
+        this.vx = (Math.random() - 0.5) * 20;
+        this.vy = (Math.random() - 0.5) * 20;
         this.life = 1.0; this.color = color;
     }
     update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
     draw(ctx) {
         ctx.globalAlpha = Math.max(0, this.life);
         ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x, this.y, 10, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
     }
 }
@@ -361,14 +367,12 @@ function handleStart(x, y) {
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
-        // === ВАЖНО: УВЕЛИЧЕН ХИТБОКС ===
-        // Должен соответствовать визуальному размеру (250)
-        const size = 250 * pos.scale; 
+        // Хитбокс тоже огромный (350)
+        const size = 350 * pos.scale; 
         const dx = x - pos.x;
         const dy = y - pos.y;
         
-        // Проверка радиуса с запасом (дерево легче хватать)
-        if (Math.sqrt(dx*dx + dy*dy) < size / 1.8) {
+        if (Math.sqrt(dx*dx + dy*dy) < size / 1.5) {
             dragItem = t;
             t.isDragging = true;
             t.dragX = x; t.dragY = y;
@@ -403,7 +407,6 @@ function handleEnd(x, y) {
     }
 }
 
-// Слушатели
 window.addEventListener('resize', resize);
 canvas.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
 canvas.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
@@ -414,8 +417,6 @@ canvas.addEventListener('touchend', e => { e.preventDefault(); handleEnd(e.chang
 
 document.getElementById('start-btn').onclick = startGame;
 document.getElementById('restart-btn').onclick = startGame;
-
-// --- ЯДРО ---
 
 function resize() {
     width = window.innerWidth;
@@ -433,7 +434,7 @@ function createBins() {
     for (let key in TYPES) gameState.bins.push(new Bin(TYPES[key], i++, count));
 }
 
-function createParticles(x, y, c) { for(let i=0; i<12; i++) gameState.particles.push(new Particle(x, y, c)); }
+function createParticles(x, y, c) { for(let i=0; i<15; i++) gameState.particles.push(new Particle(x, y, c)); }
 function handleMiss() { 
     gameState.lives--; 
     AudioSys.playError(); 
