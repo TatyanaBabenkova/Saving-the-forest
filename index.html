@@ -154,9 +154,10 @@ const TYPES = {
 };
 
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 3.5, isBig: true },   // Чуть увеличили масштаб деревьев
-    { prefix: 'bush', count: 5, scale: 1.5, isBig: false },   
-    { prefix: 'flower', count: 5, scale: 0.8, isBig: false }  
+    { prefix: 'tree', count: 5, scale: 3.8, type: 'tree_far' },   // Большие деревья (дальний край)
+    { prefix: 'tree', count: 5, scale: 3.0, type: 'tree_mid' },   // Средние деревья
+    { prefix: 'bush', count: 5, scale: 1.5, type: 'bush' },       // Кусты
+    { prefix: 'flower', count: 5, scale: 0.8, type: 'flower' }    // Цветы
 ];
 
 /**
@@ -229,10 +230,9 @@ class Prop {
     constructor(isTrash) {
         this.isTrash = isTrash;
         this.markedForDeletion = false;
-        this.baseSpeed = isTrash ? 0.002 : 0.0009; 
+        // ЗАМЕДЛИЛИ ЛЕС (Было 0.0009 -> 0.0006)
+        this.baseSpeed = isTrash ? 0.002 : 0.0006; 
         this.progress = 0; 
-
-        // Базовая инициализация (будет перезаписана в Decor для декора)
         this.startX = cx;
         this.targetX = cx;
 
@@ -240,7 +240,6 @@ class Prop {
             this.startX = cx + (Math.random() - 0.5) * 50; 
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.4); 
         } 
-        // Логика для декора перенесена в класс Decor
     }
 
     update(dt) {
@@ -254,7 +253,6 @@ class Prop {
                 handleMiss();
             }
         } else {
-            // Если объект ушел за пределы экрана по бокам или вниз
             if (y > height + size || x < -size || x > width + size) {
                 this.markedForDeletion = true;
             }
@@ -267,10 +265,7 @@ class Prop {
         if (this.isTrash) {
              scaleCurve = this.progress * this.progress;
         } else {
-             // ДЕКОР:
-             // Формула роста. Чуть ограничили максимальный рост в конце,
-             // чтобы они не становились абсурдно огромными.
-             // Было * 0.5, стало * 0.45, и baseScale у деревьев выше.
+             // Плавный рост для декора
              scaleCurve = 0.1 + (this.progress * this.progress * 0.45);
         }
         
@@ -334,54 +329,63 @@ class Trash extends Prop {
 }
 
 class Decor extends Prop {
-    // forcedBig - параметр для принудительного создания большого дерева (для старта)
-    constructor(forcedBig = false) {
+    constructor() {
         super(false);
         const types = DECOR_TYPES;
-        
-        // Если forcedBig = true, берем только деревья (индекс 0)
-        let t;
-        if (forcedBig) {
-            t = types[0]; // Берем настройки дерева
-        } else {
-            t = types[Math.floor(Math.random() * types.length)];
-        }
+        // Выбираем случайный тип декора
+        const t = types[Math.floor(Math.random() * types.length)];
 
         this.skinId = Math.floor(Math.random() * 5) + 1;
         this.prefix = t.prefix;
         this.baseScale = t.scale;
-        this.isBig = t.isBig; 
+        this.decorType = t.type;
         
-        this.sizeVar = 0.9 + Math.random() * 0.5;
-
-        // ЗОНИРОВАНИЕ
+        this.sizeVar = 0.9 + Math.random() * 0.4;
+        
+        // ОПРЕДЕЛЯЕМ СТОРОНУ (ЛЕВО/ПРАВО)
         const isLeft = Math.random() > 0.5;
-        const spawnOffset = width * 0.02; // Очень узкий старт на горизонте
-        this.startX = cx + (isLeft ? -spawnOffset : spawnOffset) + (Math.random()-0.5) * 5;
+        const sideSign = isLeft ? -1 : 1;
 
-        // === ИСПРАВЛЕНИЕ ДВИЖЕНИЯ В СТОРОНЫ ===
-        let minTarget, maxTarget;
+        // === ГЛАВНОЕ: РАЗНЫЕ ТОЧКИ СТАРТА И ФИНИША ДЛЯ РАЗНЫХ ОБЪЕКТОВ ===
+        
+        // StartX - точка на горизонте. 
+        // Чем дальше объект (дерево), тем шире он должен начинаться, 
+        // чтобы не сливаться в одну точку с цветами.
+        
+        // TargetX - точка внизу экрана.
+        
+        let startOffsetPct, targetOffsetPct;
 
-        if (this.isBig) { // ДЕРЕВЬЯ
-            // Деревья уходят ДАЛЕКО за пределы экрана влево и вправо.
-            // width * 1.5 означает, что они уедут за полтора экрана вбок.
-            // Это решает проблему "взлетания" - они просто уйдут вбок раньше.
-            minTarget = width * 0.8; 
-            maxTarget = width * 2.5; 
-        } else { // ЦВЕТЫ И КУСТЫ
-            // Кусты тоже должны уходить вбок, а не оставаться в центре
-            minTarget = width * 0.4;
-            maxTarget = width * 1.2;
+        switch(this.decorType) {
+            case 'tree_far': // Самые дальние (край экрана)
+                startOffsetPct = 0.15; // Начинаются шире
+                targetOffsetPct = 1.2; // Уходят далеко за экран
+                break;
+            case 'tree_mid': // Средние деревья
+                startOffsetPct = 0.08; 
+                targetOffsetPct = 0.7; // Ближе к краю экрана
+                break;
+            case 'bush': // Кусты
+                startOffsetPct = 0.04;
+                targetOffsetPct = 0.45; // Середина поляны
+                break;
+            case 'flower': // Цветы (у дороги)
+                startOffsetPct = 0.01; // Почти из центра
+                targetOffsetPct = 0.18; // У самой дороги
+                break;
         }
 
-        const targetOffset = minTarget + Math.random() * (maxTarget - minTarget);
-        this.targetX = cx + (isLeft ? -targetOffset : targetOffset);
+        // Добавляем немного рандома, чтобы не было "под линейку"
+        const randomVar = 1.0 + (Math.random() - 0.5) * 0.2; 
+
+        this.startX = cx + (sideSign * (width * startOffsetPct * randomVar));
+        this.targetX = cx + (sideSign * (width * targetOffsetPct * randomVar));
     }
 
     update(dt) {
         super.update(dt);
         const pos = this.getScreenPos();
-        // Размер
+        // Уменьшенный размер для аккуратности
         const size = 350 * pos.scale * this.baseScale * this.sizeVar;
         this.checkVisibility(pos.x, pos.y, size);
     }
@@ -390,7 +394,6 @@ class Decor extends Prop {
         const pos = this.getScreenPos();
         let size = 350 * pos.scale * this.baseScale * this.sizeVar;
         
-        // Оптимизация: не рисуем, если объект сильно за пределами экрана
         if (pos.x < -size || pos.x > width + size) return;
 
         const res = Loader.get(`${this.prefix}${this.skinId}`);
@@ -566,31 +569,14 @@ function gameOver() {
     document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
 }
 
-// === ОБНОВЛЕННОЕ ЗАПОЛНЕНИЕ ЛЕСА ===
+// === ЗАПОЛНЕНИЕ ЛЕСА ===
 function populateForest() {
-    // 1. Сначала заполняем фон обычным миксом (деревья, кусты)
-    for(let i=0; i<80; i++) {
+    // Генерируем 150 объектов сразу, чтобы не было пустоты
+    for(let i=0; i<150; i++) {
         let d = new Decor();
         d.progress = Math.random(); 
         gameState.decor.push(d);
     }
-    
-    // 2. А ТЕПЕРЬ САМОЕ ВАЖНОЕ: Сажаем БОЛЬШИЕ деревья прямо по бокам у экрана
-    for(let i=0; i<12; i++) {
-        // forcedBig = true (только деревья)
-        let d = new Decor(true);
-        // Ставим их близко к игроку (прогресс от 0.6 до 1.0)
-        d.progress = 0.6 + Math.random() * 0.5; 
-        
-        // Принудительно раздвигаем их по ширине, чтобы они были СБОКУ
-        // Иначе рандом может поставить их близко к центру
-        const isLeft = Math.random() > 0.5;
-        const sideOffset = width * 0.6 + Math.random() * (width * 0.5);
-        d.targetX = cx + (isLeft ? -sideOffset : sideOffset);
-
-        gameState.decor.push(d);
-    }
-
     gameState.decor.sort((a,b) => a.progress - b.progress);
 }
 
@@ -647,8 +633,8 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    // Таймер появления
-    if (gameState.decorTimer > 30) { 
+    // Частый спавн (20), так как скорость медленная, нужно больше объектов
+    if (gameState.decorTimer > 20) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
