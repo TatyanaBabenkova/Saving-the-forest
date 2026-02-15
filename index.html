@@ -153,12 +153,11 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-// zIndex: чем больше число, тем "ближе" объект к тропинке (будет рисоваться поверх других)
+// zIndex: чем больше число, тем "ближе" к зрителю (рисуется поверх остальных)
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 5.5, type: 'tree_far', zIndex: 1 }, // Самый задний план
-    { prefix: 'tree', count: 5, scale: 4.5, type: 'tree_mid', zIndex: 2 }, 
-    { prefix: 'bush', count: 5, scale: 1.5, type: 'bush',     zIndex: 3 }, 
-    { prefix: 'flower', count: 5, scale: 0.8, type: 'flower', zIndex: 4 }  // Самый передний план (обочина)
+    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree', zIndex: 1 }, 
+    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush', zIndex: 2 }, 
+    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower', zIndex: 3 } 
 ];
 
 /**
@@ -243,7 +242,13 @@ class Prop {
     }
 
     update(dt) {
-        this.progress += this.baseSpeed * gameState.speed * (dt / 16);
+        // === ОТКЛЮЧИЛИ ДВИЖЕНИЕ ДЛЯ ЛЕСА ===
+        if (this.isTrash) {
+            this.progress += this.baseSpeed * gameState.speed * (dt / 16);
+        } else {
+            // Лес не двигается (закомментировано)
+            // this.progress += this.baseSpeed * gameState.speed * (dt / 16);
+        }
     }
 
     checkVisibility(x, y, size) {
@@ -252,12 +257,8 @@ class Prop {
                 this.markedForDeletion = true;
                 handleMiss();
             }
-        } else {
-            // Удаляем, если ушел вниз или далеко в бок
-            if (y > height + size || x < -size * 2 || x > width + size * 2) {
-                this.markedForDeletion = true;
-            }
-        }
+        } 
+        // Лес не удаляем, он статичен
     }
 
     getScreenPos() {
@@ -270,6 +271,9 @@ class Prop {
         }
         
         const curY = cy + (height - cy) * this.progress;
+        
+        // Линейная интерполяция X, но для леса мы будем задавать координаты хитро в populateForest
+        // Поэтому здесь используем стандартную формулу, она сработает, так как startX и targetX мы подгоним
         const curX = this.startX + (this.targetX - this.startX) * this.progress;
 
         return { x: curX, y: curY, scale: scaleCurve };
@@ -329,69 +333,82 @@ class Trash extends Prop {
 }
 
 class Decor extends Prop {
-    constructor() {
+    constructor(forcedProgress = null, forcedType = null) {
         super(false);
         const types = DECOR_TYPES;
-        const t = types[Math.floor(Math.random() * types.length)];
+        
+        // Если передан тип принудительно, используем его, иначе рандом
+        let t;
+        if (forcedType) {
+            t = types.find(type => type.type === forcedType) || types[0];
+        } else {
+             // Вероятности: Деревьев меньше, кустов и цветов больше
+             const rand = Math.random();
+             if (rand < 0.4) t = types[0]; // Tree
+             else if (rand < 0.7) t = types[1]; // Bush
+             else t = types[2]; // Flower
+        }
 
         this.skinId = Math.floor(Math.random() * 5) + 1;
         this.prefix = t.prefix;
         this.baseScale = t.scale;
         this.decorType = t.type;
-        this.zIndex = t.zIndex; // Приоритет отрисовки
+        this.zIndex = t.zIndex;
         
-        this.sizeVar = 0.9 + Math.random() * 0.4;
+        this.sizeVar = 0.8 + Math.random() * 0.5; // Разброс размеров
         
-        const isLeft = Math.random() > 0.5;
-        const sideSign = isLeft ? -1 : 1;
-
-        // === ГЕОМЕТРИЯ ДВИЖЕНИЯ (НАСТРОЙКИ КОРИДОРОВ) ===
+        // === УСТАНОВКА ПОЗИЦИИ ===
         
-        let minStartPct, maxStartPct; 
-        let minTargetPct, maxTargetPct; 
-
-        switch(this.decorType) {
-            case 'tree_far': // Деревья далеко
-                minStartPct = 0.12; maxStartPct = 0.25; 
-                // Увеличили maxTargetPct до 2.5, чтобы они быстрее улетали вбок
-                minTargetPct = 0.8; maxTargetPct = 2.5; 
-                break;
-            case 'tree_mid': // Деревья средние
-                minStartPct = 0.08; maxStartPct = 0.18;
-                minTargetPct = 0.5; maxTargetPct = 1.2; 
-                break;
-            case 'bush': // Кусты
-                minStartPct = 0.05; maxStartPct = 0.12;
-                minTargetPct = 0.35; maxTargetPct = 0.7; 
-                break;
-            case 'flower': // Цветы (Обочина)
-                minStartPct = 0.02; maxStartPct = 0.06;
-                // СДВИНУЛИ ЕЩЕ ДАЛЬШЕ (0.28), ЧТОБЫ УБРАТЬ С ДОРОГИ
-                minTargetPct = 0.28; maxTargetPct = 0.45; 
-                break;
+        // 1. Прогресс (Глубина)
+        // Если передан forcedProgress, берем его. Иначе рандом.
+        if (forcedProgress !== null) {
+            this.progress = forcedProgress;
+        } else {
+            this.progress = Math.random();
         }
 
-        const startPct = minStartPct + Math.random() * (maxStartPct - minStartPct);
-        const targetPct = minTargetPct + Math.random() * (maxTargetPct - minTargetPct);
+        // 2. Расчет позиции X (Чтобы не на дороге)
+        const isLeft = Math.random() > 0.5;
+        const sideSign = isLeft ? -1 : 1;
+        
+        // ФОРМУЛА ДОРОГИ:
+        // Ширина дороги меняется от 0 (горизонт) до width*0.25 (низ экрана)
+        // Добавляем буфер, чтобы цветы не росли прям на асфальте
+        const roadHalfWidthAtProgress = (width * 0.02) + (width * 0.25 * this.progress);
+        
+        // Минимальный отступ от центра (Дорога + Трава)
+        const minX = roadHalfWidthAtProgress + (width * 0.05); // +5% ширины экрана на траву
+        
+        // Максимальный отступ (Край экрана и дальше)
+        // Чем ближе объект (progress > 0.8), тем шире можно ставить деревья
+        let maxX = width * 0.6 + (width * 0.5 * this.progress);
 
-        this.startX = cx + (sideSign * (width * startPct));
-        this.targetX = cx + (sideSign * (width * targetPct));
+        // Случайное смещение внутри разрешенной зоны
+        const xOffset = minX + Math.random() * (maxX - minX);
+        
+        // Устанавливаем и startX и targetX одинаковыми, так как движения нет
+        // Но используем формулу getScreenPos, которая интерполирует.
+        // Чтобы getScreenPos вернул нужное X при текущем progress, 
+        // мы схитрим: установим startX и targetX так, чтобы результат был равен xOffset
+        
+        const centerX = cx + (sideSign * xOffset);
+        
+        // Так как движения нет, просто ставим координаты
+        this.startX = centerX;
+        this.targetX = centerX;
     }
 
     update(dt) {
         super.update(dt);
-        const pos = this.getScreenPos();
-        const size = 350 * pos.scale * this.baseScale * this.sizeVar;
-        this.checkVisibility(pos.x, pos.y, size);
+        // Не обновляем видимость для удаления, так как они статичны
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
+        // Используем X рассчитанный в конструкторе (он не меняется, так как start=target)
+        
         let size = 350 * pos.scale * this.baseScale * this.sizeVar;
         
-        // Оптимизация: не рисуем, если сильно за экраном
-        if (pos.x < -size || pos.x > width + size) return;
-
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
@@ -457,8 +474,6 @@ let dragItem = null;
 function handleStart(x, y) {
     if (!gameState.isRunning || gameState.isPaused) return;
     
-    // Ищем мусор. Сортируем так, чтобы брать тот, что ближе (progress больше)
-    // Увеличили область захвата (size / 1.0 вместо 1.5), чтобы легче попадать
     let candidates = gameState.trash.filter(t => t.progress > 0.3);
     candidates.sort((a,b) => b.progress - a.progress);
 
@@ -468,12 +483,12 @@ function handleStart(x, y) {
         const dx = x - pos.x;
         const dy = y - pos.y;
         
-        if (Math.sqrt(dx*dx + dy*dy) < size) { // Упростили попадание
+        if (Math.sqrt(dx*dx + dy*dy) < size) { 
             dragItem = t;
             t.isDragging = true;
             t.dragX = x; t.dragY = y;
             AudioSys.playPop();
-            break; // Берем только один предмет
+            break; 
         }
     }
 }
@@ -503,7 +518,6 @@ function handleEnd(x, y) {
     }
 }
 
-// Пауза
 const pauseBtn = document.getElementById('pause-btn');
 const pauseOverlay = document.getElementById('pause-overlay');
 
@@ -568,15 +582,40 @@ function gameOver() {
     document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
 }
 
-// === ЗАПОЛНЕНИЕ ЛЕСА ===
+// === СТАТИЧНАЯ ГЕНЕРАЦИЯ ЛЕСА ===
 function populateForest() {
-    // Чуть меньше объектов на старте (120), чтобы не перегружать сцену
-    for(let i=0; i<120; i++) {
-        let d = new Decor();
-        d.progress = Math.random(); 
+    gameState.decor = []; // Очищаем старое
+    
+    // 1. ЗАДНИЙ ПЛАН (Стена леса на горизонте)
+    // Много маленьких деревьев вдалеке
+    for(let i=0; i<50; i++) {
+        // progress от 0.0 до 0.15 (очень далеко)
+        const p = Math.random() * 0.15;
+        // Только деревья
+        gameState.decor.push(new Decor(p, 'tree'));
+    }
+
+    // 2. БОКА (Огромные деревья-кулисы)
+    // Чтобы закрыть углы экрана
+    for(let i=0; i<20; i++) {
+        // progress от 0.4 до 1.0 (близко)
+        const p = 0.4 + Math.random() * 0.6;
+        const d = new Decor(p, 'tree');
+        
+        // Принудительно раздвигаем их ОЧЕНЬ далеко, чтобы видны были только ветки/стволы сбоку
+        const isLeft = Math.random() > 0.5;
+        const offset = width * 0.8 + Math.random() * width * 0.5;
+        d.startX = cx + (isLeft ? -offset : offset);
+        d.targetX = d.startX; // Статика
+        
         gameState.decor.push(d);
     }
-    // Сортировка будет в loop
+
+    // 3. ОСНОВНАЯ МАССА (Заполнение по всей глубине)
+    for(let i=0; i<250; i++) {
+        const p = Math.random(); // Любая глубина
+        gameState.decor.push(new Decor(p, null)); // Случайный тип
+    }
 }
 
 function startGame() {
@@ -595,7 +634,7 @@ function startGame() {
     createBins(); 
     updateHUD(); 
     resize();
-    populateForest();
+    populateForest(); // Генерируем лес один раз
     requestAnimationFrame(loop);
 }
 
@@ -624,34 +663,28 @@ function loop(time) {
     }
 
     gameState.spawnTimer += dt;
-    gameState.decorTimer += dt;
     gameState.speed = 1 + (gameState.score / 250); 
 
+    // Спавн мусора (он двигается)
     if (gameState.spawnTimer > 2500 / gameState.speed) {
         gameState.trash.push(new Trash());
         gameState.spawnTimer = 0;
     }
     
-    // Спавн декора
-    if (gameState.decorTimer > 20) { 
-        gameState.decor.push(new Decor());
-        gameState.decorTimer = 0;
-    }
+    // Спавн декора ОТКЛЮЧЕН (у нас статика)
 
+    // Обновляем только мусор (лес статичен)
     gameState.decor.forEach(d => d.update(dt));
     gameState.trash.forEach(t => t.update(dt));
     
-    gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // === УМНАЯ СОРТИРОВКА (ИСПРАВЛЕНИЕ НАЛОЖЕНИЯ) ===
-    // 1. Сортируем по дальности (progress). Кто дальше (меньше progress) - тот рисуется раньше.
-    // 2. ЕСЛИ они примерно на одной линии (разница progress маленькая),
-    //    то рисуем сначала Деревья (меньший zIndex), потом Цветы (больший zIndex).
-    //    Так цветы перекроют корни деревьев.
+    // Сортировка и отрисовка
+    // Сначала сортируем по глубине (дальние - раньше)
+    // Если глубина одна, то по zIndex (деревья сзади, цветы спереди)
     gameState.decor.sort((a,b) => {
         const diff = a.progress - b.progress;
-        if (Math.abs(diff) < 0.1) { // Если они рядом
+        if (Math.abs(diff) < 0.05) { 
             return a.zIndex - b.zIndex;
         }
         return diff;
@@ -659,7 +692,7 @@ function loop(time) {
 
     gameState.decor.forEach(d => d.draw(ctx));
 
-    // МУСОР РИСУЕМ ПОСЛЕ ДЕКОРА (Чтобы не прятался за деревьями)
+    // Мусор поверх леса
     gameState.trash.sort((a,b) => {
         if (a.isDragging) return 1; if (b.isDragging) return -1;
         return a.progress - b.progress;
