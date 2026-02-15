@@ -35,7 +35,27 @@
             font-weight: bold;
             display: flex;
             justify-content: space-between;
+            align-items: flex-start; /* Чтобы кнопка паузы не растягивала ряд */
             z-index: 5;
+            pointer-events: auto; /* Чтобы кнопки работали */
+        }
+        .hud-left {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #pause-btn {
+            background: #FF9800;
+            border: 2px solid #fff;
+            color: white;
+            font-size: 18px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            width: fit-content;
+            font-weight: bold;
+            pointer-events: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
         #start-screen, #game-over-screen {
             position: absolute;
@@ -68,16 +88,37 @@
         .btn:active { transform: scale(0.95); box-shadow: 0 3px 0 #2E7D32; }
         h1 { font-size: 60px; margin-bottom: 20px; text-align: center; text-shadow: 0 5px 10px rgba(0,0,0,0.5); }
         .hidden { display: none !important; }
+        
+        /* Оверлей паузы */
+        #pause-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 50px;
+            font-weight: bold;
+            text-shadow: 0 0 10px black;
+            z-index: 8;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
         <div class="hud">
-            <span id="score-el">Очки: 0</span>
+            <div class="hud-left">
+                <span id="score-el">Очки: 0</span>
+                <button id="pause-btn">II Пауза</button>
+            </div>
             <span id="lives-el">Жизни: 5</span>
         </div>
     </div>
+
+    <div id="pause-overlay" class="hidden">ПАУЗА</div>
 
     <div id="start-screen">
         <h1>Эко-Тропа</h1>
@@ -97,8 +138,8 @@
 /**
  * НАСТРОЙКИ
  */
-const ASSETS_PATH = 'IMG/'; // Папка большими буквами
-const HORIZON_Y = 0.42; 
+const ASSETS_PATH = 'IMG/'; 
+const HORIZON_Y = 0.42; // Уровень горизонта (42% от верха)
 
 const TYPES = {
     ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
@@ -173,7 +214,7 @@ const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
-    score: 0, lives: 5, speed: 1, isRunning: false,
+    score: 0, lives: 5, speed: 1, isRunning: false, isPaused: false,
     bins: [], trash: [], decor: [], particles: [],
     lastTime: 0, spawnTimer: 0, decorTimer: 0
 };
@@ -184,40 +225,34 @@ class Prop {
     constructor(isTrash) {
         this.isTrash = isTrash;
         this.markedForDeletion = false;
-        this.baseSpeed = isTrash ? 0.003 : 0.002; 
         
-        // Z начинается с 0
-        this.z = 0; 
+        // СКОРОСТЬ: 
+        // Для мусора - обычная (0.0025)
+        // Для деревьев - МЕДЛЕННАЯ (0.001) - в 2.5 раза медленнее мусора
+        this.baseSpeed = isTrash ? 0.0025 : 0.001; 
+        
+        this.z = 0; // 0 = горизонт, 1 = низ экрана
 
         if (isTrash) {
-            // === МУСОР ===
-            // Летит из ЦЕНТРА (Солнце/Точка схода)
+            // Мусор летит из точки схода
             this.startX = cx + (Math.random() - 0.5) * 50; 
-            this.startY = cy; // Высоко (горизонт)
+            // Цель мусора по X (узко по центру)
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.4); 
-            this.targetY = height + 150; 
         } else {
-            // === ДЕКОР (ЛЕС) ===
+            // Лес
             const isLeft = Math.random() > 0.5;
             
-            // 1. Старт:
+            // Старт по X (на горизонте)
             const horizonSpread = width * 0.25; 
             const startOffset = (Math.random() * horizonSpread) + 10;
             this.startX = cx + (isLeft ? -startOffset : startOffset);
 
-            // !! ВАЖНО !!
-            // Спавним лес НИЖЕ линии горизонта.
-            // (cy + height * 0.1) опускает точку появления на землю.
-            // Это чинит "полет" деревьев.
-            this.startY = cy + (height * 0.1); 
-
-            // 2. Финиш:
-            const minTarget = width * 0.75; // Широко, чтобы не лезть на дорогу
-            const maxTarget = width * 1.8; 
+            // Цель по X (внизу экрана) - разлетаются широко
+            const minTarget = width * 0.7; 
+            const maxTarget = width * 1.6; 
             const targetOffset = minTarget + Math.random() * (maxTarget - minTarget);
 
             this.targetX = cx + (isLeft ? -targetOffset : targetOffset);
-            this.targetY = height + 150;
         }
     }
 
@@ -232,6 +267,7 @@ class Prop {
                 handleMiss();
             }
         } else {
+            // Удаляем декор, если он ушел за границы
             if (y > height + size || x < -size * 2 || x > width + size * 2) {
                 this.markedForDeletion = true;
             }
@@ -239,12 +275,24 @@ class Prop {
     }
 
     getScreenPos() {
-        const curX = this.startX + (this.targetX - this.startX) * this.z;
-        const curY = this.startY + (this.targetY - this.startY) * this.z;
+        // === ИСПРАВЛЕННАЯ МАТЕМАТИКА ===
         
-        // Масштаб
-        // Начинаем с 0.4, чтобы сразу были видны, но не гигантские
-        let baseScale = 0.4 + (this.z * 1.5); 
+        // X: Линейное движение от горизонта к краям
+        const curX = this.startX + (this.targetX - this.startX) * this.z;
+        
+        // Y: ЧЕТКАЯ ПРИВЯЗКА К ЗЕМЛЕ
+        // cy - это линия горизонта (небо/земля). 
+        // height - это самый низ экрана.
+        // Мы говорим: точка "ног" объекта находится ровно между горизонтом и низом, пропорционально Z.
+        // Мы добавляем 10% (height * 1.1) чтобы они уезжали чуть ниже края экрана.
+        const groundStart = cy;
+        const groundEnd = height * 1.1; 
+        
+        const curY = groundStart + (groundEnd - groundStart) * this.z;
+        
+        // МАСШТАБ
+        // Начинаем с очень маленького (0.05), чтобы на горизонте они были точками
+        let baseScale = 0.05 + (this.z * 1.5); 
         
         if (this.isTrash) baseScale = Math.pow(this.z, 2); 
 
@@ -285,6 +333,7 @@ class Trash extends Prop {
         ctx.save();
         ctx.translate(drawX, drawY);
         
+        // Тень
         if (!this.isDragging) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
@@ -331,8 +380,9 @@ class Decor extends Prop {
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
-            // Рисуем от низа картинки (pos.y - size)
-            // pos.y - это точка на земле. size - высота дерева.
+            // ВАЖНО: Рисуем так, чтобы низ картинки (ноги дерева) совпадал с pos.y
+            // pos.x - центр по горизонтали
+            // pos.y - это точка на земле (координата низа)
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
             ctx.fillStyle = '#1B5E20';
@@ -394,7 +444,7 @@ class Particle {
 let dragItem = null;
 
 function handleStart(x, y) {
-    if (!gameState.isRunning) return;
+    if (!gameState.isRunning || gameState.isPaused) return;
     let candidates = gameState.trash.filter(t => t.z > 0.3);
     candidates.sort((a,b) => b.z - a.z);
 
@@ -438,6 +488,23 @@ function handleEnd(x, y) {
         dragItem = null;
     }
 }
+
+// Пауза
+const pauseBtn = document.getElementById('pause-btn');
+const pauseOverlay = document.getElementById('pause-overlay');
+
+pauseBtn.onclick = () => {
+    gameState.isPaused = !gameState.isPaused;
+    if (gameState.isPaused) {
+        pauseBtn.textContent = "▶ Продолжить";
+        pauseOverlay.classList.remove('hidden');
+    } else {
+        pauseBtn.textContent = "II Пауза";
+        pauseOverlay.classList.add('hidden');
+        gameState.lastTime = performance.now(); // Сброс таймера, чтобы не было скачка
+        requestAnimationFrame(loop);
+    }
+};
 
 window.addEventListener('resize', resize);
 canvas.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
@@ -491,9 +558,11 @@ function startGame() {
     AudioSys.init();
     document.getElementById('start-screen').style.display = 'none';
     document.getElementById('game-over-screen').classList.add('hidden');
+    pauseOverlay.classList.add('hidden');
+    pauseBtn.textContent = "II Пауза";
     
     gameState = {
-        score: 0, lives: 5, speed: 1, isRunning: true,
+        score: 0, lives: 5, speed: 1, isRunning: true, isPaused: false,
         bins: [], trash: [], decor: [], particles: [],
         lastTime: performance.now(), spawnTimer: 0, decorTimer: 0
     };
@@ -503,6 +572,8 @@ function startGame() {
 
 function loop(time) {
     if (!gameState.isRunning) return;
+    if (gameState.isPaused) return; // Если пауза, не обновляем кадр
+
     const dt = time - gameState.lastTime;
     gameState.lastTime = time;
 
