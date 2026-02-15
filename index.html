@@ -35,9 +35,9 @@
             font-weight: bold;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start; /* Чтобы кнопка паузы не растягивала ряд */
+            align-items: flex-start;
             z-index: 5;
-            pointer-events: auto; /* Чтобы кнопки работали */
+            pointer-events: auto;
         }
         .hud-left {
             display: flex;
@@ -56,7 +56,10 @@
             font-weight: bold;
             pointer-events: auto;
             box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
         }
+        #pause-btn:active { transform: scale(0.95); }
+        
         #start-screen, #game-over-screen {
             position: absolute;
             top: 0;
@@ -89,7 +92,6 @@
         h1 { font-size: 60px; margin-bottom: 20px; text-align: center; text-shadow: 0 5px 10px rgba(0,0,0,0.5); }
         .hidden { display: none !important; }
         
-        /* Оверлей паузы */
         #pause-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -98,11 +100,13 @@
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 50px;
+            font-size: 60px;
             font-weight: bold;
-            text-shadow: 0 0 10px black;
+            text-shadow: 0 5px 15px black;
             z-index: 8;
             pointer-events: none;
+            text-transform: uppercase;
+            letter-spacing: 5px;
         }
     </style>
 </head>
@@ -139,7 +143,7 @@
  * НАСТРОЙКИ
  */
 const ASSETS_PATH = 'IMG/'; 
-const HORIZON_Y = 0.42; // Уровень горизонта (42% от верха)
+const HORIZON_Y = 0.42; 
 
 const TYPES = {
     ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
@@ -226,28 +230,27 @@ class Prop {
         this.isTrash = isTrash;
         this.markedForDeletion = false;
         
-        // СКОРОСТЬ: 
-        // Для мусора - обычная (0.0025)
-        // Для деревьев - МЕДЛЕННАЯ (0.001) - в 2.5 раза медленнее мусора
-        this.baseSpeed = isTrash ? 0.0025 : 0.001; 
+        // СКОРОСТЬ
+        // Мусор: 0.0025 (нормальная)
+        // Деревья: 0.0005 (ОЧЕНЬ МЕДЛЕННАЯ, как просил)
+        this.baseSpeed = isTrash ? 0.0025 : 0.0005; 
         
-        this.z = 0; // 0 = горизонт, 1 = низ экрана
+        this.z = 0; 
 
         if (isTrash) {
-            // Мусор летит из точки схода
+            // МУСОР
             this.startX = cx + (Math.random() - 0.5) * 50; 
-            // Цель мусора по X (узко по центру)
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.4); 
         } else {
-            // Лес
+            // ДЕКОР
             const isLeft = Math.random() > 0.5;
             
-            // Старт по X (на горизонте)
+            // Старт (Горизонт)
             const horizonSpread = width * 0.25; 
             const startOffset = (Math.random() * horizonSpread) + 10;
             this.startX = cx + (isLeft ? -startOffset : startOffset);
 
-            // Цель по X (внизу экрана) - разлетаются широко
+            // Финиш (Низ экрана)
             const minTarget = width * 0.7; 
             const maxTarget = width * 1.6; 
             const targetOffset = minTarget + Math.random() * (maxTarget - minTarget);
@@ -267,7 +270,6 @@ class Prop {
                 handleMiss();
             }
         } else {
-            // Удаляем декор, если он ушел за границы
             if (y > height + size || x < -size * 2 || x > width + size * 2) {
                 this.markedForDeletion = true;
             }
@@ -275,26 +277,28 @@ class Prop {
     }
 
     getScreenPos() {
-        // === ИСПРАВЛЕННАЯ МАТЕМАТИКА ===
-        
-        // X: Линейное движение от горизонта к краям
+        // X: Движение в стороны
         const curX = this.startX + (this.targetX - this.startX) * this.z;
         
-        // Y: ЧЕТКАЯ ПРИВЯЗКА К ЗЕМЛЕ
-        // cy - это линия горизонта (небо/земля). 
-        // height - это самый низ экрана.
-        // Мы говорим: точка "ног" объекта находится ровно между горизонтом и низом, пропорционально Z.
-        // Мы добавляем 10% (height * 1.1) чтобы они уезжали чуть ниже края экрана.
-        const groundStart = cy;
+        // Y: ПРИВЯЗКА К ЗЕМЛЕ
+        // Мы опускаем точку старта (horizon) чуть ниже (height*0.05), чтобы скрыть "полет"
+        const groundStart = cy + (height * 0.05);
         const groundEnd = height * 1.1; 
-        
         const curY = groundStart + (groundEnd - groundStart) * this.z;
         
-        // МАСШТАБ
-        // Начинаем с очень маленького (0.05), чтобы на горизонте они были точками
-        let baseScale = 0.05 + (this.z * 1.5); 
+        // МАСШТАБ (Ключевое исправление полета)
+        let baseScale;
         
-        if (this.isTrash) baseScale = Math.pow(this.z, 2); 
+        if (this.isTrash) {
+            // Мусор растет квадратично (обычно)
+            baseScale = Math.pow(this.z, 2); 
+        } else {
+            // ДЕРЕВЬЯ растут КУБИЧЕСКИ (Math.pow(this.z, 3))
+            // Это значит, что при Z=0.5 размер будет всего 0.125 (очень маленький).
+            // Это удерживает их маленькими на горизонте и не дает "висеть" в небе.
+            // Множитель 4 нужен, чтобы в самом конце (Z=1) они всё же стали большими.
+            baseScale = Math.pow(this.z, 3) * 4.0;
+        }
 
         return { x: curX, y: curY, scale: baseScale };
     }
@@ -333,7 +337,6 @@ class Trash extends Prop {
         ctx.save();
         ctx.translate(drawX, drawY);
         
-        // Тень
         if (!this.isDragging) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
@@ -378,11 +381,12 @@ class Decor extends Prop {
         
         let size = 500 * pos.scale * this.baseScale;
         
+        // Проверка на мусорные значения
+        if (size <= 0) return;
+
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
-            // ВАЖНО: Рисуем так, чтобы низ картинки (ноги дерева) совпадал с pos.y
-            // pos.x - центр по горизонтали
-            // pos.y - это точка на земле (координата низа)
+            // Рисуем от низа (корни на земле)
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
             ctx.fillStyle = '#1B5E20';
@@ -501,7 +505,7 @@ pauseBtn.onclick = () => {
     } else {
         pauseBtn.textContent = "II Пауза";
         pauseOverlay.classList.add('hidden');
-        gameState.lastTime = performance.now(); // Сброс таймера, чтобы не было скачка
+        gameState.lastTime = performance.now(); 
         requestAnimationFrame(loop);
     }
 };
@@ -572,7 +576,7 @@ function startGame() {
 
 function loop(time) {
     if (!gameState.isRunning) return;
-    if (gameState.isPaused) return; // Если пауза, не обновляем кадр
+    if (gameState.isPaused) return; 
 
     const dt = time - gameState.lastTime;
     gameState.lastTime = time;
@@ -603,6 +607,7 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
+    // Спавн декора (леса)
     if (gameState.decorTimer > 30) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
