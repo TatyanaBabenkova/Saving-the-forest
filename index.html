@@ -266,10 +266,7 @@ class Prop {
         if (this.isTrash) {
              scaleCurve = this.progress * this.progress;
         } else {
-             // ДЕКОР:
-             // 0.1 - старт.
-             // (this.progress * this.progress * 0.5) - уменьшили коэффициент роста вдвое.
-             // Теперь они не будут становиться гигантскими в конце пути.
+             // ДЕКОР
              scaleCurve = 0.1 + (this.progress * this.progress * 0.5);
         }
         
@@ -340,26 +337,21 @@ class Decor extends Prop {
         this.skinId = Math.floor(Math.random() * 5) + 1;
         this.prefix = t.prefix;
         this.baseScale = t.scale;
-        this.isBig = t.isBig; // Это дерево или мелочь?
+        this.isBig = t.isBig; 
         
         this.sizeVar = 0.9 + Math.random() * 0.5;
 
-        // === ПЕРЕОПРЕДЕЛЯЕМ КООРДИНАТЫ ДЛЯ ЗОНИРОВАНИЯ ===
+        // ЗОНИРОВАНИЕ
         const isLeft = Math.random() > 0.5;
-        
-        // Все появляются близко к горизонту (к солнцу)
         const spawnOffset = width * 0.03;
         this.startX = cx + (isLeft ? -spawnOffset : spawnOffset) + (Math.random()-0.5) * 10;
 
-        // КУДА ОНИ ЕДУТ (НИЗ ЭКРАНА):
         let minTarget, maxTarget;
 
         if (this.isBig) { // ДЕРЕВЬЯ
-            // Они должны быть ДАЛЬШЕ от центра (по краям)
             minTarget = width * 0.45; 
             maxTarget = width * 0.9;
         } else { // ЦВЕТЫ И КУСТЫ
-            // Они могут быть БЛИЖЕ к тропинке, заполняя пустоту
             minTarget = width * 0.15;
             maxTarget = width * 0.5;
         }
@@ -371,15 +363,13 @@ class Decor extends Prop {
     update(dt) {
         super.update(dt);
         const pos = this.getScreenPos();
-        // УМЕНЬШИЛИ БАЗОВЫЙ РАЗМЕР (Было 600 -> Стало 350)
-        // Теперь при приближении они не будут закрывать весь экран
+        // Размер 350 - оптимальный для "не гигантского" леса
         const size = 350 * pos.scale * this.baseScale * this.sizeVar;
         this.checkVisibility(pos.x, pos.y, size);
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
-        // Тот же размер для отрисовки
         let size = 350 * pos.scale * this.baseScale * this.sizeVar;
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
@@ -557,7 +547,8 @@ function gameOver() {
 
 // === ЗАПОЛНЕНИЕ ЛЕСА ===
 function populateForest() {
-    for(let i=0; i<50; i++) {
+    // УВЕЛИЧИЛИ ДО 100 ОБЪЕКТОВ
+    for(let i=0; i<100; i++) {
         let d = new Decor();
         d.progress = Math.random(); 
         gameState.decor.push(d);
@@ -618,7 +609,8 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    if (gameState.decorTimer > 60) { 
+    // УМЕНЬШИЛИ ТАЙМЕР ДО 30 (Чаще появляются)
+    if (gameState.decorTimer > 30) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
