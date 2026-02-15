@@ -97,8 +97,7 @@
 /**
  * НАСТРОЙКИ
  */
-// ВАЖНО: Папка теперь IMG (большими буквами)
-const ASSETS_PATH = 'IMG/';
+const ASSETS_PATH = 'IMG/'; // Папка большими буквами
 const HORIZON_Y = 0.42; 
 
 const TYPES = {
@@ -188,21 +187,37 @@ class Prop {
         this.baseSpeed = isTrash ? 0.003 : 0.002; 
         
         if (isTrash) {
-            // МУСОР: Начинает с 0 (горизонт)
+            // МУСОР: Летит строго из центра
             this.z = 0; 
             this.startX = cx + (Math.random() - 0.5) * 50; 
             this.startY = cy;
-            this.targetX = cx + (Math.random() - 0.5) * (width * 0.6); 
+            this.targetX = cx + (Math.random() - 0.5) * (width * 0.5); 
             this.targetY = height + 150; 
         } else {
-            // ДЕКОР: Начинает чуть ближе (0.15), чтобы быть сразу видимым
-            this.z = 0.15; 
-            const side = Math.random() > 0.5 ? 1 : -1;
-            const offsetStart = 10 + Math.random() * 50;
-            this.startX = cx + (side * offsetStart);
+            // === НОВАЯ ЛОГИКА ЛЕСА ===
+            
+            // 1. Стартуем чуть ближе (чтобы не были точками)
+            this.z = 0.1; 
+
+            // 2. Выбираем сторону (Лево или Право)
+            const isLeft = Math.random() > 0.5;
+            
+            // 3. Рандомизируем СТАРТ на горизонте
+            // Деревья появляются не из одной точки, а широкой полосой
+            const horizonSpread = width * 0.3; // Разброс 30% ширины
+            const startOffset = (Math.random() * horizonSpread) + 20;
+            this.startX = cx + (isLeft ? -startOffset : startOffset);
             this.startY = cy;
-            // Летят ближе к центру
-            this.targetX = cx + (side * width * 0.9); 
+
+            // 4. Рандомизируем ЦЕЛЬ (Траекторию)
+            // Деревья летят по разным линиям. 
+            // minTarget - самые близкие к дороге деревья (но не на дороге!)
+            // maxTarget - деревья в глубоком лесу
+            const minTarget = width * 0.35; 
+            const maxTarget = width * 1.5;
+            const targetOffset = minTarget + Math.random() * (maxTarget - minTarget);
+
+            this.targetX = cx + (isLeft ? -targetOffset : targetOffset);
             this.targetY = height + 300;
         }
     }
@@ -218,7 +233,6 @@ class Prop {
                 handleMiss();
             }
         } else {
-            // Декор удаляем только когда ушел за экран полностью
             if (y > height + size || x < -size || x > width + size) {
                 this.markedForDeletion = true;
             }
@@ -228,7 +242,9 @@ class Prop {
     getScreenPos() {
         const curX = this.startX + (this.targetX - this.startX) * this.z;
         const curY = this.startY + (this.targetY - this.startY) * this.z;
-        const scale = Math.pow(this.z, 2);
+        
+        // Более плавная кривая роста, чтобы в середине были крупнее
+        let scale = Math.pow(this.z, 1.8); 
         return { x: curX, y: curY, scale: scale };
     }
 }
@@ -247,7 +263,7 @@ class Trash extends Prop {
         if (!this.isDragging) {
             super.update(dt);
             const pos = this.getScreenPos();
-            const size = 220 * pos.scale; // Используем тот же размер для расчета выхода
+            const size = 220 * pos.scale; 
             this.checkVisibility(pos.x, pos.y, size);
         }
     }
@@ -260,8 +276,6 @@ class Trash extends Prop {
         
         if (finalScale < 0.02) return;
 
-        // === ИЗМЕНЕН РАЗМЕР МУСОРА ===
-        // Уменьшил с 350 до 220, чтобы не перекрывал экран
         let size = 220 * finalScale; 
 
         const res = Loader.get(`${this.type.prefix}${this.skinId}`);
@@ -303,18 +317,14 @@ class Decor extends Prop {
     update(dt) {
         super.update(dt);
         const pos = this.getScreenPos();
-        // Рассчитываем размер для корректной проверки выхода за экран
         const size = 500 * pos.scale * this.baseScale;
         this.checkVisibility(pos.x, pos.y, size);
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
-        // Так как Z начинается с 0.15, scale сразу будет не 0
         if (pos.scale < 0.01) return;
 
-        // === ГИГАНТСКИЙ ЛЕС ===
-        // Оставил большим, но так как старт ближе, они сразу видны
         let size = 500 * pos.scale * this.baseScale;
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
@@ -388,7 +398,6 @@ function handleStart(x, y) {
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
-        // Хитбокс уменьшен пропорционально размеру картинки (220)
         const size = 220 * pos.scale; 
         const dx = x - pos.x;
         const dy = y - pos.y;
@@ -521,9 +530,9 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    // === СПАВН ДЕКОРА (ЕЩЕ БОЛЬШЕ ДЕРЕВЬЕВ) ===
-    // Уменьшил таймер до 50 (было 120, а до этого 350). Очень густой лес.
-    if (gameState.decorTimer > 50) { 
+    // === СПАВН ДЕКОРА (ОЧЕНЬ БЫСТРЫЙ) ===
+    // Таймер 15мс = сплошной поток
+    if (gameState.decorTimer > 15) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
