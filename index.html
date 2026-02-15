@@ -154,10 +154,11 @@ const TYPES = {
 };
 
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 3.8, type: 'tree_far' },   // Большие деревья (дальний край)
-    { prefix: 'tree', count: 5, scale: 3.0, type: 'tree_mid' },   // Средние деревья
-    { prefix: 'bush', count: 5, scale: 1.5, type: 'bush' },       // Кусты
-    { prefix: 'flower', count: 5, scale: 0.8, type: 'flower' }    // Цветы
+    // УВЕЛИЧИЛИ РАЗМЕР (Scale)
+    { prefix: 'tree', count: 5, scale: 5.5, type: 'tree_far' },   // Было 3.8
+    { prefix: 'tree', count: 5, scale: 4.5, type: 'tree_mid' },   // Было 3.0
+    { prefix: 'bush', count: 5, scale: 1.5, type: 'bush' },       
+    { prefix: 'flower', count: 5, scale: 0.8, type: 'flower' }    
 ];
 
 /**
@@ -230,7 +231,6 @@ class Prop {
     constructor(isTrash) {
         this.isTrash = isTrash;
         this.markedForDeletion = false;
-        // ЗАМЕДЛИЛИ ЛЕС (Было 0.0009 -> 0.0006)
         this.baseSpeed = isTrash ? 0.002 : 0.0006; 
         this.progress = 0; 
         this.startX = cx;
@@ -265,7 +265,7 @@ class Prop {
         if (this.isTrash) {
              scaleCurve = this.progress * this.progress;
         } else {
-             // Плавный рост для декора
+             // Плавный рост
              scaleCurve = 0.1 + (this.progress * this.progress * 0.45);
         }
         
@@ -332,7 +332,6 @@ class Decor extends Prop {
     constructor() {
         super(false);
         const types = DECOR_TYPES;
-        // Выбираем случайный тип декора
         const t = types[Math.floor(Math.random() * types.length)];
 
         this.skinId = Math.floor(Math.random() * 5) + 1;
@@ -342,50 +341,46 @@ class Decor extends Prop {
         
         this.sizeVar = 0.9 + Math.random() * 0.4;
         
-        // ОПРЕДЕЛЯЕМ СТОРОНУ (ЛЕВО/ПРАВО)
         const isLeft = Math.random() > 0.5;
         const sideSign = isLeft ? -1 : 1;
 
-        // === ГЛАВНОЕ: РАЗНЫЕ ТОЧКИ СТАРТА И ФИНИША ДЛЯ РАЗНЫХ ОБЪЕКТОВ ===
+        // === ИСПРАВЛЕННАЯ ЛОГИКА РАСПОЛОЖЕНИЯ (РАНДОМ + ОТСТУП ОТ ДОРОГИ) ===
         
-        // StartX - точка на горизонте. 
-        // Чем дальше объект (дерево), тем шире он должен начинаться, 
-        // чтобы не сливаться в одну точку с цветами.
-        
-        // TargetX - точка внизу экрана.
-        
-        let startOffsetPct, targetOffsetPct;
+        let minStartPct, maxStartPct; // Для горизонта
+        let minTargetPct, maxTargetPct; // Для низа экрана (куда приезжает)
 
         switch(this.decorType) {
-            case 'tree_far': // Самые дальние (край экрана)
-                startOffsetPct = 0.15; // Начинаются шире
-                targetOffsetPct = 1.2; // Уходят далеко за экран
+            case 'tree_far': // Дальние гиганты
+                minStartPct = 0.12; maxStartPct = 0.25; 
+                minTargetPct = 0.8; maxTargetPct = 1.6; // Сильно по бокам
                 break;
             case 'tree_mid': // Средние деревья
-                startOffsetPct = 0.08; 
-                targetOffsetPct = 0.7; // Ближе к краю экрана
+                minStartPct = 0.08; maxStartPct = 0.18;
+                minTargetPct = 0.5; maxTargetPct = 0.9; // Смешиваются с дальними
                 break;
             case 'bush': // Кусты
-                startOffsetPct = 0.04;
-                targetOffsetPct = 0.45; // Середина поляны
+                minStartPct = 0.05; maxStartPct = 0.12;
+                minTargetPct = 0.30; maxTargetPct = 0.6; // Смешиваются с деревьями
                 break;
-            case 'flower': // Цветы (у дороги)
-                startOffsetPct = 0.01; // Почти из центра
-                targetOffsetPct = 0.18; // У самой дороги
+            case 'flower': // Цветы
+                minStartPct = 0.02; maxStartPct = 0.06;
+                // ВАЖНО: Увеличили минимальный отступ от центра (было 0.18 -> стало 0.20)
+                // Чтобы цветы не лезли на дорогу
+                minTargetPct = 0.20; maxTargetPct = 0.35; 
                 break;
         }
 
-        // Добавляем немного рандома, чтобы не было "под линейку"
-        const randomVar = 1.0 + (Math.random() - 0.5) * 0.2; 
+        // Вычисляем случайную позицию в заданном диапазоне
+        const startPct = minStartPct + Math.random() * (maxStartPct - minStartPct);
+        const targetPct = minTargetPct + Math.random() * (maxTargetPct - minTargetPct);
 
-        this.startX = cx + (sideSign * (width * startOffsetPct * randomVar));
-        this.targetX = cx + (sideSign * (width * targetOffsetPct * randomVar));
+        this.startX = cx + (sideSign * (width * startPct));
+        this.targetX = cx + (sideSign * (width * targetPct));
     }
 
     update(dt) {
         super.update(dt);
         const pos = this.getScreenPos();
-        // Уменьшенный размер для аккуратности
         const size = 350 * pos.scale * this.baseScale * this.sizeVar;
         this.checkVisibility(pos.x, pos.y, size);
     }
@@ -571,7 +566,6 @@ function gameOver() {
 
 // === ЗАПОЛНЕНИЕ ЛЕСА ===
 function populateForest() {
-    // Генерируем 150 объектов сразу, чтобы не было пустоты
     for(let i=0; i<150; i++) {
         let d = new Decor();
         d.progress = Math.random(); 
@@ -633,7 +627,7 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    // Частый спавн (20), так как скорость медленная, нужно больше объектов
+    // Спавн декора
     if (gameState.decorTimer > 20) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
