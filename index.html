@@ -186,39 +186,36 @@ class Prop {
         this.markedForDeletion = false;
         this.baseSpeed = isTrash ? 0.003 : 0.002; 
         
+        // Z начинается с 0
+        this.z = 0; 
+
         if (isTrash) {
-            // МУСОР: Летит строго из центра
-            this.z = 0; 
+            // МУСОР: Летит СТРОГО В ЦЕНТР
             this.startX = cx + (Math.random() - 0.5) * 50; 
             this.startY = cy;
-            this.targetX = cx + (Math.random() - 0.5) * (width * 0.5); 
+            this.targetX = cx + (Math.random() - 0.5) * (width * 0.4); // Узкий коридор для мусора
             this.targetY = height + 150; 
         } else {
-            // === НОВАЯ ЛОГИКА ЛЕСА ===
+            // === ЛОГИКА "РАССТУПАЮЩЕГОСЯ" ЛЕСА ===
             
-            // 1. Стартуем чуть ближе (чтобы не были точками)
-            this.z = 0.1; 
-
-            // 2. Выбираем сторону (Лево или Право)
             const isLeft = Math.random() > 0.5;
             
-            // 3. Рандомизируем СТАРТ на горизонте
-            // Деревья появляются не из одной точки, а широкой полосой
-            const horizonSpread = width * 0.3; // Разброс 30% ширины
-            const startOffset = (Math.random() * horizonSpread) + 20;
+            // 1. Старт: Довольно узко у горизонта (чтобы лес выглядел цельным вдали)
+            const horizonSpread = width * 0.25; 
+            const startOffset = (Math.random() * horizonSpread) + 10;
             this.startX = cx + (isLeft ? -startOffset : startOffset);
             this.startY = cy;
 
-            // 4. Рандомизируем ЦЕЛЬ (Траекторию)
-            // Деревья летят по разным линиям. 
-            // minTarget - самые близкие к дороге деревья (но не на дороге!)
-            // maxTarget - деревья в глубоком лесу
-            const minTarget = width * 0.35; 
-            const maxTarget = width * 1.5;
+            // 2. Финиш: ОЧЕНЬ ШИРОКО
+            // Мы заставляем деревья улетать за пределы экрана, чтобы не перекрывать тропинку
+            // minTarget - минимальное расстояние от центра в конце пути (безопасная зона для дороги)
+            const minTarget = width * 0.6; // 60% ширины от центра свободно
+            const maxTarget = width * 1.5; // Улетают далеко за бока
+            
             const targetOffset = minTarget + Math.random() * (maxTarget - minTarget);
 
             this.targetX = cx + (isLeft ? -targetOffset : targetOffset);
-            this.targetY = height + 300;
+            this.targetY = height + 100;
         }
     }
 
@@ -233,19 +230,31 @@ class Prop {
                 handleMiss();
             }
         } else {
-            if (y > height + size || x < -size || x > width + size) {
+            // Декор удаляем если он ушел за любую границу
+            if (y > height + size || x < -size * 2 || x > width + size * 2) {
                 this.markedForDeletion = true;
             }
         }
     }
 
     getScreenPos() {
+        // Линейная интерполяция позиции
         const curX = this.startX + (this.targetX - this.startX) * this.z;
         const curY = this.startY + (this.targetY - this.startY) * this.z;
         
-        // Более плавная кривая роста, чтобы в середине были крупнее
-        let scale = Math.pow(this.z, 1.8); 
-        return { x: curX, y: curY, scale: scale };
+        // === НОВАЯ ФОРМУЛА МАСШТАБА ===
+        // scaleStart = 0.4 (Сразу большие на горизонте)
+        // scaleEnd = 1.0 (Обычный размер в конце)
+        // Мы используем Z, чтобы плавно менять размер от 0.4 до 1.0+
+        
+        let baseScale = 0.4 + (this.z * 1.2); 
+        
+        // Мусор растет чуть агрессивнее в конце, чтобы его было удобно хватать
+        if (this.isTrash) {
+             baseScale = Math.pow(this.z, 2); 
+        }
+
+        return { x: curX, y: curY, scale: baseScale };
     }
 }
 
@@ -274,7 +283,8 @@ class Trash extends Prop {
         let drawY = this.isDragging ? this.dragY : pos.y;
         let finalScale = this.isDragging ? 1.0 : pos.scale;
         
-        if (finalScale < 0.02) return;
+        // Мусор показываем только когда он отлетел от горизонта
+        if (finalScale < 0.05) return;
 
         let size = 220 * finalScale; 
 
@@ -323,20 +333,19 @@ class Decor extends Prop {
 
     draw(ctx) {
         const pos = this.getScreenPos();
-        if (pos.scale < 0.01) return;
-
+        // Рисуем сразу, так как они теперь большие на старте
+        
         let size = 500 * pos.scale * this.baseScale;
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
-            ctx.globalAlpha = pos.scale;
+            ctx.globalAlpha = 1; // Убрал прозрачность для теста
             ctx.fillStyle = '#1B5E20';
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, size/4, 0, Math.PI*2);
             ctx.fill();
-            ctx.globalAlpha = 1;
         }
     }
 }
@@ -531,8 +540,7 @@ function loop(time) {
     }
     
     // === СПАВН ДЕКОРА (ОЧЕНЬ БЫСТРЫЙ) ===
-    // Таймер 15мс = сплошной поток
-    if (gameState.decorTimer > 15) { 
+    if (gameState.decorTimer > 30) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
