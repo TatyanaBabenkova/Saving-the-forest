@@ -31,7 +31,7 @@
             padding: 20px;
             color: white;
             text-shadow: 2px 2px 4px black;
-            font-size: 32px; /* Увеличил шрифт очков */
+            font-size: 32px;
             font-weight: bold;
             display: flex;
             justify-content: space-between;
@@ -108,10 +108,11 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
+// УВЕЛИЧИЛ МАСШТАБЫ ДЕКОРА
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 2.5 },   
-    { prefix: 'bush', count: 5, scale: 1.5 },   
-    { prefix: 'flower', count: 5, scale: 0.8 }  
+    { prefix: 'tree', count: 5, scale: 3.5 },   // Деревья ОЧЕНЬ большие
+    { prefix: 'bush', count: 5, scale: 2.0 },   // Кусты большие
+    { prefix: 'flower', count: 5, scale: 1.0 }  
 ];
 
 /**
@@ -193,22 +194,42 @@ class Prop {
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.6); 
             this.targetY = height + 150; 
         } else {
+            // ДЕКОР
             const side = Math.random() > 0.5 ? 1 : -1;
-            const offsetStart = 20 + Math.random() * 100;
+            // Старт ближе к центру
+            const offsetStart = 10 + Math.random() * 50;
             this.startX = cx + (side * offsetStart);
             this.startY = cy;
-            // Увеличил разлет декора в стороны, чтобы они не лезли в центр
-            this.targetX = cx + (side * width * 2.0); 
-            this.targetY = height + 200;
+            
+            // ЦЕЛЬ (Траектория):
+            // Раньше было width * 2.0 (очень широко).
+            // Теперь 0.9 — они пролетают ближе к центру, сужая туннель.
+            this.targetX = cx + (side * width * 0.9); 
+            
+            // Но чтобы они точно ушли вниз
+            this.targetY = height + 300;
         }
     }
 
     update(dt) {
         this.z += this.baseSpeed * gameState.speed * (dt / 16);
-        if (this.z >= 1.3 && !this.isTrash) this.markedForDeletion = true;
-        if (this.isTrash && this.z > 1.2) {
-            this.markedForDeletion = true;
-            handleMiss();
+    }
+
+    // Проверка, ушел ли объект за экран
+    checkVisibility(x, y, size) {
+        if (this.isTrash) {
+            // Мусор удаляем, если он улетел ниже экрана
+            if (y > height + size) {
+                this.markedForDeletion = true;
+                handleMiss();
+            }
+        } else {
+            // Декор удаляем ТОЛЬКО если он физически ушел за границы экрана
+            // (Слева ИЛИ Справа ИЛИ Снизу)
+            // Это решает проблему "зависания" на краях
+            if (y > height + size || x < -size || x > width + size) {
+                this.markedForDeletion = true;
+            }
         }
     }
 
@@ -231,7 +252,12 @@ class Trash extends Prop {
     }
 
     update(dt) {
-        if (!this.isDragging) super.update(dt);
+        if (!this.isDragging) {
+            super.update(dt);
+            const pos = this.getScreenPos();
+            const size = 350 * pos.scale;
+            this.checkVisibility(pos.x, pos.y, size);
+        }
     }
 
     draw(ctx) {
@@ -240,11 +266,8 @@ class Trash extends Prop {
         let drawY = this.isDragging ? this.dragY : pos.y;
         let finalScale = this.isDragging ? 1.0 : pos.scale;
         
-        // Показываем объект раньше
         if (finalScale < 0.02) return;
 
-        // === ГИГАНТСКИЙ МУСОР (350px) ===
-        // Чтобы было удобно хватать
         let size = 350 * finalScale; 
 
         const res = Loader.get(`${this.type.prefix}${this.skinId}`);
@@ -266,7 +289,7 @@ class Trash extends Prop {
             ctx.arc(0, 0, size/2.5, 0, Math.PI*2);
             ctx.fill();
             ctx.fillStyle = 'white';
-            ctx.font = `${Math.ceil(40*finalScale)}px Arial`; // Шрифт больше
+            ctx.font = `${Math.ceil(40*finalScale)}px Arial`;
             ctx.fillText(this.type.id[0].toUpperCase(), -10, 15);
         }
         ctx.restore();
@@ -283,13 +306,21 @@ class Decor extends Prop {
         this.baseScale = t.scale;
     }
 
+    update(dt) {
+        super.update(dt);
+        const pos = this.getScreenPos();
+        // Рассчитываем размер для корректной проверки выхода за экран
+        // Увеличил базовый множитель до 500 для гигантских деревьев
+        const size = 500 * pos.scale * this.baseScale;
+        this.checkVisibility(pos.x, pos.y, size);
+    }
+
     draw(ctx) {
         const pos = this.getScreenPos();
         if (pos.scale < 0.01) return;
 
-        // === ОГРОМНЫЕ ДЕРЕВЬЯ (1200px) ===
-        // Теперь они будут реального размера, пролетая мимо
-        let size = 1200 * pos.scale * this.baseScale;
+        // === ГИГАНТСКИЙ ЛЕС ===
+        let size = 500 * pos.scale * this.baseScale;
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
@@ -312,12 +343,9 @@ class Bin {
         const availableW = width - (margin * 2);
         const binW = availableW / total;
         
-        // === БОЛЬШИЕ БАКИ ===
-        // Увеличил макс ширину с 90 до 160
         this.w = Math.min(160, binW - 5); 
-        this.h = this.w * 1.3; // Чуть выше пропорция
+        this.h = this.w * 1.3;
         
-        // Центрируем с учетом новой ширины
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 15;
     }
@@ -326,12 +354,10 @@ class Bin {
         const res = Loader.get(`bin_${this.type.id}`);
         if (res && res.loaded) ctx.drawImage(res.img, this.x, this.y, this.w, this.h);
         else {
-            // Фолбэк для баков тоже крупнее
             ctx.fillStyle = this.type.color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
             ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
             ctx.strokeRect(this.x, this.y, this.w, this.h);
-            // Текст на заглушке
             ctx.fillStyle = 'white';
             ctx.textAlign = 'center';
             ctx.font = 'bold 24px Arial';
@@ -367,7 +393,6 @@ function handleStart(x, y) {
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
-        // Хитбокс тоже огромный (350)
         const size = 350 * pos.scale; 
         const dx = x - pos.x;
         const dy = y - pos.y;
@@ -499,13 +524,19 @@ function loop(time) {
         gameState.trash.push(new Trash());
         gameState.spawnTimer = 0;
     }
-    if (gameState.decorTimer > 350) { 
+    
+    // === СПАВН ДЕКОРА ===
+    // Уменьшил таймер с 350 до 120. Теперь они появляются очень часто.
+    if (gameState.decorTimer > 120) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
 
     gameState.decor.forEach(d => d.update(dt));
     gameState.trash.forEach(t => t.update(dt));
+    
+    // Фильтр теперь использует флаг markedForDeletion, 
+    // который ставится только при полном уходе за экран
     gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
