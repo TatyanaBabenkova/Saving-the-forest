@@ -97,9 +97,8 @@
 /**
  * НАСТРОЙКИ
  */
-const ASSETS_PATH = 'IMG/';
-// Настройка перспективы (0.5 - центр экрана по вертикали)
-// Чуть выше центра (0.42), чтобы совпадало с картинкой горизонта
+const ASSETS_PATH = 'img/';
+// Настройка перспективы (0.42 - линия горизонта на твоем фоне)
 const HORIZON_Y = 0.42; 
 
 const TYPES = {
@@ -112,12 +111,12 @@ const TYPES = {
 
 const DECOR_TYPES = [
     { prefix: 'tree', count: 5, scale: 2.5 },   // Деревья большие
-    { prefix: 'bush', count: 5, scale: 1.2 },   // Кусты поменьше
-    { prefix: 'flower', count: 5, scale: 0.5 }  // Цветы маленькие
+    { prefix: 'bush', count: 5, scale: 1.5 },   // Кусты поменьше
+    { prefix: 'flower', count: 5, scale: 0.8 }  // Цветы маленькие
 ];
 
 /**
- * АУДИО (Генерация звука)
+ * АУДИО
  */
 const AudioSys = {
     ctx: null,
@@ -175,85 +174,52 @@ const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
-    score: 0,
-    lives: 5,
-    speed: 1, 
-    isRunning: false,
-    bins: [],
-    trash: [],
-    decor: [],
-    particles: [],
-    lastTime: 0,
-    spawnTimer: 0,
-    decorTimer: 0
+    score: 0, lives: 5, speed: 1, isRunning: false,
+    bins: [], trash: [], decor: [], particles: [],
+    lastTime: 0, spawnTimer: 0, decorTimer: 0
 };
 
 // --- ФИЗИКА И ОБЪЕКТЫ ---
 
 class Prop {
     constructor(isTrash) {
-        // Z - это прогресс движения от 0 (горизонт) до 1 (экран)
-        this.z = 0; 
+        this.z = 0; // Прогресс от 0 (горизонт) до 1+ (экран)
         this.isTrash = isTrash;
         this.markedForDeletion = false;
-        
-        // Базовая скорость (МЕДЛЕННО)
-        // Для мусора чуть быстрее, чтобы игрок не скучал
+        // Базовая скорость
         this.baseSpeed = isTrash ? 0.003 : 0.002; 
         
-        // --- ЛОГИКА ТРАЕКТОРИЙ ---
-        
-        // Координаты спавна (на горизонте)
-        // cx - центр экрана, cy - линия горизонта
-        
         if (isTrash) {
-            // МУСОР: Летит из центра прямо на игрока (с небольшим разбросом)
+            // МУСОР: Летит из центра на игрока
             this.startX = cx + (Math.random() - 0.5) * 50; 
             this.startY = cy;
-            
-            // Цель: низ экрана, центр +/- ширина
-            this.targetX = cx + (Math.random() - 0.5) * (width * 0.5); 
-            this.targetY = height + 100; // Чуть ниже экрана
-            
+            this.targetX = cx + (Math.random() - 0.5) * (width * 0.6); 
+            this.targetY = height + 150; 
         } else {
-            // ДЕКОР: Спавнится слева или справа от тропинки
-            // Определяем сторону: -1 (лево) или 1 (право)
+            // ДЕКОР: Спавнится и улетает в бок
             const side = Math.random() > 0.5 ? 1 : -1;
-            
-            // Старт: чуть в стороне от центра горизонта
             const offsetStart = 20 + Math.random() * 100;
             this.startX = cx + (side * offsetStart);
             this.startY = cy;
-            
-            // Цель: улететь далеко в бок и вниз
-            this.targetX = cx + (side * width * 1.5); // Сильно в бок
-            this.targetY = height + 100;
+            this.targetX = cx + (side * width * 1.8); // Сильно в бок
+            this.targetY = height + 200;
         }
     }
 
     update(dt) {
-        // Движение вперед по Z
         this.z += this.baseSpeed * gameState.speed * (dt / 16);
-
-        if (this.z >= 1.2 && !this.isTrash) this.markedForDeletion = true;
-        
-        // Мусор удаляем если улетел совсем вниз
-        if (this.isTrash && this.z > 1.1) {
+        if (this.z >= 1.3 && !this.isTrash) this.markedForDeletion = true;
+        if (this.isTrash && this.z > 1.2) {
             this.markedForDeletion = true;
             handleMiss();
         }
     }
 
     getScreenPos() {
-        // ЛИНЕЙНАЯ ИНТЕРПОЛЯЦИЯ (Lerp)
-        // Текущая позиция = Старт + (Разница * Z)
         const curX = this.startX + (this.targetX - this.startX) * this.z;
         const curY = this.startY + (this.targetY - this.startY) * this.z;
-        
-        // ЭКСПОНЕНЦИАЛЬНЫЙ МАСШТАБ
-        // Объекты растут медленно в начале, и быстро в конце (эффект 3D)
-        const scale = Math.pow(this.z, 2); // Квадратичная зависимость
-
+        // Квадратичный масштаб для 3D эффекта
+        const scale = Math.pow(this.z, 2);
         return { x: curX, y: curY, scale: scale };
     }
 }
@@ -274,23 +240,20 @@ class Trash extends Prop {
 
     draw(ctx) {
         const pos = this.getScreenPos();
-        // Если тащим - берем координаты пальца, иначе расчетные
         let drawX = this.isDragging ? this.dragX : pos.x;
         let drawY = this.isDragging ? this.dragY : pos.y;
-        
-        // Масштаб: если тащим, фиксированный крупный, иначе по Z
         let finalScale = this.isDragging ? 1.0 : pos.scale;
-        
-        // Не рисуем, если слишком мелко (на горизонте)
         if (finalScale < 0.05) return;
 
-        let size = 120 * finalScale; // Базовый размер мусора
+        // === ИЗМЕНЕНИЕ РАЗМЕРА МУСОРА ===
+        // Базовый размер увеличен до 250
+        let size = 250 * finalScale; 
 
         const res = Loader.get(`${this.type.prefix}${this.skinId}`);
         ctx.save();
         ctx.translate(drawX, drawY);
         
-        // Тень падающая
+        // Тень
         if (!this.isDragging) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
@@ -301,14 +264,14 @@ class Trash extends Prop {
         if (res && res.loaded) {
             ctx.drawImage(res.img, -size/2, -size/2, size, size);
         } else {
-            // Заглушка
+            // Заглушка увеличенная
             ctx.fillStyle = this.type.color;
             ctx.beginPath();
-            ctx.arc(0, 0, size/2, 0, Math.PI*2);
+            ctx.arc(0, 0, size/2.5, 0, Math.PI*2);
             ctx.fill();
             ctx.fillStyle = 'white';
-            ctx.font = `${Math.ceil(14*finalScale)}px Arial`;
-            ctx.fillText(this.type.id[0].toUpperCase(), -5, 5);
+            ctx.font = `${Math.ceil(20*finalScale)}px Arial`;
+            ctx.fillText(this.type.id[0].toUpperCase(), -5, 8);
         }
         ctx.restore();
     }
@@ -321,24 +284,26 @@ class Decor extends Prop {
         const t = types[Math.floor(Math.random() * types.length)];
         this.skinId = Math.floor(Math.random() * 5) + 1;
         this.prefix = t.prefix;
-        this.baseScale = t.scale; // У каждого декора свой базовый размер
+        this.baseScale = t.scale;
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
-        if (pos.scale < 0.02) return; // Скрываем совсем мелкие
+        if (pos.scale < 0.02) return;
 
-        // Размер = База * Перспектива * Тип объекта
-        let size = 150 * pos.scale * this.baseScale;
+        // === ИЗМЕНЕНИЕ РАЗМЕРА ДЕКОРА ===
+        // Базовый множитель увеличен с 150 до 400!
+        let size = 400 * pos.scale * this.baseScale;
         
         const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
+            // Рисуем так, чтобы низ картинки совпадал с точкой Y
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
             ctx.globalAlpha = pos.scale;
             ctx.fillStyle = '#1B5E20';
             ctx.beginPath();
-            ctx.arc(pos.x, pos.y, size/3, 0, Math.PI*2);
+            ctx.arc(pos.x, pos.y, size/4, 0, Math.PI*2);
             ctx.fill();
             ctx.globalAlpha = 1;
         }
@@ -351,23 +316,19 @@ class Bin {
         const margin = 20;
         const availableW = width - (margin * 2);
         const binW = availableW / total;
-        this.w = Math.min(80, binW - 10);
+        this.w = Math.min(90, binW - 5); // Чуть шире баки
         this.h = this.w * 1.2;
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 10;
-        this.scale = 1;
-        this.baseY = 10;
     }
     checkHit(x, y) { return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h; }
     draw(ctx) {
         const res = Loader.get(`bin_${this.type.id}`);
-        // Анимация прыжка бака при попадании (опционально можно добавить)
         if (res && res.loaded) ctx.drawImage(res.img, this.x, this.y, this.w, this.h);
         else {
             ctx.fillStyle = this.type.color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
             ctx.strokeRect(this.x, this.y, this.w, this.h);
         }
     }
@@ -384,7 +345,7 @@ class Particle {
     draw(ctx) {
         ctx.globalAlpha = Math.max(0, this.life);
         ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x, this.y, 8, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
     }
 }
@@ -395,21 +356,19 @@ let dragItem = null;
 
 function handleStart(x, y) {
     if (!gameState.isRunning) return;
-    // Ищем мусор, в который попали
-    // Сортируем обратным циклом, чтобы брать тот, что "сверху" (ближе)
-    // Но так как у нас 3D, "ближе" тот, у кого Z больше
-    
-    let candidates = gameState.trash.filter(t => t.z > 0.3); // Нельзя хватать то, что на горизонте
-    candidates.sort((a,b) => b.z - a.z); // Самые близкие первые
+    let candidates = gameState.trash.filter(t => t.z > 0.3);
+    candidates.sort((a,b) => b.z - a.z);
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
-        const size = 120 * pos.scale; // Хитбокс
+        // === ВАЖНО: УВЕЛИЧЕН ХИТБОКС ===
+        // Должен соответствовать визуальному размеру (250)
+        const size = 250 * pos.scale; 
         const dx = x - pos.x;
         const dy = y - pos.y;
         
-        // Проверка радиуса + запас
-        if (Math.sqrt(dx*dx + dy*dy) < size/1.5) {
+        // Проверка радиуса с запасом (дерево легче хватать)
+        if (Math.sqrt(dx*dx + dy*dy) < size / 1.8) {
             dragItem = t;
             t.isDragging = true;
             t.dragX = x; t.dragY = y;
@@ -437,7 +396,7 @@ function handleEnd(x, y) {
             }
             dragItem.markedForDeletion = true;
         } else {
-            dragItem.isDragging = false; // Возврат
+            dragItem.isDragging = false;
         }
         updateHUD();
         dragItem = null;
@@ -474,7 +433,7 @@ function createBins() {
     for (let key in TYPES) gameState.bins.push(new Bin(TYPES[key], i++, count));
 }
 
-function createParticles(x, y, c) { for(let i=0; i<10; i++) gameState.particles.push(new Particle(x, y, c)); }
+function createParticles(x, y, c) { for(let i=0; i<12; i++) gameState.particles.push(new Particle(x, y, c)); }
 function handleMiss() { 
     gameState.lives--; 
     AudioSys.playError(); 
@@ -484,7 +443,7 @@ function handleMiss() {
 }
 
 let shakeTimer = 0;
-function triggerShake() { shakeTimer = 10; }
+function triggerShake() { shakeTimer = 15; }
 function updateHUD() {
     document.getElementById('score-el').textContent = `Очки: ${gameState.score}`;
     document.getElementById('lives-el').textContent = `Жизни: ${gameState.lives}`;
@@ -516,60 +475,48 @@ function loop(time) {
 
     ctx.clearRect(0, 0, width, height);
 
-    // Фон
     const bgRes = Loader.get('bg');
     if (bgRes && bgRes.loaded) ctx.drawImage(bgRes.img, 0, 0, width, height);
     else {
-        // Фоллбэк фон
         const grad = ctx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, '#87CEEB'); grad.addColorStop(HORIZON_Y, '#eee'); 
-        grad.addColorStop(HORIZON_Y, '#4CAF50'); grad.addColorStop(1, '#2E7D32');
+        grad.addColorStop(0, '#87CEEB'); grad.addColorStop(HORIZON_Y, '#ccc'); 
+        grad.addColorStop(HORIZON_Y, '#2E7D32'); grad.addColorStop(1, '#1B5E20');
         ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
     }
 
     if (shakeTimer > 0) {
         ctx.save();
-        ctx.translate((Math.random()-0.5)*10, (Math.random()-0.5)*10);
+        ctx.translate((Math.random()-0.5)*15, (Math.random()-0.5)*15);
         shakeTimer--;
     }
 
-    // Спавн
     gameState.spawnTimer += dt;
     gameState.decorTimer += dt;
-    gameState.speed = 1 + (gameState.score / 200); // Медленное ускорение
+    gameState.speed = 1 + (gameState.score / 250); 
 
-    if (gameState.spawnTimer > 2500 / gameState.speed) { // Реже мусор
+    if (gameState.spawnTimer > 2500 / gameState.speed) {
         gameState.trash.push(new Trash());
         gameState.spawnTimer = 0;
     }
-    if (gameState.decorTimer > 300) { // Чаще декор
+    if (gameState.decorTimer > 350) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
 
-    // Обновление и Отрисовка
-    // Сначала рисуем декор (он за мусором), сортируем по Z чтобы дальние перекрывались ближними правильно
-    const allObjects = [...gameState.decor, ...gameState.trash];
-    
-    // Важно: разделяем обновление и отрисовку слоев
     gameState.decor.forEach(d => d.update(dt));
     gameState.trash.forEach(t => t.update(dt));
-
     gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // Рисуем декор (фон)
     gameState.decor.sort((a,b) => a.z - b.z);
     gameState.decor.forEach(d => d.draw(ctx));
 
-    // Рисуем мусор (передний план)
     gameState.trash.sort((a,b) => {
         if (a.isDragging) return 1; if (b.isDragging) return -1;
         return a.z - b.z;
     });
     gameState.trash.forEach(t => t.draw(ctx));
 
-    // UI элементы
     gameState.bins.forEach(b => b.draw(ctx));
     gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
     gameState.particles = gameState.particles.filter(p => p.life > 0);
