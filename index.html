@@ -10,7 +10,7 @@
             padding: 0;
             overflow: hidden;
             background-color: #333;
-            touch-action: none; /* Отключаем зум и скролл на тачах */
+            touch-action: none;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         canvas {
@@ -30,11 +30,12 @@
         .hud {
             padding: 15px;
             color: white;
-            text-shadow: 2px 2px 2px black;
+            text-shadow: 2px 2px 4px black;
             font-size: 24px;
             font-weight: bold;
             display: flex;
             justify-content: space-between;
+            z-index: 5;
         }
         #start-screen, #game-over-screen {
             position: absolute;
@@ -61,9 +62,11 @@
             border-radius: 10px;
             margin-top: 20px;
             transition: transform 0.1s;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #2E7D32;
         }
-        .btn:active { transform: scale(0.95); }
-        h1 { font-size: 48px; margin-bottom: 10px; text-align: center; }
+        .btn:active { transform: scale(0.95); box-shadow: 0 2px 0 #2E7D32; }
+        h1 { font-size: 48px; margin-bottom: 10px; text-align: center; text-shadow: 0 5px 10px rgba(0,0,0,0.5); }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -78,23 +81,27 @@
 
     <div id="start-screen">
         <h1>Эко-Тропа</h1>
-        <p>Сортируй мусор, спасай лес!</p>
-        <button class="btn" id="start-btn">Начать путь</button>
+        <p>Сортируй мусор, иди вперед!</p>
+        <button class="btn" id="start-btn">В Путь</button>
     </div>
 
     <div id="game-over-screen" class="hidden">
-        <h1>Игра окончена</h1>
+        <h1>Конец игры</h1>
         <p id="final-score">Твой счет: 0</p>
-        <button class="btn" id="restart-btn">Попробовать снова</button>
+        <button class="btn" id="restart-btn">Заново</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
 <script>
 /**
- * КОНФИГУРАЦИЯ И РЕСУРСЫ
+ * НАСТРОЙКИ
  */
-const ASSETS_PATH = 'IMG/';
+const ASSETS_PATH = 'img/';
+// Настройка перспективы (0.5 - центр экрана по вертикали)
+// Чуть выше центра (0.42), чтобы совпадало с картинкой горизонта
+const HORIZON_Y = 0.42; 
+
 const TYPES = {
     ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
     PAPER:   { id: 'paper',   color: '#2196F3', binImg: 'bin_paper.png',   prefix: 'trash_newspaper' },
@@ -104,41 +111,37 @@ const TYPES = {
 };
 
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5 },
-    { prefix: 'bush', count: 5 },
-    { prefix: 'flower', count: 5 }
+    { prefix: 'tree', count: 5, scale: 2.5 },   // Деревья большие
+    { prefix: 'bush', count: 5, scale: 1.2 },   // Кусты поменьше
+    { prefix: 'flower', count: 5, scale: 0.5 }  // Цветы маленькие
 ];
 
 /**
- * АУДИО СИСТЕМА (Web Audio API)
- * Генерирует звуки без внешних файлов
+ * АУДИО (Генерация звука)
  */
 const AudioSys = {
     ctx: null,
-    init() {
-        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    },
-    playTone(freq, type, duration) {
+    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+    playTone(freq, type, duration, vol=0.1) {
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start();
         osc.stop(this.ctx.currentTime + duration);
     },
-    playSuccess() { this.playTone(600, 'sine', 0.2); setTimeout(() => this.playTone(900, 'sine', 0.4), 100); },
-    playError() { this.playTone(150, 'sawtooth', 0.4); },
-    playPop() { this.playTone(400, 'triangle', 0.1); }
+    playSuccess() { this.playTone(500, 'sine', 0.1); setTimeout(() => this.playTone(1000, 'sine', 0.2), 100); },
+    playError() { this.playTone(150, 'sawtooth', 0.3, 0.2); },
+    playPop() { this.playTone(600, 'triangle', 0.05, 0.05); }
 };
 
 /**
- * МЕНЕДЖЕР РЕСУРСОВ
- * Загружает картинки и создает заглушки при ошибках
+ * ЗАГРУЗЧИК
  */
 const Loader = {
     images: {},
@@ -146,58 +149,35 @@ const Loader = {
         return new Promise((resolve) => {
             const img = new Image();
             img.src = src;
-            img.onload = () => {
-                this.images[key] = { img: img, loaded: true };
-                resolve();
-            };
-            img.onerror = () => {
-                // Если картинки нет, помечаем как false, будем рисовать заглушку
-                this.images[key] = { img: null, loaded: false };
-                resolve();
-            };
+            img.onload = () => { this.images[key] = { img: img, loaded: true }; resolve(); };
+            img.onerror = () => { this.images[key] = { img: null, loaded: false }; resolve(); };
         });
     },
     async init() {
-        const promises = [];
-        // Фон
-        promises.push(this.loadImg('bg', ASSETS_PATH + 'bg_forest.png')); // Попробуй .jpg если png нет
-        
-        // Баки
+        const promises = [this.loadImg('bg', ASSETS_PATH + 'bg_forest.png')];
+        for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
         for (let key in TYPES) {
-            promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
+            for (let i = 1; i <= 5; i++) promises.push(this.loadImg(`${TYPES[key].prefix}${i}`, `${ASSETS_PATH}${TYPES[key].prefix}${i}.png`));
         }
-        
-        // Мусор (1-5)
-        for (let key in TYPES) {
-            for (let i = 1; i <= 5; i++) {
-                promises.push(this.loadImg(`${TYPES[key].prefix}${i}`, `${ASSETS_PATH}${TYPES[key].prefix}${i}.png`));
-            }
-        }
-
-        // Декор (1-5)
         DECOR_TYPES.forEach(d => {
-            for (let i = 1; i <= 5; i++) {
-                promises.push(this.loadImg(`${d.prefix}${i}`, `${ASSETS_PATH}${d.prefix}${i}.png`));
-            }
+            for (let i = 1; i <= 5; i++) promises.push(this.loadImg(`${d.prefix}${i}`, `${ASSETS_PATH}${d.prefix}${i}.png`));
         });
-
         await Promise.all(promises);
     },
     get(key) { return this.images[key]; }
 };
 
 /**
- * ИГРОВАЯ ЛОГИКА
+ * ИГРА
  */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
-// Состояние игры
 let gameState = {
     score: 0,
     lives: 5,
-    speed: 1, // Множитель скорости
+    speed: 1, 
     isRunning: false,
     bins: [],
     trash: [],
@@ -208,151 +188,116 @@ let gameState = {
     decorTimer: 0
 };
 
-// --- Классы ---
+// --- ФИЗИКА И ОБЪЕКТЫ ---
 
-class Particle {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.vx = (Math.random() - 0.5) * 10;
-        this.vy = (Math.random() - 0.5) * 10;
-        this.life = 1.0;
-        this.color = color;
-    }
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.life -= 0.05;
-    }
-    draw(ctx) {
-        ctx.globalAlpha = Math.max(0, this.life);
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-    }
-}
-
-class Bin {
-    constructor(typeObj, index, total) {
-        this.type = typeObj;
-        // Распределяем баки по ширине
-        const margin = 20;
-        const availableW = width - (margin * 2);
-        const binW = availableW / total;
-        
-        this.w = Math.min(80, binW - 10);
-        this.h = this.w * 1.2;
-        this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-        this.y = 20;
-        this.scale = 1;
-    }
-
-    checkHit(x, y) {
-        return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h;
-    }
-
-    draw(ctx) {
-        const res = Loader.get(`bin_${this.type.id}`);
-        if (res && res.loaded) {
-            ctx.drawImage(res.img, this.x, this.y, this.w, this.h);
-        } else {
-            // Заглушка
-            ctx.fillStyle = this.type.color;
-            ctx.fillRect(this.x, this.y, this.w, this.h);
-            ctx.strokeStyle = 'white';
-            ctx.strokeRect(this.x, this.y, this.w, this.h);
-            ctx.fillStyle = 'white';
-            ctx.font = '12px Arial';
-            ctx.fillText(this.type.id.toUpperCase(), this.x + 5, this.y + 20);
-        }
-    }
-}
-
-// Базовый класс для 3D объектов
 class Prop {
-    constructor(isTrash = false) {
-        // Все спавнится в центре (Vanishing point)
-        this.x = cx;
-        this.y = cy;
-        this.z = 0.01; // Глубина (0 - далеко, 1 - близко)
+    constructor(isTrash) {
+        // Z - это прогресс движения от 0 (горизонт) до 1 (экран)
+        this.z = 0; 
         this.isTrash = isTrash;
         this.markedForDeletion = false;
         
-        if (isTrash) {
-            // Мусор летит строго вниз и чуть в стороны рандомно
-            this.angle = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
-            this.speedZ = 0.005; 
-        } else {
-            // Декор разлетается во все стороны, кроме низа (где мусор)
-            // Угол от PI (лево) до 2PI (право) через верх
-            this.angle = Math.PI + (Math.random() * Math.PI);
-            this.speedZ = 0.008; // Декор движется быстрее для эффекта скорости
-        }
+        // Базовая скорость (МЕДЛЕННО)
+        // Для мусора чуть быстрее, чтобы игрок не скучал
+        this.baseSpeed = isTrash ? 0.003 : 0.002; 
         
-        // Вектор движения на плоскости экрана
-        this.vx = Math.cos(this.angle) * width * 0.8; 
-        this.vy = Math.sin(this.angle) * height * 0.8;
+        // --- ЛОГИКА ТРАЕКТОРИЙ ---
+        
+        // Координаты спавна (на горизонте)
+        // cx - центр экрана, cy - линия горизонта
+        
+        if (isTrash) {
+            // МУСОР: Летит из центра прямо на игрока (с небольшим разбросом)
+            this.startX = cx + (Math.random() - 0.5) * 50; 
+            this.startY = cy;
+            
+            // Цель: низ экрана, центр +/- ширина
+            this.targetX = cx + (Math.random() - 0.5) * (width * 0.5); 
+            this.targetY = height + 100; // Чуть ниже экрана
+            
+        } else {
+            // ДЕКОР: Спавнится слева или справа от тропинки
+            // Определяем сторону: -1 (лево) или 1 (право)
+            const side = Math.random() > 0.5 ? 1 : -1;
+            
+            // Старт: чуть в стороне от центра горизонта
+            const offsetStart = 20 + Math.random() * 100;
+            this.startX = cx + (side * offsetStart);
+            this.startY = cy;
+            
+            // Цель: улететь далеко в бок и вниз
+            this.targetX = cx + (side * width * 1.5); // Сильно в бок
+            this.targetY = height + 100;
+        }
     }
 
     update(dt) {
-        // Увеличиваем Z (приближение)
-        this.z += this.speedZ * gameState.speed * (dt / 16);
+        // Движение вперед по Z
+        this.z += this.baseSpeed * gameState.speed * (dt / 16);
 
-        if (this.z >= 1 && !this.isTrash) this.markedForDeletion = true;
-        // Мусор удаляем только если ушел за низ
-        if (this.isTrash && (cy + this.vy * this.z) > height + 100) {
-             this.markedForDeletion = true;
-             handleMiss();
+        if (this.z >= 1.2 && !this.isTrash) this.markedForDeletion = true;
+        
+        // Мусор удаляем если улетел совсем вниз
+        if (this.isTrash && this.z > 1.1) {
+            this.markedForDeletion = true;
+            handleMiss();
         }
     }
 
     getScreenPos() {
-        return {
-            x: cx + this.vx * this.z,
-            y: cy + this.vy * this.z,
-            scale: this.z
-        };
+        // ЛИНЕЙНАЯ ИНТЕРПОЛЯЦИЯ (Lerp)
+        // Текущая позиция = Старт + (Разница * Z)
+        const curX = this.startX + (this.targetX - this.startX) * this.z;
+        const curY = this.startY + (this.targetY - this.startY) * this.z;
+        
+        // ЭКСПОНЕНЦИАЛЬНЫЙ МАСШТАБ
+        // Объекты растут медленно в начале, и быстро в конце (эффект 3D)
+        const scale = Math.pow(this.z, 2); // Квадратичная зависимость
+
+        return { x: curX, y: curY, scale: scale };
     }
 }
 
 class Trash extends Prop {
     constructor() {
         super(true);
-        // Выбираем тип
         const keys = Object.keys(TYPES);
-        const randomKey = keys[Math.floor(Math.random() * keys.length)];
-        this.type = TYPES[randomKey];
-        // Выбираем скин 1-5
+        this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
         this.skinId = Math.floor(Math.random() * 5) + 1;
-        
         this.isDragging = false;
-        this.dragX = 0;
-        this.dragY = 0;
-        this.radius = 40; // Размер хитбокса
+        this.dragX = 0; this.dragY = 0;
     }
 
     update(dt) {
-        if (!this.isDragging) {
-            super.update(dt);
-        }
+        if (!this.isDragging) super.update(dt);
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
+        // Если тащим - берем координаты пальца, иначе расчетные
         let drawX = this.isDragging ? this.dragX : pos.x;
         let drawY = this.isDragging ? this.dragY : pos.y;
-        let scale = this.isDragging ? 1.2 : pos.scale; // При драге увеличиваем
         
-        let size = 80 * scale;
+        // Масштаб: если тащим, фиксированный крупный, иначе по Z
+        let finalScale = this.isDragging ? 1.0 : pos.scale;
+        
+        // Не рисуем, если слишком мелко (на горизонте)
+        if (finalScale < 0.05) return;
 
-        const imgKey = `${this.type.prefix}${this.skinId}`;
-        const res = Loader.get(imgKey);
+        let size = 120 * finalScale; // Базовый размер мусора
 
+        const res = Loader.get(`${this.type.prefix}${this.skinId}`);
         ctx.save();
         ctx.translate(drawX, drawY);
         
+        // Тень падающая
+        if (!this.isDragging) {
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(0, size/2, size/3, size/6, 0, 0, Math.PI*2);
+            ctx.fill();
+        }
+
         if (res && res.loaded) {
             ctx.drawImage(res.img, -size/2, -size/2, size, size);
         } else {
@@ -361,10 +306,9 @@ class Trash extends Prop {
             ctx.beginPath();
             ctx.arc(0, 0, size/2, 0, Math.PI*2);
             ctx.fill();
-            ctx.fillStyle = 'black';
-            ctx.textAlign = 'center';
-            ctx.font = `${Math.floor(14*scale)}px Arial`;
-            ctx.fillText(this.type.id[0].toUpperCase(), 0, 5);
+            ctx.fillStyle = 'white';
+            ctx.font = `${Math.ceil(14*finalScale)}px Arial`;
+            ctx.fillText(this.type.id[0].toUpperCase(), -5, 5);
         }
         ctx.restore();
     }
@@ -377,125 +321,142 @@ class Decor extends Prop {
         const t = types[Math.floor(Math.random() * types.length)];
         this.skinId = Math.floor(Math.random() * 5) + 1;
         this.prefix = t.prefix;
+        this.baseScale = t.scale; // У каждого декора свой базовый размер
     }
 
     draw(ctx) {
         const pos = this.getScreenPos();
-        let size = 150 * pos.scale;
-        
-        const imgKey = `${this.prefix}${this.skinId}`;
-        const res = Loader.get(imgKey);
+        if (pos.scale < 0.02) return; // Скрываем совсем мелкие
 
+        // Размер = База * Перспектива * Тип объекта
+        let size = 150 * pos.scale * this.baseScale;
+        
+        const res = Loader.get(`${this.prefix}${this.skinId}`);
         if (res && res.loaded) {
-            ctx.drawImage(res.img, pos.x - size/2, pos.y - size/2, size, size);
+            ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
-            // Для декора без картинок просто рисуем зеленые круги
             ctx.globalAlpha = pos.scale;
-            ctx.fillStyle = '#2E7D32';
+            ctx.fillStyle = '#1B5E20';
             ctx.beginPath();
-            ctx.arc(pos.x, pos.y, size/2, 0, Math.PI*2);
+            ctx.arc(pos.x, pos.y, size/3, 0, Math.PI*2);
             ctx.fill();
             ctx.globalAlpha = 1;
         }
     }
 }
 
-// --- Управление ---
+class Bin {
+    constructor(typeObj, index, total) {
+        this.type = typeObj;
+        const margin = 20;
+        const availableW = width - (margin * 2);
+        const binW = availableW / total;
+        this.w = Math.min(80, binW - 10);
+        this.h = this.w * 1.2;
+        this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
+        this.y = 10;
+        this.scale = 1;
+        this.baseY = 10;
+    }
+    checkHit(x, y) { return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h; }
+    draw(ctx) {
+        const res = Loader.get(`bin_${this.type.id}`);
+        // Анимация прыжка бака при попадании (опционально можно добавить)
+        if (res && res.loaded) ctx.drawImage(res.img, this.x, this.y, this.w, this.h);
+        else {
+            ctx.fillStyle = this.type.color;
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x, this.y, this.w, this.h);
+        }
+    }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 15;
+        this.vy = (Math.random() - 0.5) * 15;
+        this.life = 1.0; this.color = color;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
+    draw(ctx) {
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+// --- УПРАВЛЕНИЕ ---
 
 let dragItem = null;
 
-function handleInputStart(x, y) {
+function handleStart(x, y) {
     if (!gameState.isRunning) return;
+    // Ищем мусор, в который попали
+    // Сортируем обратным циклом, чтобы брать тот, что "сверху" (ближе)
+    // Но так как у нас 3D, "ближе" тот, у кого Z больше
     
-    // Ищем мусор, в который попали. Начинаем с самого "ближнего" (последний в массиве)
-    for (let i = gameState.trash.length - 1; i >= 0; i--) {
-        const t = gameState.trash[i];
+    let candidates = gameState.trash.filter(t => t.z > 0.3); // Нельзя хватать то, что на горизонте
+    candidates.sort((a,b) => b.z - a.z); // Самые близкие первые
+
+    for (let t of candidates) {
         const pos = t.getScreenPos();
-        const size = 80 * pos.scale;
-        
-        // Простая проверка дистанции
+        const size = 120 * pos.scale; // Хитбокс
         const dx = x - pos.x;
         const dy = y - pos.y;
-        if (Math.sqrt(dx*dx + dy*dy) < size/2) {
+        
+        // Проверка радиуса + запас
+        if (Math.sqrt(dx*dx + dy*dy) < size/1.5) {
             dragItem = t;
             t.isDragging = true;
-            t.dragX = x;
-            t.dragY = y;
+            t.dragX = x; t.dragY = y;
             AudioSys.playPop();
             break;
         }
     }
 }
 
-function handleInputMove(x, y) {
-    if (dragItem) {
-        dragItem.dragX = x;
-        dragItem.dragY = y;
-    }
-}
+function handleMove(x, y) { if (dragItem) { dragItem.dragX = x; dragItem.dragY = y; } }
 
-function handleInputEnd(x, y) {
+function handleEnd(x, y) {
     if (dragItem) {
-        // Проверяем попадание в бак
-        let hitBin = null;
-        for (let bin of gameState.bins) {
-            if (bin.checkHit(x, y)) {
-                hitBin = bin;
-                break;
-            }
-        }
-
+        let hitBin = gameState.bins.find(b => b.checkHit(x, y));
         if (hitBin) {
             if (hitBin.type.id === dragItem.type.id) {
-                // ПРАВИЛЬНО
                 gameState.score += 10;
                 AudioSys.playSuccess();
                 createParticles(x, y, hitBin.type.color);
             } else {
-                // ОШИБКА
                 gameState.score = Math.max(0, gameState.score - 5);
                 AudioSys.playError();
                 createParticles(x, y, '#555');
                 triggerShake();
             }
-            // Удаляем мусор
             dragItem.markedForDeletion = true;
         } else {
-            // Отпустили мимо - возвращаем в поток
-            dragItem.isDragging = false;
+            dragItem.isDragging = false; // Возврат
         }
-        
         updateHUD();
         dragItem = null;
     }
 }
 
-// --- События ---
-
+// Слушатели
 window.addEventListener('resize', resize);
-canvas.addEventListener('mousedown', e => handleInputStart(e.clientX, e.clientY));
-canvas.addEventListener('mousemove', e => handleInputMove(e.clientX, e.clientY));
-canvas.addEventListener('mouseup', e => handleInputEnd(e.clientX, e.clientY));
+canvas.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
+canvas.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+canvas.addEventListener('mouseup', e => handleEnd(e.clientX, e.clientY));
+canvas.addEventListener('touchstart', e => { e.preventDefault(); handleStart(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+canvas.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+canvas.addEventListener('touchend', e => { e.preventDefault(); handleEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
 
-canvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    handleInputStart(e.touches[0].clientX, e.touches[0].clientY);
-}, {passive: false});
-canvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    handleInputMove(e.touches[0].clientX, e.touches[0].clientY);
-}, {passive: false});
-canvas.addEventListener('touchend', e => {
-    e.preventDefault();
-    // Touchend не имеет clientX, берем из changedTouches
-    handleInputEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-});
-
-// Кнопки
 document.getElementById('start-btn').onclick = startGame;
 document.getElementById('restart-btn').onclick = startGame;
 
-// --- Игровой Цикл ---
+// --- ЯДРО ---
 
 function resize() {
     width = window.innerWidth;
@@ -503,49 +464,35 @@ function resize() {
     canvas.width = width;
     canvas.height = height;
     cx = width / 2;
-    cy = height / 3; // Точка схода чуть выше центра (горизонт)
-    
-    // Пересчет позиций баков при ресайзе
-    if (gameState.bins.length > 0) {
-        gameState.bins = []; 
-        createBins();
-    }
+    cy = height * HORIZON_Y; 
+    gameState.bins = [];
+    createBins();
 }
 
 function createBins() {
-    let i = 0;
-    const count = Object.keys(TYPES).length;
-    for (let key in TYPES) {
-        gameState.bins.push(new Bin(TYPES[key], i++, count));
-    }
+    let i = 0; const count = Object.keys(TYPES).length;
+    for (let key in TYPES) gameState.bins.push(new Bin(TYPES[key], i++, count));
 }
 
-function createParticles(x, y, color) {
-    for(let i=0; i<10; i++) {
-        gameState.particles.push(new Particle(x, y, color));
-    }
-}
-
-function handleMiss() {
-    gameState.lives--;
-    AudioSys.playError();
-    triggerShake();
-    updateHUD();
-    if (gameState.lives <= 0) gameOver();
+function createParticles(x, y, c) { for(let i=0; i<10; i++) gameState.particles.push(new Particle(x, y, c)); }
+function handleMiss() { 
+    gameState.lives--; 
+    AudioSys.playError(); 
+    triggerShake(); 
+    updateHUD(); 
+    if (gameState.lives <= 0) gameOver(); 
 }
 
 let shakeTimer = 0;
 function triggerShake() { shakeTimer = 10; }
-
 function updateHUD() {
     document.getElementById('score-el').textContent = `Очки: ${gameState.score}`;
     document.getElementById('lives-el').textContent = `Жизни: ${gameState.lives}`;
 }
-
 function gameOver() {
     gameState.isRunning = false;
     document.getElementById('game-over-screen').classList.remove('hidden');
-    document.getElementById('final-score').textContent = `Итоговый счет: ${gameState.score}`;
+    document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
 }
 
 function startGame() {
@@ -554,110 +501,84 @@ function startGame() {
     document.getElementById('game-over-screen').classList.add('hidden');
     
     gameState = {
-        score: 0,
-        lives: 5,
-        speed: 1,
-        isRunning: true,
-        bins: [],
-        trash: [],
-        decor: [],
-        particles: [],
-        lastTime: performance.now(),
-        spawnTimer: 0,
-        decorTimer: 0
+        score: 0, lives: 5, speed: 1, isRunning: true,
+        bins: [], trash: [], decor: [], particles: [],
+        lastTime: performance.now(), spawnTimer: 0, decorTimer: 0
     };
-    
-    createBins();
-    updateHUD();
-    resize();
+    createBins(); updateHUD(); resize();
     requestAnimationFrame(loop);
 }
 
 function loop(time) {
     if (!gameState.isRunning) return;
-
     const dt = time - gameState.lastTime;
     gameState.lastTime = time;
 
-    // Очистка
     ctx.clearRect(0, 0, width, height);
 
-    // Рисуем Фон
+    // Фон
     const bgRes = Loader.get('bg');
-    if (bgRes && bgRes.loaded) {
-        // Растягиваем фон
-        ctx.drawImage(bgRes.img, 0, 0, width, height);
-    } else {
-        // Градиент неба и травы если фона нет
+    if (bgRes && bgRes.loaded) ctx.drawImage(bgRes.img, 0, 0, width, height);
+    else {
+        // Фоллбэк фон
         const grad = ctx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, '#87CEEB');
-        grad.addColorStop(0.3, '#87CEEB');
-        grad.addColorStop(0.3, '#4CAF50');
-        grad.addColorStop(1, '#2E7D32');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+        grad.addColorStop(0, '#87CEEB'); grad.addColorStop(HORIZON_Y, '#eee'); 
+        grad.addColorStop(HORIZON_Y, '#4CAF50'); grad.addColorStop(1, '#2E7D32');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
     }
 
-    // Тряска экрана
     if (shakeTimer > 0) {
         ctx.save();
         ctx.translate((Math.random()-0.5)*10, (Math.random()-0.5)*10);
         shakeTimer--;
     }
 
-    // Логика спавна
+    // Спавн
     gameState.spawnTimer += dt;
     gameState.decorTimer += dt;
-    
-    // Усложнение
-    gameState.speed = 1 + (gameState.score / 100);
+    gameState.speed = 1 + (gameState.score / 200); // Медленное ускорение
 
-    // Спавн мусора (зависит от скорости)
-    if (gameState.spawnTimer > 2000 / gameState.speed) {
+    if (gameState.spawnTimer > 2500 / gameState.speed) { // Реже мусор
         gameState.trash.push(new Trash());
         gameState.spawnTimer = 0;
     }
-    // Спавн декора (чаще)
-    if (gameState.decorTimer > 500 / gameState.speed) {
+    if (gameState.decorTimer > 300) { // Чаще декор
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
     }
 
-    // Обновление и отрисовка декора (позади мусора)
+    // Обновление и Отрисовка
+    // Сначала рисуем декор (он за мусором), сортируем по Z чтобы дальние перекрывались ближними правильно
+    const allObjects = [...gameState.decor, ...gameState.trash];
+    
+    // Важно: разделяем обновление и отрисовку слоев
     gameState.decor.forEach(d => d.update(dt));
+    gameState.trash.forEach(t => t.update(dt));
+
     gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
-    gameState.decor.sort((a,b) => a.z - b.z); // Сортировка по Z (Painter's algo)
+    gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
+
+    // Рисуем декор (фон)
+    gameState.decor.sort((a,b) => a.z - b.z);
     gameState.decor.forEach(d => d.draw(ctx));
 
-    // Обновление и отрисовка мусора
-    gameState.trash.forEach(t => t.update(dt));
-    gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
-    // Мусор тоже сортируем, но драг-элемент всегда сверху
+    // Рисуем мусор (передний план)
     gameState.trash.sort((a,b) => {
-        if (a.isDragging) return 1;
-        if (b.isDragging) return -1;
+        if (a.isDragging) return 1; if (b.isDragging) return -1;
         return a.z - b.z;
     });
     gameState.trash.forEach(t => t.draw(ctx));
 
-    // Баки (Интерфейс)
+    // UI элементы
     gameState.bins.forEach(b => b.draw(ctx));
-
-    // Частицы
-    gameState.particles.forEach(p => p.update());
+    gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
     gameState.particles = gameState.particles.filter(p => p.life > 0);
-    gameState.particles.forEach(p => p.draw(ctx));
 
     if (shakeTimer > 0) ctx.restore();
-
     requestAnimationFrame(loop);
 }
 
-// Запуск загрузки
-Loader.init().then(() => {
-    resize();
-    console.log("Assets loaded");
-});
+Loader.init().then(() => { resize(); console.log("Ready"); });
 
 </script>
 </body>
