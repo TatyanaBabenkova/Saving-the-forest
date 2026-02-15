@@ -190,26 +190,34 @@ class Prop {
         this.z = 0; 
 
         if (isTrash) {
-            // МУСОР
+            // === МУСОР ===
+            // Летит из ЦЕНТРА (Солнце/Точка схода)
             this.startX = cx + (Math.random() - 0.5) * 50; 
-            // Цель по X - узкая зона в центре
+            this.startY = cy; // Высоко (горизонт)
             this.targetX = cx + (Math.random() - 0.5) * (width * 0.4); 
+            this.targetY = height + 150; 
         } else {
-            // ДЕКОР
+            // === ДЕКОР (ЛЕС) ===
             const isLeft = Math.random() > 0.5;
             
-            // 1. Старт: Довольно узко у горизонта
+            // 1. Старт:
             const horizonSpread = width * 0.25; 
             const startOffset = (Math.random() * horizonSpread) + 10;
             this.startX = cx + (isLeft ? -startOffset : startOffset);
 
-            // 2. Финиш (TargetX):
-            // Увеличиваем минимальный разлет, чтобы не перекрывать тропинку внизу
-            const minTarget = width * 0.7; // 70% от центра свободно
-            const maxTarget = width * 1.6; // Сильно в бок
+            // !! ВАЖНО !!
+            // Спавним лес НИЖЕ линии горизонта.
+            // (cy + height * 0.1) опускает точку появления на землю.
+            // Это чинит "полет" деревьев.
+            this.startY = cy + (height * 0.1); 
+
+            // 2. Финиш:
+            const minTarget = width * 0.75; // Широко, чтобы не лезть на дорогу
+            const maxTarget = width * 1.8; 
             const targetOffset = minTarget + Math.random() * (maxTarget - minTarget);
 
             this.targetX = cx + (isLeft ? -targetOffset : targetOffset);
+            this.targetY = height + 150;
         }
     }
 
@@ -224,7 +232,6 @@ class Prop {
                 handleMiss();
             }
         } else {
-            // Декор удаляем если он ушел за любую границу
             if (y > height + size || x < -size * 2 || x > width + size * 2) {
                 this.markedForDeletion = true;
             }
@@ -232,20 +239,13 @@ class Prop {
     }
 
     getScreenPos() {
-        // === ЛОГИКА КООРДИНАТ ===
-        
-        // X: Линейная интерполяция от Старта до Цели
         const curX = this.startX + (this.targetX - this.startX) * this.z;
+        const curY = this.startY + (this.targetY - this.startY) * this.z;
         
-        // Y: ЖЕСТКАЯ ПРИВЯЗКА К ЗЕМЛЕ
-        // cy = линия горизонта. height = низ экрана.
-        // Если z=0, y=cy. Если z=1, y=height.
-        // Мы умножаем height на 1.2, чтобы они уходили чуть ниже экрана
-        const floorLevel = height * 1.2;
-        const curY = cy + (floorLevel - cy) * this.z;
+        // Масштаб
+        // Начинаем с 0.4, чтобы сразу были видны, но не гигантские
+        let baseScale = 0.4 + (this.z * 1.5); 
         
-        // МАСШТАБ
-        let baseScale = 0.4 + (this.z * 1.2); 
         if (this.isTrash) baseScale = Math.pow(this.z, 2); 
 
         return { x: curX, y: curY, scale: baseScale };
@@ -333,7 +333,6 @@ class Decor extends Prop {
         if (res && res.loaded) {
             // Рисуем от низа картинки (pos.y - size)
             // pos.y - это точка на земле. size - высота дерева.
-            // Значит (pos.y - size) ставит "ноги" дерева в точку pos.y
             ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
         } else {
             ctx.fillStyle = '#1B5E20';
@@ -533,7 +532,6 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    // === СПАВН ДЕКОРА (ОЧЕНЬ БЫСТРЫЙ) ===
     if (gameState.decorTimer > 30) { 
         gameState.decor.push(new Decor());
         gameState.decorTimer = 0;
