@@ -143,7 +143,7 @@
  * НАСТРОЙКИ
  */
 const ASSETS_PATH = 'IMG/'; 
-const HORIZON_Y = 0.44; 
+const HORIZON_Y = 0.44; // Линия горизонта на твоей картинке
 
 const TYPES = {
     ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
@@ -153,13 +153,9 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-// zIndex: 1 = Деревья, 2 = Кусты, 3 = Цветы
-const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree', zIndex: 1 }, 
-    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush', zIndex: 2 }, 
-    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower', zIndex: 3 } 
-];
-
+/**
+ * АУДИО
+ */
 const AudioSys = {
     ctx: null,
     init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
@@ -181,6 +177,9 @@ const AudioSys = {
     playPop() { this.playTone(600, 'triangle', 0.05, 0.05); }
 };
 
+/**
+ * ЗАГРУЗЧИК
+ */
 const Loader = {
     images: {},
     loadImg(key, src) {
@@ -192,105 +191,78 @@ const Loader = {
         });
     },
     async init() {
-        const promises = [this.loadImg('bg', ASSETS_PATH + 'bg_forest.png')];
+        // !!! ЗДЕСЬ Я ОСТАВИЛ JPG, ПОТОМУ ЧТО ФАЙЛ НАЗЫВАЕТСЯ bg_forest.jpg
+        const promises = [this.loadImg('bg', ASSETS_PATH + 'bg_forest.jpg')];
+        
+        // Загружаем мусор и баки
         for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
         for (let key in TYPES) {
             for (let i = 1; i <= 5; i++) promises.push(this.loadImg(`${TYPES[key].prefix}${i}`, `${ASSETS_PATH}${TYPES[key].prefix}${i}.png`));
         }
-        DECOR_TYPES.forEach(d => {
-            for (let i = 1; i <= 5; i++) promises.push(this.loadImg(`${d.prefix}${i}`, `${ASSETS_PATH}${d.prefix}${i}.png`));
-        });
         await Promise.all(promises);
     },
     get(key) { return this.images[key]; }
 };
 
+/**
+ * ИГРА
+ */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
     score: 0, lives: 5, speed: 1, 
-    isRunning: false, isPaused: false, isCountdown: false,
-    bins: [], trash: [], decor: [], particles: [],
-    lastTime: 0, spawnTimer: 0, decorTimer: 0,
-    countdownValue: 3, countdownTimer: 0
+    isRunning: false, isPaused: false,
+    bins: [], trash: [], particles: [],
+    lastTime: 0, spawnTimer: 0
 };
 
-class Prop {
-    constructor(isTrash) {
-        this.isTrash = isTrash;
-        this.markedForDeletion = false;
-        // ОЧЕНЬ МЕДЛЕННАЯ СКОРОСТЬ
-        this.baseSpeed = isTrash ? 0.002 : 0.0003; 
-        this.progress = 0; 
-        this.startX = cx;
-        this.targetX = cx;
+// --- ФИЗИКА И ОБЪЕКТЫ ---
 
-        if (isTrash) {
-            this.startX = cx + (Math.random() - 0.5) * 50; 
-            this.targetX = cx + (Math.random() - 0.5) * (width * 0.4); 
-        } 
+class Trash {
+    constructor() {
+        this.markedForDeletion = false;
+        
+        // Скорость мусора
+        this.baseSpeed = 0.002; 
+        this.progress = 0; // от 0 (горизонт) до 1 (экран)
+
+        const keys = Object.keys(TYPES);
+        this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
+        this.skinId = Math.floor(Math.random() * 5) + 1;
+        
+        this.isDragging = false;
+        this.dragX = 0; this.dragY = 0;
+
+        // Появление: в центре на горизонте
+        this.startX = cx + (Math.random() - 0.5) * 50; 
+        // Цель: разлет внизу экрана
+        this.targetX = cx + (Math.random() - 0.5) * (width * 0.5); 
     }
 
     update(dt) {
-        if (this.isTrash) {
+        if (!this.isDragging) {
+            // Двигаем мусор к игроку
             this.progress += this.baseSpeed * gameState.speed * (dt / 16);
-        } else {
-            // ЛЕС ТЕПЕРЬ ДВИГАЕТСЯ (но медленно)
-            this.progress += this.baseSpeed * gameState.speed * (dt / 16);
-        }
-    }
-
-    checkVisibility(x, y, size) {
-        if (this.isTrash) {
+            
+            // Если мусор улетел вниз (пропущен)
             if (this.progress > 1.1) {
                 this.markedForDeletion = true;
                 handleMiss();
-            }
-        } else {
-            // Лес не удаляем, если он ушел вниз, а помечаем для респауна?
-            // Нет, удаляем и создаем новый через спавнер
-            if (this.progress > 1.2) {
-                this.markedForDeletion = true;
             }
         }
     }
 
     getScreenPos() {
-        let scaleCurve;
-        if (this.isTrash) {
-             scaleCurve = this.progress * this.progress;
-        } else {
-             scaleCurve = 0.1 + (this.progress * this.progress * 0.45);
-        }
+        // Квадратичное увеличение размера (перспектива)
+        const scale = this.progress * this.progress;
         
+        // Линейная интерполяция Y и X
         const curY = cy + (height - cy) * this.progress;
-        
-        // Линейная интерполяция между Start (Горизонт) и Target (Низ)
         const curX = this.startX + (this.targetX - this.startX) * this.progress;
 
-        return { x: curX, y: curY, scale: scaleCurve };
-    }
-}
-
-class Trash extends Prop {
-    constructor() {
-        super(true);
-        const keys = Object.keys(TYPES);
-        this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
-        this.skinId = Math.floor(Math.random() * 5) + 1;
-        this.isDragging = false;
-        this.dragX = 0; this.dragY = 0;
-    }
-
-    update(dt) {
-        if (!this.isDragging) {
-            super.update(dt);
-            const pos = this.getScreenPos();
-            const size = 220 * pos.scale; 
-            this.checkVisibility(pos.x, pos.y, size);
-        }
+        return { x: curX, y: curY, scale: scale };
     }
 
     draw(ctx) {
@@ -299,6 +271,7 @@ class Trash extends Prop {
         let drawY = this.isDragging ? this.dragY : pos.y;
         let finalScale = this.isDragging ? 1.0 : pos.scale;
         
+        // Не рисуем, если слишком далеко
         if (finalScale < 0.05) return;
 
         let size = 220 * finalScale; 
@@ -307,13 +280,16 @@ class Trash extends Prop {
         ctx.save();
         ctx.translate(drawX, drawY);
         
+        // Тень (рисуем под объектом)
         if (!this.isDragging) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
+            // Тень чуть ниже центра
             ctx.ellipse(0, size/2, size/3, size/6, 0, 0, Math.PI*2);
             ctx.fill();
         }
 
+        // Сама картинка мусора
         if (res && res.loaded) {
             ctx.drawImage(res.img, -size/2, -size/2, size, size);
         } else {
@@ -321,102 +297,11 @@ class Trash extends Prop {
             ctx.beginPath();
             ctx.arc(0, 0, size/2.5, 0, Math.PI*2);
             ctx.fill();
+            ctx.fillStyle = 'white';
+            ctx.font = `${Math.ceil(40*finalScale)}px Arial`;
+            ctx.fillText(this.type.id[0].toUpperCase(), -10, 15);
         }
         ctx.restore();
-    }
-}
-
-class Decor extends Prop {
-    constructor(forcedProgress = null, forcedType = null, isSide = false) {
-        super(false);
-        const types = DECOR_TYPES;
-        
-        let t;
-        if (forcedType) {
-            t = types.find(type => type.type === forcedType) || types[0];
-        } else {
-             const rand = Math.random();
-             if (rand < 0.4) t = types[0]; 
-             else if (rand < 0.7) t = types[1]; 
-             else t = types[2]; 
-        }
-
-        this.skinId = Math.floor(Math.random() * 5) + 1;
-        this.prefix = t.prefix;
-        this.baseScale = t.scale;
-        this.decorType = t.type; 
-        this.zIndex = t.zIndex;  
-        
-        this.sizeVar = 0.8 + Math.random() * 0.5; 
-        
-        // 1. ОПРЕДЕЛЯЕМ ПРОГРЕСС
-        if (forcedProgress !== null) {
-            this.progress = forcedProgress;
-        } else {
-            // Если создается в процессе игры - всегда на горизонте
-            // Если при старте (populateForest) - рандом
-            this.progress = (gameState.isCountdown || !gameState.isRunning) ? Math.random() : 0.0;
-        }
-
-        const isLeft = Math.random() > 0.5;
-        const sideSign = isLeft ? -1 : 1;
-
-        // 2. РАСЧЕТ ТРАЕКТОРИИ (Lane)
-        // Чтобы объект двигался правильно, нам нужно знать его LaneFactor (насколько он далеко от центра)
-        
-        // Диапазон "смещения от центра" для данного объекта
-        let minLane, maxLane;
-        
-        if (isSide) {
-            // Кулисы: очень далеко
-            minLane = 0.55; maxLane = 0.85;
-            // Кулисам при старте даем большой прогресс
-            if (forcedProgress === null) this.progress = 0.7 + Math.random() * 0.3;
-        } else {
-            // Обычный лес: от "обочины" до "чащи"
-            minLane = 0.07; // Близко к дороге (0.02 дорога + 0.05 трава)
-            maxLane = 0.60; // Глубокий лес
-        }
-        
-        // Случайная позиция в "полосе" (0..1)
-        const lanePosition = Math.random(); 
-        // Реальный коэффициент ширины (0.07 ... 0.60)
-        const laneFactor = minLane + lanePosition * (maxLane - minLane);
-
-        // ТЕПЕРЬ САМОЕ ГЛАВНОЕ:
-        // Рассчитываем StartX (где он был бы на горизонте)
-        // и TargetX (куда он приедет внизу), чтобы он двигался по лучу.
-        
-        // Ширина дороги на горизонте: ~width * 0.02
-        // Ширина дороги внизу: ~width * 0.27
-        
-        const startOffset = (width * 0.02) + (width * laneFactor * 0.2); // Узко на горизонте
-        const targetOffset = (width * 0.27) + (width * laneFactor * 1.5); // Широко внизу
-        
-        this.startX = cx + (sideSign * startOffset);
-        this.targetX = cx + (sideSign * targetOffset);
-    }
-
-    update(dt) {
-        super.update(dt);
-        const pos = this.getScreenPos();
-        const size = 350 * pos.scale * this.baseScale * this.sizeVar;
-        this.checkVisibility(pos.x, pos.y, size);
-    }
-
-    draw(ctx) {
-        const pos = this.getScreenPos();
-        let size = 350 * pos.scale * this.baseScale * this.sizeVar;
-        
-        const res = Loader.get(`${this.prefix}${this.skinId}`);
-        if (res && res.loaded) {
-            ctx.drawImage(res.img, pos.x - size/2, pos.y - size, size, size);
-        } else {
-            ctx.fillStyle = '#1B5E20';
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, size/4, 0, Math.PI*2);
-            ctx.fill();
-        }
     }
 }
 
@@ -427,12 +312,14 @@ class Bin {
         const availableW = width - (margin * 2);
         const binW = availableW / total;
         
+        // Баки увеличены
         this.w = Math.min(240, binW - 10); 
         this.h = this.w * 1.3;
         
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 15;
     }
+    // Хитбокс с запасом
     checkHit(x, y) { 
         return x > this.x - 40 && 
                x < this.x + this.w + 40 && 
@@ -471,11 +358,14 @@ class Particle {
     }
 }
 
+// --- УПРАВЛЕНИЕ ---
+
 let dragItem = null;
 
 function handleStart(x, y) {
-    if (!gameState.isRunning || gameState.isPaused || gameState.isCountdown) return;
+    if (!gameState.isRunning || gameState.isPaused) return;
     
+    // Берем мусор, который ближе всего (большой progress)
     let candidates = gameState.trash.filter(t => t.progress > 0.3);
     candidates.sort((a,b) => b.progress - a.progress);
 
@@ -485,6 +375,7 @@ function handleStart(x, y) {
         const dx = x - pos.x;
         const dy = y - pos.y;
         
+        // Проверка клика по мусору
         if (Math.sqrt(dx*dx + dy*dy) < size) { 
             dragItem = t;
             t.isDragging = true;
@@ -584,55 +475,6 @@ function gameOver() {
     document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
 }
 
-// === ГЕНЕРАЦИЯ ЛЕСА ===
-function populateForest() {
-    gameState.decor = []; 
-    
-    // 1. ЗАДНИЙ ПЛАН
-    for(let i=0; i<40; i++) {
-        const p = 0.1 + Math.random() * 0.15; 
-        gameState.decor.push(new Decor(p, 'tree', false));
-    }
-
-    // 2. БОКА
-    for(let i=0; i<3; i++) {
-        gameState.decor.push(new Decor(null, 'tree', true));
-    }
-
-    // 3. ОСНОВНАЯ МАССА
-    for(let i=0; i<12; i++) {
-        const p = 0.05 + Math.random() * 0.7; 
-        gameState.decor.push(new Decor(p, 'tree', false)); 
-    }
-
-    // 4. КУСТЫ
-    for(let i=0; i<70; i++) {
-        const p = 0.05 + Math.random() * 0.95; 
-        gameState.decor.push(new Decor(p, 'bush', false)); 
-    }
-
-    // 5. ЦВЕТЫ
-    for(let i=0; i<70; i++) {
-        const p = 0.05 + Math.random() * 0.95; 
-        gameState.decor.push(new Decor(p, 'flower', false)); 
-    }
-
-    // === СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ (Слева) ===
-    
-    // А) Близко слева
-    let treeLeftClose = new Decor(0.95, 'tree', false); 
-    // Вручную переопределяем траекторию, чтобы оно уезжало влево
-    treeLeftClose.startX = cx - (width * 0.05); // Старт
-    treeLeftClose.targetX = cx - (width * 0.8); // Финиш (уедет влево)
-    gameState.decor.push(treeLeftClose);
-
-    // Б) Середина слева
-    let treeLeftMid = new Decor(0.5, 'tree', false); 
-    treeLeftMid.startX = cx - (width * 0.04);
-    treeLeftMid.targetX = cx - (width * 0.5); 
-    gameState.decor.push(treeLeftMid);
-}
-
 function startGame() {
     AudioSys.init();
     document.getElementById('start-screen').style.display = 'none';
@@ -643,16 +485,13 @@ function startGame() {
     gameState = {
         score: 0, lives: 5, speed: 1, 
         isRunning: true, isPaused: false,
-        // ВКЛЮЧАЕМ ОТСЧЕТ
-        isCountdown: true, countdownValue: 3, countdownTimer: 0,
-        bins: [], trash: [], decor: [], particles: [],
-        lastTime: performance.now(), spawnTimer: 0, decorTimer: 0
+        bins: [], trash: [], particles: [],
+        lastTime: performance.now(), spawnTimer: 0
     };
     
     createBins(); 
     updateHUD(); 
     resize();
-    populateForest(); 
     requestAnimationFrame(loop);
 }
 
@@ -665,9 +504,11 @@ function loop(time) {
 
     ctx.clearRect(0, 0, width, height);
 
+    // Рисуем статичный фон
     const bgRes = Loader.get('bg');
     if (bgRes && bgRes.loaded) ctx.drawImage(bgRes.img, 0, 0, width, height);
     else {
+        // Запасной вариант (градиент)
         const grad = ctx.createLinearGradient(0, 0, 0, height);
         grad.addColorStop(0, '#87CEEB'); grad.addColorStop(HORIZON_Y, '#ccc'); 
         grad.addColorStop(HORIZON_Y, '#2E7D32'); grad.addColorStop(1, '#1B5E20');
@@ -680,65 +521,19 @@ function loop(time) {
         shakeTimer--;
     }
 
-    // === ЛОГИКА ОТСЧЕТА ===
-    if (gameState.isCountdown) {
-        // Лес и мусор не двигаются, только рисуются
-        
-        // Обновляем таймер
-        gameState.countdownTimer += dt;
-        if (gameState.countdownTimer > 1000) {
-            gameState.countdownValue--;
-            gameState.countdownTimer = 0;
-            if (gameState.countdownValue < 0) {
-                gameState.isCountdown = false; // Поехали!
-            }
-        }
-    } else {
-        // Игра идет
-        gameState.spawnTimer += dt;
-        gameState.decorTimer += dt;
-        gameState.speed = 1 + (gameState.score / 250); 
+    gameState.spawnTimer += dt;
+    gameState.speed = 1 + (gameState.score / 250); 
 
-        if (gameState.spawnTimer > 2500 / gameState.speed) {
-            gameState.trash.push(new Trash());
-            gameState.spawnTimer = 0;
-        }
-        
-        // Спавн декора (чтобы лес был бесконечным)
-        if (gameState.decorTimer > 50) { 
-            gameState.decor.push(new Decor());
-            gameState.decorTimer = 0;
-        }
-
-        gameState.decor.forEach(d => d.update(dt));
-        gameState.trash.forEach(t => t.update(dt));
+    // Спавн мусора
+    if (gameState.spawnTimer > 2500 / gameState.speed) {
+        gameState.trash.push(new Trash());
+        gameState.spawnTimer = 0;
     }
     
-    // Рисуем всё (и в паузе, и в игре)
-    gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
+    gameState.trash.forEach(t => t.update(dt));
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // Сортировка Z-Index
-    gameState.decor.sort((a,b) => {
-        // Сначала по "слоям" (цветы > кусты > деревья)
-        // НО с учетом расстояния до центра (чтобы центральные кусты крыли боковые деревья)
-        const posA = a.getScreenPos();
-        const posB = b.getScreenPos();
-        
-        let priorityA = a.progress + (a.zIndex * 0.1); 
-        let priorityB = b.progress + (b.zIndex * 0.1);
-        
-        // Штраф за удаленность от центра
-        const distA = Math.abs(posA.x - cx);
-        const distB = Math.abs(posB.x - cx);
-        priorityA -= (distA / width) * 0.3;
-        priorityB -= (distB / width) * 0.3;
-
-        return priorityA - priorityB;
-    });
-
-    gameState.decor.forEach(d => d.draw(ctx));
-
+    // Сортировка мусора (ближний рисуем последним)
     gameState.trash.sort((a,b) => {
         if (a.isDragging) return 1; if (b.isDragging) return -1;
         return a.progress - b.progress;
@@ -748,31 +543,6 @@ function loop(time) {
     gameState.bins.forEach(b => b.draw(ctx));
     gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
     gameState.particles = gameState.particles.filter(p => p.life > 0);
-
-    // === РИСУЕМ ЦИФРЫ ОТСЧЕТА ===
-    if (gameState.isCountdown && gameState.countdownValue >= 0) {
-        ctx.save();
-        ctx.fillStyle = 'white';
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 5;
-        ctx.font = 'bold 200px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Эффект пульсации/исчезновения
-        const alpha = 1 - (gameState.countdownTimer / 1000);
-        const scale = 1 + (gameState.countdownTimer / 2000);
-        
-        ctx.globalAlpha = alpha;
-        ctx.translate(cx, height/2);
-        ctx.scale(scale, scale);
-        
-        const text = gameState.countdownValue === 0 ? "START!" : gameState.countdownValue;
-        ctx.strokeText(text, 0, 0);
-        ctx.fillText(text, 0, 0);
-        
-        ctx.restore();
-    }
 
     if (shakeTimer > 0) ctx.restore();
     requestAnimationFrame(loop);
