@@ -153,10 +153,13 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
+// zIndex: 1 = Деревья (рисуются первыми, "фон")
+// zIndex: 2 = Кусты (рисуются вторыми, перекрывают деревья)
+// zIndex: 3 = Цветы (рисуются последними, перекрывают всё)
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree' }, 
-    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush' }, 
-    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower' } 
+    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree', zIndex: 1 }, 
+    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush', zIndex: 2 }, 
+    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower', zIndex: 3 } 
 ];
 
 const AudioSys = {
@@ -311,9 +314,7 @@ class Trash extends Prop {
     }
 }
 
-// === ИСПРАВЛЕННЫЙ КЛАСС DECOR ===
 class Decor extends Prop {
-    // isSide - флаг, это боковое дерево (кулиса) или нет
     constructor(forcedProgress = null, forcedType = null, isSide = false) {
         super(false);
         const types = DECOR_TYPES;
@@ -331,6 +332,8 @@ class Decor extends Prop {
         this.skinId = Math.floor(Math.random() * 5) + 1;
         this.prefix = t.prefix;
         this.baseScale = t.scale;
+        this.decorType = t.type; // Важно: сохраняем тип для сортировки
+        this.zIndex = t.zIndex;  // Важно: сохраняем слой для сортировки
         
         this.sizeVar = 0.8 + Math.random() * 0.5; 
         
@@ -340,34 +343,30 @@ class Decor extends Prop {
             this.progress = Math.random();
         }
 
-        // РАСЧЕТ КООРДИНАТ
-        const sideSign = Math.random() > 0.5 ? -1 : 1;
+        // === ИСПРАВЛЕНИЕ ПЛОТНОСТИ СЛЕВА ===
+        // Делаем вероятность выпадения "левой стороны" меньше (0.4 против 0.6)
+        // isLeft = true (слева), если rand > 0.6 (40% вероятность)
+        // isLeft = false (справа), если rand <= 0.6 (60% вероятность)
+        const isLeft = Math.random() > 0.6;
+        const sideSign = isLeft ? -1 : 1;
 
         if (isSide) {
-             // 1. БОКОВЫЕ КУЛИСЫ (Сдвигаем далеко, чтобы были по краям)
              let offset;
-             if (sideSign === -1) { // Слева
+             if (sideSign === -1) { 
                   offset = width * 0.85 + Math.random() * width * 0.2;
-             } else { // Справа
+             } else { 
                   offset = width * 0.55 + Math.random() * width * 0.2;
              }
              this.startX = cx + (sideSign * offset);
         } else {
-             // 2. ОСНОВНОЙ ЛЕС (Растет вдоль дороги)
-             // Рассчитываем ширину дороги в зависимости от глубины (progress)
              const roadWidth = (width * 0.02) + (width * 0.25 * this.progress);
-             
-             // Минимальный отступ (чтобы не на дороге)
              const minX = roadWidth + (width * 0.05); 
-             
-             // Максимальный отступ (чтобы заполнить экран, но не улететь совсем в край)
              const maxX = width * 0.6 + (width * 0.3 * this.progress);
-             
              const xOffset = minX + Math.random() * (maxX - minX);
              this.startX = cx + (sideSign * xOffset);
         }
 
-        this.targetX = this.startX; // Статика
+        this.targetX = this.startX; 
     }
 
     update(dt) {
@@ -403,11 +402,12 @@ class Bin {
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 15;
     }
+    // Еще немного увеличили хитбокс (+40 пикселей)
     checkHit(x, y) { 
-        return x > this.x - 30 && 
-               x < this.x + this.w + 30 && 
-               y > this.y - 30 && 
-               y < this.y + this.h + 30; 
+        return x > this.x - 40 && 
+               x < this.x + this.w + 40 && 
+               y > this.y - 40 && 
+               y < this.y + this.h + 40; 
     }
     draw(ctx) {
         const res = Loader.get(`bin_${this.type.id}`);
@@ -558,22 +558,19 @@ function gameOver() {
 function populateForest() {
     gameState.decor = []; 
     
-    // 1. ЗАДНИЙ ПЛАН (Далекие деревья)
-    // Используем isSide = false, чтобы они стояли нормально
-    for(let i=0; i<40; i++) {
+    // 1. ЗАДНИЙ ПЛАН
+    for(let i=0; i<30; i++) {
         const p = 0.1 + Math.random() * 0.15; 
         gameState.decor.push(new Decor(p, 'tree', false));
     }
 
-    // 2. БОКА (Кулисы - огромные деревья по краям)
-    // Используем isSide = true
+    // 2. БОКА (Кулисы)
     for(let i=0; i<12; i++) {
         const p = 0.4 + Math.random() * 0.6;
         gameState.decor.push(new Decor(p, 'tree', true));
     }
 
-    // 3. ОСНОВНАЯ МАССА (Заполнение)
-    // Используем isSide = false
+    // 3. ОСНОВНАЯ МАССА
     for(let i=0; i<160; i++) {
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, null, false)); 
@@ -637,8 +634,13 @@ function loop(time) {
     
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // Сортировка слоев
-    gameState.decor.sort((a,b) => a.progress - b.progress);
+    // === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: СОРТИРОВКА ПО Z-INDEX (ТИПУ) ===
+    // Сначала рисуем все деревья (1), потом все кусты (2), потом все цветы (3).
+    // Внутри группы сортируем по дальности (progress).
+    gameState.decor.sort((a,b) => {
+        if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
+        return a.progress - b.progress;
+    });
 
     gameState.decor.forEach(d => d.draw(ctx));
 
