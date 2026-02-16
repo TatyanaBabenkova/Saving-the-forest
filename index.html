@@ -15,7 +15,13 @@
         }
         canvas {
             display: block;
+            transition: filter 0.3s; /* Плавное размытие */
         }
+        /* Класс для эффекта размытия при повышении уровня */
+        .blur-effect {
+            filter: blur(8px);
+        }
+
         #ui-layer {
             position: absolute;
             top: 0;
@@ -44,6 +50,23 @@
             flex-direction: column;
             gap: 10px;
         }
+        
+        /* Стили для листочков жизни */
+        #lives-container {
+            display: flex;
+            align-items: center;
+        }
+        .life-leaf {
+            width: 50px;
+            height: auto;
+            margin-left: -15px; /* Наезд друг на друга */
+            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+            transition: transform 0.2s;
+        }
+        .life-leaf:first-child {
+            margin-left: 0;
+        }
+
         #pause-btn {
             background: #FF9800;
             border: 2px solid #fff;
@@ -116,9 +139,10 @@
         <div class="hud">
             <div class="hud-left">
                 <span id="score-el">Очки: 0</span>
+                <span id="speed-el" style="color: #FFEB3B;">Скорость: 1</span>
                 <button id="pause-btn">II Пауза</button>
             </div>
-            <span id="lives-el">Жизни: 5</span>
+            <div id="lives-container"></div>
         </div>
     </div>
 
@@ -143,7 +167,7 @@
  * НАСТРОЙКИ
  */
 const ASSETS_PATH = 'IMG/'; 
-const HORIZON_Y = 0.44; // Линия горизонта на твоей картинке
+const HORIZON_Y = 0.44; 
 
 const TYPES = {
     ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
@@ -174,7 +198,13 @@ const AudioSys = {
     },
     playSuccess() { this.playTone(500, 'sine', 0.1); setTimeout(() => this.playTone(1000, 'sine', 0.2), 100); },
     playError() { this.playTone(150, 'sawtooth', 0.3, 0.2); },
-    playPop() { this.playTone(600, 'triangle', 0.05, 0.05); }
+    playPop() { this.playTone(600, 'triangle', 0.05, 0.05); },
+    // Звук повышения уровня (дилинь!)
+    playLevelUp() { 
+        this.playTone(400, 'sine', 0.1, 0.2); 
+        setTimeout(() => this.playTone(600, 'sine', 0.1, 0.2), 100);
+        setTimeout(() => this.playTone(800, 'sine', 0.3, 0.2), 200);
+    }
 };
 
 /**
@@ -191,10 +221,12 @@ const Loader = {
         });
     },
     async init() {
-      
-        const promises = [this.loadImg('bg', ASSETS_PATH + 'bg_forest.png')];
+        // ИСПРАВЛЕНО: расширение png для фона
+        const promises = [
+            this.loadImg('bg', ASSETS_PATH + 'bg_forest.png'),
+            this.loadImg('leaf', ASSETS_PATH + 'leaf.png') // Загружаем листочек
+        ];
         
-        // Загружаем мусор и баки
         for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
         for (let key in TYPES) {
             for (let i = 1; i <= 5; i++) promises.push(this.loadImg(`${TYPES[key].prefix}${i}`, `${ASSETS_PATH}${TYPES[key].prefix}${i}.png`));
@@ -212,7 +244,12 @@ const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
-    score: 0, lives: 5, speed: 1, 
+    score: 0, 
+    lives: 5, 
+    speedLevel: 1,      // Текущая цифра скорости
+    itemsSorted: 0,     // Сколько мусора собрали (для повышения уровня)
+    speedMultiplier: 1, // Реальный множитель скорости
+    
     isRunning: false, isPaused: false,
     bins: [], trash: [], particles: [],
     lastTime: 0, spawnTimer: 0
@@ -224,9 +261,8 @@ class Trash {
     constructor() {
         this.markedForDeletion = false;
         
-        // Скорость мусора
         this.baseSpeed = 0.002; 
-        this.progress = 0; // от 0 (горизонт) до 1 (экран)
+        this.progress = 0; 
 
         const keys = Object.keys(TYPES);
         this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
@@ -235,18 +271,15 @@ class Trash {
         this.isDragging = false;
         this.dragX = 0; this.dragY = 0;
 
-        // Появление: в центре на горизонте
         this.startX = cx + (Math.random() - 0.5) * 50; 
-        // Цель: разлет внизу экрана
         this.targetX = cx + (Math.random() - 0.5) * (width * 0.5); 
     }
 
     update(dt) {
         if (!this.isDragging) {
-            // Двигаем мусор к игроку
-            this.progress += this.baseSpeed * gameState.speed * (dt / 16);
+            // Скорость зависит от множителя
+            this.progress += this.baseSpeed * gameState.speedMultiplier * (dt / 16);
             
-            // Если мусор улетел вниз (пропущен)
             if (this.progress > 1.1) {
                 this.markedForDeletion = true;
                 handleMiss();
@@ -255,13 +288,9 @@ class Trash {
     }
 
     getScreenPos() {
-        // Квадратичное увеличение размера (перспектива)
         const scale = this.progress * this.progress;
-        
-        // Линейная интерполяция Y и X
         const curY = cy + (height - cy) * this.progress;
         const curX = this.startX + (this.targetX - this.startX) * this.progress;
-
         return { x: curX, y: curY, scale: scale };
     }
 
@@ -271,7 +300,6 @@ class Trash {
         let drawY = this.isDragging ? this.dragY : pos.y;
         let finalScale = this.isDragging ? 1.0 : pos.scale;
         
-        // Не рисуем, если слишком далеко
         if (finalScale < 0.05) return;
 
         let size = 220 * finalScale; 
@@ -280,16 +308,13 @@ class Trash {
         ctx.save();
         ctx.translate(drawX, drawY);
         
-        // Тень (рисуем под объектом)
         if (!this.isDragging) {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
-            // Тень чуть ниже центра
             ctx.ellipse(0, size/2, size/3, size/6, 0, 0, Math.PI*2);
             ctx.fill();
         }
 
-        // Сама картинка мусора
         if (res && res.loaded) {
             ctx.drawImage(res.img, -size/2, -size/2, size, size);
         } else {
@@ -312,14 +337,12 @@ class Bin {
         const availableW = width - (margin * 2);
         const binW = availableW / total;
         
-        // Баки увеличены
         this.w = Math.min(240, binW - 10); 
         this.h = this.w * 1.3;
         
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 15;
     }
-    // Хитбокс с запасом
     checkHit(x, y) { 
         return x > this.x - 40 && 
                x < this.x + this.w + 40 && 
@@ -365,7 +388,6 @@ let dragItem = null;
 function handleStart(x, y) {
     if (!gameState.isRunning || gameState.isPaused) return;
     
-    // Берем мусор, который ближе всего (большой progress)
     let candidates = gameState.trash.filter(t => t.progress > 0.3);
     candidates.sort((a,b) => b.progress - a.progress);
 
@@ -375,7 +397,6 @@ function handleStart(x, y) {
         const dx = x - pos.x;
         const dy = y - pos.y;
         
-        // Проверка клика по мусору
         if (Math.sqrt(dx*dx + dy*dy) < size) { 
             dragItem = t;
             t.isDragging = true;
@@ -393,10 +414,18 @@ function handleEnd(x, y) {
         let hitBin = gameState.bins.find(b => b.checkHit(x, y));
         if (hitBin) {
             if (hitBin.type.id === dragItem.type.id) {
+                // ПРАВИЛЬНАЯ СОРТИРОВКА
                 gameState.score += 10;
+                gameState.itemsSorted++; // Увеличиваем счетчик предметов
+                
                 AudioSys.playSuccess();
                 createParticles(x, y, hitBin.type.color);
+                
+                // === ПРОВЕРКА НА ПОВЫШЕНИЕ УРОВНЯ ===
+                checkLevelUp();
+                
             } else {
+                // ОШИБКА
                 gameState.score = Math.max(0, gameState.score - 5);
                 AudioSys.playError();
                 createParticles(x, y, '#555');
@@ -409,6 +438,24 @@ function handleEnd(x, y) {
         updateHUD();
         dragItem = null;
     }
+}
+
+function checkLevelUp() {
+    // Каждые 20 предметов
+    if (gameState.itemsSorted > 0 && gameState.itemsSorted % 20 === 0) {
+        gameState.speedLevel++;
+        gameState.speedMultiplier += 0.2; // Ускоряем игру на 20%
+        
+        AudioSys.playLevelUp(); // Звук
+        triggerBlurEffect();    // Визуальный эффект
+    }
+}
+
+function triggerBlurEffect() {
+    canvas.classList.add('blur-effect');
+    setTimeout(() => {
+        canvas.classList.remove('blur-effect');
+    }, 500); // Размытие на полсекунды
 }
 
 const pauseBtn = document.getElementById('pause-btn');
@@ -455,20 +502,44 @@ function createBins() {
 }
 
 function createParticles(x, y, c) { for(let i=0; i<15; i++) gameState.particles.push(new Particle(x, y, c)); }
+
 function handleMiss() { 
     gameState.lives--; 
     AudioSys.playError(); 
     triggerShake(); 
-    updateHUD(); 
+    updateHUD(); // Обновит и очки, и листочки
     if (gameState.lives <= 0) gameOver(); 
 }
 
 let shakeTimer = 0;
 function triggerShake() { shakeTimer = 15; }
+
+// === ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ===
 function updateHUD() {
+    // Очки
     document.getElementById('score-el').textContent = `Очки: ${gameState.score}`;
-    document.getElementById('lives-el').textContent = `Жизни: ${gameState.lives}`;
+    
+    // Скорость
+    document.getElementById('speed-el').textContent = `Скорость: ${gameState.speedLevel}`;
+    
+    // Листочки жизни
+    const container = document.getElementById('lives-container');
+    container.innerHTML = ''; // Очищаем старые
+    
+    const leafRes = Loader.get('leaf');
+    if (leafRes && leafRes.loaded) {
+        for(let i=0; i < gameState.lives; i++) {
+            const img = document.createElement('img');
+            img.src = leafRes.img.src;
+            img.className = 'life-leaf';
+            container.appendChild(img);
+        }
+    } else {
+        // Запасной вариант (текст), если картинка не прогрузилась
+        container.textContent = `Жизни: ${gameState.lives}`;
+    }
 }
+
 function gameOver() {
     gameState.isRunning = false;
     document.getElementById('game-over-screen').classList.remove('hidden');
@@ -483,7 +554,12 @@ function startGame() {
     pauseBtn.textContent = "II Пауза";
     
     gameState = {
-        score: 0, lives: 5, speed: 1, 
+        score: 0, 
+        lives: 5, 
+        speedLevel: 1, 
+        itemsSorted: 0,
+        speedMultiplier: 1,
+        
         isRunning: true, isPaused: false,
         bins: [], trash: [], particles: [],
         lastTime: performance.now(), spawnTimer: 0
@@ -504,11 +580,10 @@ function loop(time) {
 
     ctx.clearRect(0, 0, width, height);
 
-    // Рисуем статичный фон
+    // Рисуем фон (уже PNG)
     const bgRes = Loader.get('bg');
     if (bgRes && bgRes.loaded) ctx.drawImage(bgRes.img, 0, 0, width, height);
     else {
-        // Запасной вариант (градиент)
         const grad = ctx.createLinearGradient(0, 0, 0, height);
         grad.addColorStop(0, '#87CEEB'); grad.addColorStop(HORIZON_Y, '#ccc'); 
         grad.addColorStop(HORIZON_Y, '#2E7D32'); grad.addColorStop(1, '#1B5E20');
@@ -522,10 +597,12 @@ function loop(time) {
     }
 
     gameState.spawnTimer += dt;
-    gameState.speed = 1 + (gameState.score / 250); 
-
-    // Спавн мусора
-    if (gameState.spawnTimer > 2500 / gameState.speed) {
+    
+    // Спавн мусора (частота зависит от multiplier)
+    // Чем выше уровень, тем меньше интервал (быстрее спавн)
+    const spawnInterval = 2500 / gameState.speedMultiplier;
+    
+    if (gameState.spawnTimer > spawnInterval) {
         gameState.trash.push(new Trash());
         gameState.spawnTimer = 0;
     }
@@ -533,7 +610,6 @@ function loop(time) {
     gameState.trash.forEach(t => t.update(dt));
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // Сортировка мусора (ближний рисуем последним)
     gameState.trash.sort((a,b) => {
         if (a.isDragging) return 1; if (b.isDragging) return -1;
         return a.progress - b.progress;
