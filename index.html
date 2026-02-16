@@ -154,9 +154,9 @@ const TYPES = {
 };
 
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree', zIndex: 1 }, 
-    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush', zIndex: 2 }, 
-    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower', zIndex: 3 } 
+    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree' }, 
+    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush' }, 
+    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower' } 
 ];
 
 const AudioSys = {
@@ -233,13 +233,10 @@ class Prop {
         if (this.isTrash) {
             this.progress += this.baseSpeed * gameState.speed * (dt / 16);
         }
-        // Лес не двигается
     }
 
     checkVisibility(x, y, size) {
         if (this.isTrash) {
-            // ИСПРАВЛЕНИЕ: Жесткая проверка по прогрессу. 
-            // Если мусор улетел за 110% пути (низ экрана), удаляем его.
             if (this.progress > 1.1) {
                 this.markedForDeletion = true;
                 handleMiss();
@@ -333,7 +330,6 @@ class Decor extends Prop {
         this.prefix = t.prefix;
         this.baseScale = t.scale;
         this.decorType = t.type;
-        this.zIndex = t.zIndex;
         
         this.sizeVar = 0.8 + Math.random() * 0.5; 
         
@@ -343,18 +339,29 @@ class Decor extends Prop {
             this.progress = Math.random();
         }
 
+        // Асимметрия и позиционирование
         const isLeft = Math.random() > 0.5;
-        const sideSign = isLeft ? -1 : 1;
+        let offset;
         
-        const roadHalfWidthAtProgress = (width * 0.02) + (width * 0.25 * this.progress);
-        const minX = roadHalfWidthAtProgress + (width * 0.05); 
+        if (isLeft) {
+             offset = width * 0.85 + Math.random() * width * 0.4;
+             this.startX = cx - offset;
+        } else {
+             offset = width * 0.55 + Math.random() * width * 0.4;
+             this.startX = cx + offset;
+        }
         
-        let maxX = width * 0.6 + (width * 0.5 * this.progress);
-        const xOffset = minX + Math.random() * (maxX - minX);
-        const centerX = cx + (sideSign * xOffset);
-        
-        this.startX = centerX;
-        this.targetX = centerX;
+        // Для основной массы (не кулис) пересчитываем позицию более умно
+        if (!forcedType && forcedProgress === null) {
+             const sideSign = Math.random() > 0.5 ? -1 : 1;
+             const roadWidth = (width * 0.02) + (width * 0.25 * this.progress);
+             const minX = roadWidth + (width * 0.05); 
+             const maxX = width * 0.6 + (width * 0.5 * this.progress);
+             const xOffset = minX + Math.random() * (maxX - minX);
+             this.startX = cx + (sideSign * xOffset);
+        }
+
+        this.targetX = this.startX;
     }
 
     update(dt) {
@@ -384,13 +391,22 @@ class Bin {
         const availableW = width - (margin * 2);
         const binW = availableW / total;
         
-        this.w = Math.min(160, binW - 5); 
+        // === ИСПРАВЛЕНИЕ: БАКИ В 1.5 РАЗА БОЛЬШЕ ===
+        // Увеличили максимальный размер со 160 до 240
+        // И используем большую часть ширины слота
+        this.w = Math.min(240, binW - 10); 
         this.h = this.w * 1.3;
         
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 15;
     }
-    checkHit(x, y) { return x > this.x && x < this.x + this.w && y > this.y && y < this.y + this.h; }
+    // Проверка попадания с запасом (+30 пикселей вокруг)
+    checkHit(x, y) { 
+        return x > this.x - 30 && 
+               x < this.x + this.w + 30 && 
+               y > this.y - 30 && 
+               y < this.y + this.h + 30; 
+    }
     draw(ctx) {
         const res = Loader.get(`bin_${this.type.id}`);
         if (res && res.loaded) ctx.drawImage(res.img, this.x, this.y, this.w, this.h);
@@ -541,29 +557,23 @@ function populateForest() {
     gameState.decor = []; 
     
     // 1. ЗАДНИЙ ПЛАН
-    // УМЕНЬШИЛИ ДО 30 шт.
-    // ИСПРАВЛЕНИЕ: Стартуем с progress 0.1, чтобы они были ниже горизонта
     for(let i=0; i<30; i++) {
-        const p = 0.1 + Math.random() * 0.15; // от 0.1 до 0.25 (ниже горизонта)
+        const p = 0.1 + Math.random() * 0.15; 
         gameState.decor.push(new Decor(p, 'tree'));
     }
 
     // 2. БОКА (Кулисы)
-    // УМЕНЬШИЛИ ДО 15 шт.
     for(let i=0; i<15; i++) {
         const p = 0.4 + Math.random() * 0.6;
         const d = new Decor(p, 'tree');
         
-        // ИСПРАВЛЕНИЕ: Асимметрия
+        // Исправленная асимметрия
         const isLeft = Math.random() > 0.5;
         let offset;
-        
         if (isLeft) {
-             // СЛЕВА: Далеко, как и было (0.85)
              offset = width * 0.85 + Math.random() * width * 0.4;
              d.startX = cx - offset;
         } else {
-             // СПРАВА: Ближе к центру (0.55), чтобы закрыть пустоту
              offset = width * 0.55 + Math.random() * width * 0.4;
              d.startX = cx + offset;
         }
@@ -573,9 +583,7 @@ function populateForest() {
     }
 
     // 3. ОСНОВНАЯ МАССА
-    // УМЕНЬШИЛИ ДО 150 шт.
     for(let i=0; i<150; i++) {
-        // Стартуем тоже чуть ниже (0.05), чтобы не лезли на сам горизонт
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, null)); 
     }
@@ -638,13 +646,9 @@ function loop(time) {
     
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    gameState.decor.sort((a,b) => {
-        const diff = a.progress - b.progress;
-        if (Math.abs(diff) < 0.05) { 
-            return a.zIndex - b.zIndex;
-        }
-        return diff;
-    });
+    // === ИСПРАВЛЕННАЯ СОРТИРОВКА (СЛОИ) ===
+    // Просто сортируем по прогрессу: то что ниже (больше progress) - рисуется последним
+    gameState.decor.sort((a,b) => a.progress - b.progress);
 
     gameState.decor.forEach(d => d.draw(ctx));
 
