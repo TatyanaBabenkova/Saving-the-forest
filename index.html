@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эко-Тропа: Сортировка</title>
     <style>
+        html {
+            height: -webkit-fill-available; /* Фикс для iOS */
+        }
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
             background-color: #333;
-            touch-action: none; /* Отключает зум и скролл на мобильных */
+            touch-action: none;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* Исправление высоты для мобильных браузеров */
+            /* Самый надежный способ растянуть на весь экран мобильного */
+            height: 100vh; 
             height: 100dvh; 
+            min-height: -webkit-fill-available;
             width: 100vw;
         }
         canvas {
@@ -30,7 +35,7 @@
             pointer-events: none;
         }
 
-        /* --- ИНТЕРФЕЙС (ПАНЕЛЬ) --- */
+        /* --- ИНТЕРФЕЙС --- */
         .hud-panel {
             position: absolute;
             top: 20px;
@@ -50,26 +55,24 @@
             transition: all 0.3s;
         }
 
-        /* АДАПТАЦИЯ ПОД МОБИЛЬНЫЕ (Книжный формат) */
+        /* Адаптация панели под узкие экраны */
         @media (max-width: 768px) {
             .hud-panel {
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                width: auto; /* На всю ширину минус отступы */
-                flex-direction: row; /* В строчку, чтобы экономить высоту */
+                top: 10px; right: 10px; left: 10px; /* Растягиваем сверху */
+                width: auto;
+                flex-direction: row; /* В строку */
                 align-items: center;
-                justify-content: space-between;
-                padding: 10px;
+                padding: 8px 15px;
+                height: 50px;
             }
-            /* Прячем слово "Очки" и "Скорость" на очень узких экранах, оставляем цифры, 
-               или делаем шрифт меньше */
-            .hud-row span:first-child { font-size: 14px; }
-            .score-text, .speed-text { font-size: 18px; }
+            .hud-row { gap: 5px; font-size: 14px; }
+            .score-text, .speed-text { font-size: 16px; }
             #pause-btn { width: auto; font-size: 14px; padding: 5px 10px; }
-            
-            #lives-container { margin-top: 0; height: 30px; }
+            #lives-container { margin-top: 0; }
             .life-leaf { width: 30px; height: 30px; }
+            
+            /* Скрываем подписи на совсем маленьких экранах, оставляем цифры */
+            .hud-label { display: none; }
         }
 
         .hud-row {
@@ -88,14 +91,15 @@
             justify-content: flex-end;
             height: 40px;
             margin-top: 5px;
+            align-items: center;
         }
         .life-leaf {
             width: 40px;
             height: 40px;
             object-fit: contain;
-            margin-left: -10px;
+            margin-left: -12px;
             filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.5));
-            transition: transform 0.3s, opacity 0.3s;
+            transition: transform 0.3s;
         }
 
         #pause-btn {
@@ -112,7 +116,6 @@
         }
         #pause-btn:active { transform: scale(0.95); }
 
-        /* СКРЫВАЕМ ОТДЕЛЬНЫЕ ОЧКИ СЛЕВА, ТАК КАК ОНИ ТЕПЕРЬ В ПАНЕЛИ */
         .score-box { display: none; } 
 
         /* СТАРТОВЫЙ ЭКРАН */
@@ -139,19 +142,16 @@
             transform: scale(1.1);
             z-index: -2;
         }
-        
         .start-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.3);
             z-index: -1;
         }
-
         .start-decor-trash {
             position: absolute;
             bottom: -20px;
-            width: 15vw; /* Относительный размер */
-            max-width: 150px;
+            width: 15vw; max-width: 150px;
             filter: blur(2px) brightness(0.8);
             z-index: -1;
         }
@@ -172,9 +172,9 @@
         .btn {
             background: #4CAF50;
             border: none;
-            padding: 20px 60px;
+            padding: 15px 50px;
             color: white;
-            font-size: 30px; /* На мобильных можно уменьшить через media query, но пока ок */
+            font-size: 24px;
             cursor: pointer;
             border-radius: 15px;
             margin-top: 30px;
@@ -195,7 +195,7 @@
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 60px;
+            font-size: 40px;
             font-weight: bold;
             text-shadow: 0 5px 15px black;
             z-index: 15;
@@ -203,7 +203,6 @@
             text-transform: uppercase;
             letter-spacing: 5px;
         }
-        
         .hidden { display: none !important; }
     </style>
 </head>
@@ -212,17 +211,14 @@
     <div id="ui-layer">
         <div class="hud-panel">
             <button id="pause-btn">II Пауза</button>
-            
             <div class="hud-row">
-                <span>Очки:</span>
+                <span class="hud-label">Очки:</span>
                 <span id="score-el" class="score-text">0</span>
             </div>
-            
             <div class="hud-row">
-                <span>Скорость:</span>
+                <span class="hud-label">Скорость:</span>
                 <span id="speed-el" class="speed-text">1</span>
             </div>
-
             <div id="lives-container"></div>
         </div>
     </div>
@@ -237,7 +233,7 @@
         <img src="IMG/trash_apple1.png" class="start-decor-trash" style="left: 40%; bottom: -10px; filter: blur(4px);">
 
         <h1>Эко-Тропа</h1>
-        <p style="font-size: 24px; text-shadow: 1px 1px 2px black; text-align: center;">Сортируй мусор,<br>спасай лес!</p>
+        <p style="font-size: 20px; text-shadow: 1px 1px 2px black; text-align: center; max-width: 80%;">Сортируй мусор, спасай лес!</p>
         <button class="btn" id="start-btn">В Путь</button>
     </div>
 
@@ -305,7 +301,6 @@ const Loader = {
             this.loadImg('bg', ASSETS_PATH + 'bg_forest.png'), 
             this.loadImg('leaf', ASSETS_PATH + 'leaf.png')
         ];
-        
         for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
         for (let key in TYPES) {
             for (let i = 1; i <= 5; i++) promises.push(this.loadImg(`${TYPES[key].prefix}${i}`, `${ASSETS_PATH}${TYPES[key].prefix}${i}.png`));
@@ -330,8 +325,6 @@ let gameState = {
     bins: [], trash: [], particles: [],
     lastTime: 0, spawnTimer: 0
 };
-
-// --- ФИЗИКА И ОБЪЕКТЫ ---
 
 class Trash {
     constructor() {
@@ -375,8 +368,6 @@ class Trash {
         
         if (finalScale < 0.05) return;
 
-        // АДАПТИВНЫЙ РАЗМЕР МУСОРА
-        // 25% от высоты экрана, но не больше 220px
         let maxSize = Math.min(height * 0.25, 220);
         let size = maxSize * finalScale; 
 
@@ -399,44 +390,77 @@ class Trash {
             ctx.arc(0, 0, size/2.5, 0, Math.PI*2);
             ctx.fill();
             ctx.fillStyle = 'white';
-            ctx.font = `${Math.ceil(size * 0.2)}px Arial`;
-            ctx.fillText(this.type.id[0].toUpperCase(), -size*0.05, size*0.05);
+            ctx.font = `${Math.ceil(40*finalScale)}px Arial`;
+            ctx.fillText(this.type.id[0].toUpperCase(), -10, 15);
         }
         ctx.restore();
     }
 }
 
+// === КЛАСС BIN (АДАПТИВНЫЙ) ===
 class Bin {
     constructor(typeObj, index, total) {
         this.type = typeObj;
-        
-        // ЛОГИКА РАССТАНОВКИ
-        // Если экран вертикальный (телефон) - отступаем сверху больше под HUD
+        this.recalculate(index, total);
+    }
+
+    recalculate(index, total) {
+        // Проверяем ориентацию
         const isPortrait = height > width;
-        
-        const margin = 20;
-        let availableW = width - (margin * 2);
-        
-        // На десктопе оставляем место справа под панель
-        if (!isPortrait) {
-            availableW -= 250; 
-        }
-        
-        const binW = availableW / total;
-        
-        // Адаптивная ширина: либо 20% ширины экрана, либо макс 240
-        this.w = Math.min(width * 0.18, 240); 
-        this.h = this.w * 1.3;
-        
-        // Позиция Y
+        // Проверяем, мобильное ли устройство (грубо: ширина < 800)
+        const isMobile = width < 800;
+
+        // СЦЕНАРИЙ 1: ВЕРТИКАЛЬНЫЙ ЭКРАН (ТЕЛЕФОН)
+        // Задача: максимально большие баки в один ряд
         if (isPortrait) {
-            // На телефоне спускаем баки ниже, т.к. сверху панель
+            const margin = 5; // Минимальный отступ
+            const availableW = width - (margin * 2);
+            const binW = availableW / total; // Растягиваем на всю ширину
+            
+            this.w = binW - 2; // Почти вплотную
+            this.h = this.w * 1.3;
+            this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
+            
+            // Спускаем ниже, под панель
             this.y = 80; 
-        } else {
+        } 
+        // СЦЕНАРИЙ 2: ГОРИЗОНТАЛЬНЫЙ МОБИЛЬНЫЙ (2 слева, 3 справа)
+        else if (isMobile) {
+            // Размеры бака
+            this.w = Math.min(width * 0.12, 100);
+            this.h = this.w * 1.3;
+            this.y = 20;
+
+            const gap = width * 0.3; // Пустота в центре (30%)
+            const sideWidth = (width - gap) / 2; // Ширина левой/правой зоны
+
+            if (index < 2) {
+                // СЛЕВА (0, 1)
+                // Распределяем 2 бака в левой зоне
+                const step = sideWidth / 2;
+                this.x = (index * step) + (step/2) - (this.w/2);
+            } else {
+                // СПРАВА (2, 3, 4)
+                // Распределяем 3 бака в правой зоне
+                // Индекс внутри группы: index - 2 (получим 0, 1, 2)
+                const rightIndex = index - 2;
+                const step = sideWidth / 3;
+                const startX = width - sideWidth;
+                this.x = startX + (rightIndex * step) + (step/2) - (this.w/2);
+            }
+        }
+        // СЦЕНАРИЙ 3: ДЕСКТОП (ПК)
+        else {
+            const rightPanelSpace = 250; 
+            const margin = 20;
+            const availableW = width - (margin * 2) - rightPanelSpace;
+            const binW = availableW / total;
+            
+            this.w = Math.min(240, binW - 10); 
+            this.h = this.w * 1.3;
+            this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
             this.y = 15;
         }
-        
-        this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
     }
     
     checkHit(x, y) { 
@@ -451,8 +475,6 @@ class Bin {
         else {
             ctx.fillStyle = this.type.color;
             ctx.fillRect(this.x, this.y, this.w, this.h);
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-            ctx.strokeRect(this.x, this.y, this.w, this.h);
         }
     }
 }
@@ -483,7 +505,6 @@ function handleStart(x, y) {
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
-        // Используем ту же логику размера для хитбокса
         let maxSize = Math.min(height * 0.25, 220);
         let size = maxSize * pos.scale; 
         
@@ -578,11 +599,21 @@ function resize() {
     canvas.height = height;
     cx = width / 2;
     cy = height * HORIZON_Y; 
-    gameState.bins = [];
-    createBins();
+    
+    // Пересчитываем баки при повороте экрана
+    if (gameState.bins.length > 0) {
+        gameState.bins.forEach((bin, i) => bin.recalculate(i, gameState.bins.length));
+    } else {
+        // Если игра не начата, просто создаем массив (но рисовать не будем пока)
+        gameState.bins = [];
+        let i = 0; const count = Object.keys(TYPES).length;
+        for (let key in TYPES) gameState.bins.push(new Bin(TYPES[key], i++, count));
+    }
 }
 
 function createBins() {
+    // Вызывается при старте
+    gameState.bins = [];
     let i = 0; const count = Object.keys(TYPES).length;
     for (let key in TYPES) gameState.bins.push(new Bin(TYPES[key], i++, count));
 }
@@ -647,9 +678,8 @@ function startGame() {
         lastTime: performance.now(), spawnTimer: 0
     };
     
-    createBins(); 
+    resize(); // Создаст баки под текущий размер
     updateHUD(); 
-    resize();
     requestAnimationFrame(loop);
 }
 
@@ -664,22 +694,13 @@ function loop(time) {
 
     const bgRes = Loader.get('bg');
     if (bgRes && bgRes.loaded) {
-        // Умная отрисовка фона "Cover" (чтобы не плющило)
         const imgRatio = bgRes.img.width / bgRes.img.height;
         const canvasRatio = width / height;
-        
         let drawW, drawH, drawX, drawY;
-        
         if (canvasRatio > imgRatio) {
-            drawW = width;
-            drawH = width / imgRatio;
-            drawX = 0;
-            drawY = height - drawH; // Прижимаем к низу
+            drawW = width; drawH = width / imgRatio; drawX = 0; drawY = height - drawH; 
         } else {
-            drawW = height * imgRatio;
-            drawH = height;
-            drawX = (width - drawW) / 2; // Центрируем
-            drawY = 0;
+            drawW = height * imgRatio; drawH = height; drawX = (width - drawW) / 2; drawY = 0;
         }
         ctx.drawImage(bgRes.img, drawX, drawY, drawW, drawH);
     } else {
@@ -704,16 +725,28 @@ function loop(time) {
         gameState.spawnTimer = 0;
     }
     
-    gameState.trash.forEach(t => t.update(dt));
+    // 1. Обновляем мусор
+    let roadTrash = [];
+    let draggedTrash = [];
+
+    gameState.trash.forEach(t => {
+        t.update(dt);
+        if (t.isDragging) draggedTrash.push(t);
+        else roadTrash.push(t);
+    });
+    
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    gameState.trash.sort((a,b) => {
-        if (a.isDragging) return 1; if (b.isDragging) return -1;
-        return a.progress - b.progress;
-    });
-    gameState.trash.forEach(t => t.draw(ctx));
+    // 2. Рисуем мусор на дороге
+    roadTrash.sort((a,b) => a.progress - b.progress);
+    roadTrash.forEach(t => t.draw(ctx));
 
+    // 3. Рисуем баки
     gameState.bins.forEach(b => b.draw(ctx));
+
+    // 4. Рисуем перетаскиваемый мусор
+    draggedTrash.forEach(t => t.draw(ctx));
+
     gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
     gameState.particles = gameState.particles.filter(p => p.life > 0);
 
