@@ -15,9 +15,9 @@
         }
         canvas {
             display: block;
-            transition: filter 0.3s; /* Плавное размытие */
+            transition: filter 0.3s;
         }
-        /* Класс для эффекта размытия при повышении уровня */
+        /* Эффект размытия при повышении уровня */
         .blur-effect {
             filter: blur(8px);
         }
@@ -30,41 +30,55 @@
             height: 100%;
             pointer-events: none;
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .hud {
+            justify-content: space-between; /* Очки слева, панель справа */
             padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Очки слева */
+        .score-box {
             color: white;
             text-shadow: 2px 2px 4px black;
             font-size: 32px;
             font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
             z-index: 5;
-            pointer-events: auto;
         }
-        .hud-left {
+
+        /* ПАНЕЛЬ СПРАВА (Жизни, Скорость, Пауза) */
+        .right-panel {
+            pointer-events: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            align-items: flex-end; /* Прижать к правому краю */
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.5); /* Полупрозрачная подложка */
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            z-index: 5;
         }
-        
-        /* Стили для листочков жизни */
+
+        /* Контейнер для листочков */
         #lives-container {
             display: flex;
+            flex-direction: row-reverse; /* Чтобы исчезали справа налево */
+            height: 40px;
             align-items: center;
         }
         .life-leaf {
-            width: 50px;
+            width: 40px;
             height: auto;
-            margin-left: -15px; /* Наезд друг на друга */
-            filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
-            transition: transform 0.2s;
+            margin-left: -10px; /* Наложение друг на друга */
+            filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.5));
+            transition: transform 0.3s, opacity 0.3s;
         }
-        .life-leaf:first-child {
-            margin-left: 0;
+
+        .speed-label {
+            color: #FFEB3B;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-shadow: 1px 1px 2px black;
         }
 
         #pause-btn {
@@ -72,32 +86,74 @@
             border: 2px solid #fff;
             color: white;
             font-size: 18px;
-            padding: 5px 15px;
+            padding: 8px 20px;
             border-radius: 20px;
             cursor: pointer;
-            width: fit-content;
             font-weight: bold;
-            pointer-events: auto;
             box-shadow: 0 2px 5px rgba(0,0,0,0.5);
             transition: transform 0.1s;
         }
         #pause-btn:active { transform: scale(0.95); }
         
-        #start-screen, #game-over-screen {
+        /* СТАРТОВЫЙ ЭКРАН */
+        #start-screen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            z-index: 20; /* Поверх всего */
+            pointer-events: auto;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             color: white;
-            z-index: 10;
+            overflow: hidden;
+            background-color: #2E7D32; /* Цвет подложки на всякий случай */
+        }
+
+        /* Фон стартового экрана (размытый) */
+        .start-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('IMG/bg_forest.png') no-repeat center bottom;
+            background-size: cover;
+            filter: blur(8px); /* РАЗМЫТИЕ ФОНА */
+            transform: scale(1.1); /* Чтобы убрать белые края от блюра */
+            z-index: -2;
+        }
+        
+        /* Затемнение, чтобы текст читался */
+        .start-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: -1;
+        }
+
+        /* Декор внизу стартового экрана */
+        .start-decor-trash {
+            position: absolute;
+            bottom: -20px;
+            width: 150px;
+            filter: blur(3px) brightness(0.8);
+            z-index: -1;
+        }
+
+        #game-over-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 20;
             pointer-events: auto;
         }
+
         .btn {
             background: #4CAF50;
             border: none;
@@ -110,10 +166,11 @@
             transition: transform 0.1s;
             font-weight: bold;
             box-shadow: 0 6px 0 #2E7D32;
+            z-index: 10;
         }
         .btn:active { transform: scale(0.95); box-shadow: 0 3px 0 #2E7D32; }
-        h1 { font-size: 60px; margin-bottom: 20px; text-align: center; text-shadow: 0 5px 10px rgba(0,0,0,0.5); }
-        .hidden { display: none !important; }
+        
+        h1 { font-size: 70px; margin-bottom: 20px; text-align: center; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
         
         #pause-overlay {
             position: absolute;
@@ -126,31 +183,41 @@
             font-size: 60px;
             font-weight: bold;
             text-shadow: 0 5px 15px black;
-            z-index: 8;
+            z-index: 15;
             pointer-events: none;
             text-transform: uppercase;
             letter-spacing: 5px;
         }
+        
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
-        <div class="hud">
-            <div class="hud-left">
-                <span id="score-el">Очки: 0</span>
-                <span id="speed-el" style="color: #FFEB3B;">Скорость: 1</span>
-                <button id="pause-btn">II Пауза</button>
-            </div>
-            <div id="lives-container"></div>
+        <div class="score-box">
+            <span id="score-el">Очки: 0</span>
+        </div>
+
+        <div class="right-panel">
+            <button id="pause-btn">II Пауза</button>
+            <span id="speed-el" class="speed-label">Скорость: 1</span>
+            <div id="lives-container">
+                </div>
         </div>
     </div>
 
     <div id="pause-overlay" class="hidden">ПАУЗА</div>
 
     <div id="start-screen">
+        <div class="start-bg"></div>
+        <div class="start-overlay"></div>
+        <img src="IMG/trash_bottle1.png" class="start-decor-trash" style="left: 10%; bottom: 20px; transform: rotate(-15deg);">
+        <img src="IMG/trash_can1.png" class="start-decor-trash" style="right: 15%; bottom: 40px; transform: rotate(10deg); width: 120px;">
+        <img src="IMG/trash_apple1.png" class="start-decor-trash" style="left: 40%; bottom: -10px; width: 100px; filter: blur(5px);">
+
         <h1>Эко-Тропа</h1>
-        <p style="font-size: 24px;">Сортируй мусор, спасай лес!</p>
+        <p style="font-size: 24px; text-shadow: 1px 1px 2px black;">Сортируй мусор, спасай лес!</p>
         <button class="btn" id="start-btn">В Путь</button>
     </div>
 
@@ -199,7 +266,8 @@ const AudioSys = {
     playSuccess() { this.playTone(500, 'sine', 0.1); setTimeout(() => this.playTone(1000, 'sine', 0.2), 100); },
     playError() { this.playTone(150, 'sawtooth', 0.3, 0.2); },
     playPop() { this.playTone(600, 'triangle', 0.05, 0.05); },
-    // Звук повышения уровня (дилинь!)
+    
+    // Звук повышения уровня
     playLevelUp() { 
         this.playTone(400, 'sine', 0.1, 0.2); 
         setTimeout(() => this.playTone(600, 'sine', 0.1, 0.2), 100);
@@ -221,10 +289,10 @@ const Loader = {
         });
     },
     async init() {
-        // ИСПРАВЛЕНО: расширение png для фона
+        // Фоновая картинка (PNG)
         const promises = [
             this.loadImg('bg', ASSETS_PATH + 'bg_forest.png'),
-            this.loadImg('leaf', ASSETS_PATH + 'leaf.png') // Загружаем листочек
+            this.loadImg('leaf', ASSETS_PATH + 'leaf.png') // Листочек жизни
         ];
         
         for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
@@ -246,9 +314,9 @@ let width, height, cx, cy;
 let gameState = {
     score: 0, 
     lives: 5, 
-    speedLevel: 1,      // Текущая цифра скорости
-    itemsSorted: 0,     // Сколько мусора собрали (для повышения уровня)
-    speedMultiplier: 1, // Реальный множитель скорости
+    speedLevel: 1,      // Число для интерфейса (1, 2, 3...)
+    itemsSorted: 0,     // Счетчик собранного мусора
+    speedMultiplier: 1, // Реальный множитель скорости движения
     
     isRunning: false, isPaused: false,
     bins: [], trash: [], particles: [],
@@ -277,7 +345,7 @@ class Trash {
 
     update(dt) {
         if (!this.isDragging) {
-            // Скорость зависит от множителя
+            // Скорость умножается на multiplier
             this.progress += this.baseSpeed * gameState.speedMultiplier * (dt / 16);
             
             if (this.progress > 1.1) {
@@ -416,12 +484,12 @@ function handleEnd(x, y) {
             if (hitBin.type.id === dragItem.type.id) {
                 // ПРАВИЛЬНАЯ СОРТИРОВКА
                 gameState.score += 10;
-                gameState.itemsSorted++; // Увеличиваем счетчик предметов
+                gameState.itemsSorted++;
                 
                 AudioSys.playSuccess();
                 createParticles(x, y, hitBin.type.color);
                 
-                // === ПРОВЕРКА НА ПОВЫШЕНИЕ УРОВНЯ ===
+                // Проверка уровня
                 checkLevelUp();
                 
             } else {
@@ -440,14 +508,18 @@ function handleEnd(x, y) {
     }
 }
 
+// --- СИСТЕМА УРОВНЕЙ ---
 function checkLevelUp() {
     // Каждые 20 предметов
     if (gameState.itemsSorted > 0 && gameState.itemsSorted % 20 === 0) {
         gameState.speedLevel++;
-        gameState.speedMultiplier += 0.2; // Ускоряем игру на 20%
+        gameState.speedMultiplier += 0.2; // Увеличиваем скорость на 20%
         
         AudioSys.playLevelUp(); // Звук
-        triggerBlurEffect();    // Визуальный эффект
+        triggerBlurEffect();    // Эффект
+        
+        // Сразу обновляем интерфейс, чтобы видно было новую цифру
+        updateHUD();
     }
 }
 
@@ -455,7 +527,7 @@ function triggerBlurEffect() {
     canvas.classList.add('blur-effect');
     setTimeout(() => {
         canvas.classList.remove('blur-effect');
-    }, 500); // Размытие на полсекунды
+    }, 500); // 0.5 секунды
 }
 
 const pauseBtn = document.getElementById('pause-btn');
@@ -507,36 +579,38 @@ function handleMiss() {
     gameState.lives--; 
     AudioSys.playError(); 
     triggerShake(); 
-    updateHUD(); // Обновит и очки, и листочки
+    updateHUD(); 
     if (gameState.lives <= 0) gameOver(); 
 }
 
 let shakeTimer = 0;
 function triggerShake() { shakeTimer = 15; }
 
-// === ОБНОВЛЕНИЕ ИНТЕРФЕЙСА ===
+// --- ОБНОВЛЕНИЕ HUD (ЛИСТОЧКИ И СКОРОСТЬ) ---
 function updateHUD() {
-    // Очки
+    // 1. Обновляем очки
     document.getElementById('score-el').textContent = `Очки: ${gameState.score}`;
     
-    // Скорость
+    // 2. Обновляем цифру скорости
     document.getElementById('speed-el').textContent = `Скорость: ${gameState.speedLevel}`;
     
-    // Листочки жизни
+    // 3. Обновляем листочки
     const container = document.getElementById('lives-container');
-    container.innerHTML = ''; // Очищаем старые
+    container.innerHTML = ''; // Очищаем
     
     const leafRes = Loader.get('leaf');
-    if (leafRes && leafRes.loaded) {
-        for(let i=0; i < gameState.lives; i++) {
-            const img = document.createElement('img');
+    // Рисуем столько листочков, сколько жизней
+    for(let i=0; i < gameState.lives; i++) {
+        const img = document.createElement('img');
+        if (leafRes && leafRes.loaded) {
             img.src = leafRes.img.src;
-            img.className = 'life-leaf';
-            container.appendChild(img);
+        } else {
+            // Если картинка не прогрузилась, ставим плейсхолдер
+            img.style.backgroundColor = 'green';
+            img.style.borderRadius = '50%';
         }
-    } else {
-        // Запасной вариант (текст), если картинка не прогрузилась
-        container.textContent = `Жизни: ${gameState.lives}`;
+        img.className = 'life-leaf';
+        container.appendChild(img);
     }
 }
 
@@ -556,9 +630,9 @@ function startGame() {
     gameState = {
         score: 0, 
         lives: 5, 
-        speedLevel: 1, 
-        itemsSorted: 0,
-        speedMultiplier: 1,
+        speedLevel: 1,      // Старт с 1
+        itemsSorted: 0,     // Сброс счетчика
+        speedMultiplier: 1, // Множитель 1.0
         
         isRunning: true, isPaused: false,
         bins: [], trash: [], particles: [],
@@ -566,7 +640,7 @@ function startGame() {
     };
     
     createBins(); 
-    updateHUD(); 
+    updateHUD(); // Сразу рисуем листочки и скорость
     resize();
     requestAnimationFrame(loop);
 }
@@ -580,7 +654,7 @@ function loop(time) {
 
     ctx.clearRect(0, 0, width, height);
 
-    // Рисуем фон (уже PNG)
+    // Рисуем фон
     const bgRes = Loader.get('bg');
     if (bgRes && bgRes.loaded) ctx.drawImage(bgRes.img, 0, 0, width, height);
     else {
@@ -598,8 +672,8 @@ function loop(time) {
 
     gameState.spawnTimer += dt;
     
-    // Спавн мусора (частота зависит от multiplier)
-    // Чем выше уровень, тем меньше интервал (быстрее спавн)
+    // Частота появления зависит от множителя скорости
+    // Чем быстрее игра, тем чаще мусор (2500 -> 2000 -> 1600...)
     const spawnInterval = 2500 / gameState.speedMultiplier;
     
     if (gameState.spawnTimer > spawnInterval) {
