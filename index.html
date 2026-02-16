@@ -153,9 +153,7 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-// zIndex: 1 = Деревья (рисуются первыми, "фон")
-// zIndex: 2 = Кусты (рисуются вторыми, перекрывают деревья)
-// zIndex: 3 = Цветы (рисуются последними, перекрывают всё)
+// zIndex: 1 = Деревья, 2 = Кусты, 3 = Цветы
 const DECOR_TYPES = [
     { prefix: 'tree', count: 5, scale: 6.0, type: 'tree', zIndex: 1 }, 
     { prefix: 'bush', count: 5, scale: 2.0, type: 'bush', zIndex: 2 }, 
@@ -332,8 +330,8 @@ class Decor extends Prop {
         this.skinId = Math.floor(Math.random() * 5) + 1;
         this.prefix = t.prefix;
         this.baseScale = t.scale;
-        this.decorType = t.type; // Важно: сохраняем тип для сортировки
-        this.zIndex = t.zIndex;  // Важно: сохраняем слой для сортировки
+        this.decorType = t.type; 
+        this.zIndex = t.zIndex;  
         
         this.sizeVar = 0.8 + Math.random() * 0.5; 
         
@@ -343,11 +341,8 @@ class Decor extends Prop {
             this.progress = Math.random();
         }
 
-        // === ИСПРАВЛЕНИЕ ПЛОТНОСТИ СЛЕВА ===
-        // Делаем вероятность выпадения "левой стороны" меньше (0.4 против 0.6)
-        // isLeft = true (слева), если rand > 0.6 (40% вероятность)
-        // isLeft = false (справа), если rand <= 0.6 (60% вероятность)
-        const isLeft = Math.random() > 0.6;
+        // Вернули равномерное распределение (0.5), так как деревьев стало мало
+        const isLeft = Math.random() > 0.5;
         const sideSign = isLeft ? -1 : 1;
 
         if (isSide) {
@@ -402,7 +397,6 @@ class Bin {
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 15;
     }
-    // Еще немного увеличили хитбокс (+40 пикселей)
     checkHit(x, y) { 
         return x > this.x - 40 && 
                x < this.x + this.w + 40 && 
@@ -554,26 +548,38 @@ function gameOver() {
     document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
 }
 
-// === СТАТИЧНАЯ ГЕНЕРАЦИЯ ЛЕСА ===
+// === ОБНОВЛЕННАЯ ГЕНЕРАЦИЯ ЛЕСА ===
 function populateForest() {
     gameState.decor = []; 
     
-    // 1. ЗАДНИЙ ПЛАН
-    for(let i=0; i<30; i++) {
+    // 1. ЗАДНИЙ ПЛАН (Деревья далеко) - Уменьшено до 10
+    for(let i=0; i<10; i++) {
         const p = 0.1 + Math.random() * 0.15; 
         gameState.decor.push(new Decor(p, 'tree', false));
     }
 
-    // 2. БОКА (Кулисы)
-    for(let i=0; i<12; i++) {
+    // 2. БОКА (Кулисы) - Уменьшено до 4
+    for(let i=0; i<4; i++) {
         const p = 0.4 + Math.random() * 0.6;
         gameState.decor.push(new Decor(p, 'tree', true));
     }
 
-    // 3. ОСНОВНАЯ МАССА
-    for(let i=0; i<160; i++) {
+    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ - Уменьшено до 20 (редкий лес)
+    for(let i=0; i<20; i++) {
         const p = 0.05 + Math.random() * 0.95; 
-        gameState.decor.push(new Decor(p, null, false)); 
+        gameState.decor.push(new Decor(p, 'tree', false)); 
+    }
+
+    // 4. ДОБАВЛЯЕМ МНОГО КУСТОВ (70 шт)
+    for(let i=0; i<70; i++) {
+        const p = 0.05 + Math.random() * 0.95; 
+        gameState.decor.push(new Decor(p, 'bush', false)); 
+    }
+
+    // 5. ДОБАВЛЯЕМ МНОГО ЦВЕТОВ (70 шт)
+    for(let i=0; i<70; i++) {
+        const p = 0.05 + Math.random() * 0.95; 
+        gameState.decor.push(new Decor(p, 'flower', false)); 
     }
 }
 
@@ -634,9 +640,9 @@ function loop(time) {
     
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // === КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: СОРТИРОВКА ПО Z-INDEX (ТИПУ) ===
-    // Сначала рисуем все деревья (1), потом все кусты (2), потом все цветы (3).
-    // Внутри группы сортируем по дальности (progress).
+    // === СОРТИРОВКА (Z-INDEX) ===
+    // 1. Сортируем по типу: Дерево(1) -> Куст(2) -> Цветок(3)
+    // 2. Внутри типа сортируем по дальности (progress)
     gameState.decor.sort((a,b) => {
         if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
         return a.progress - b.progress;
