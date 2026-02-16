@@ -364,7 +364,6 @@ class Trash {
 class Bin {
     constructor(typeObj, index, total) {
         this.type = typeObj;
-        // Добавляем состояние наведения
         this.isHovered = false;
         this.recalculate(index, total);
     }
@@ -394,7 +393,7 @@ class Bin {
         else if (isMobile) {
             this.w = Math.min(width * 0.16, 140);
             this.h = this.w * 1.3;
-            this.y = 70; // Чуть выше, чем было (было 90)
+            this.y = 70; 
 
             const centerGap = width * 0.25; 
             const sideWidth = (width - centerGap) / 2; 
@@ -411,7 +410,6 @@ class Bin {
         }
         // 3. ПК (Desktop): СЛЕВА
         else {
-            // Отступ СЛЕВА под панель
             const leftPanelSpace = 250; 
             const margin = 20;
             const availableW = width - (margin * 2) - leftPanelSpace;
@@ -419,7 +417,6 @@ class Bin {
             
             this.w = Math.min(240, binW - 10); 
             this.h = this.w * 1.3;
-            // Сдвигаем баки вправо на размер панели
             this.x = leftPanelSpace + margin + (index * binW) + (binW / 2) - (this.w / 2);
             this.y = 15;
         }
@@ -439,12 +436,11 @@ class Bin {
         let drawX = this.x;
         let drawY = this.y;
 
-        // === ЭФФЕКТ УВЕЛИЧЕНИЯ ПРИ НАВЕДЕНИИ ===
+        // === ЭФФЕКТ УВЕЛИЧЕНИЯ ПРИ НАВЕДЕНИИ (25%) ===
         if (this.isHovered) {
-            const scale = 1.15; // Увеличиваем на 15%
+            const scale = 1.25; // Увеличиваем на 25%
             drawW = this.w * scale;
             drawH = this.h * scale;
-            // Центрируем увеличенный бак
             drawX = this.x - (drawW - this.w) / 2;
             drawY = this.y - (drawH - this.h) / 2;
         }
@@ -711,16 +707,13 @@ function loop(time) {
     roadTrash.forEach(t => t.draw(ctx));
 
     // === ЛОГИКА HOVER ЭФФЕКТА ДЛЯ БАКОВ ===
-    // Сбрасываем состояние hover перед проверкой
     gameState.bins.forEach(b => b.isHovered = false);
     if (dragItem) {
-        // Проверяем, над каким баком сейчас мусор
         let hoverBin = gameState.bins.find(b => b.checkHit(dragItem.dragX, dragItem.dragY));
         if (hoverBin) {
-            hoverBin.isHovered = true; // Включаем эффект
+            hoverBin.isHovered = true;
         }
     }
-    // Рисуем баки (они сами решат, увеличиваться или нет)
     gameState.bins.forEach(b => b.draw(ctx));
 
     draggedTrash.forEach(t => t.draw(ctx));
