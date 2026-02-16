@@ -153,11 +153,10 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-// zIndex: 1 = Деревья, 2 = Кусты, 3 = Цветы
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree', zIndex: 1 }, 
-    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush', zIndex: 2 }, 
-    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower', zIndex: 3 } 
+    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree' }, 
+    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush' }, 
+    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower' } 
 ];
 
 const AudioSys = {
@@ -331,7 +330,6 @@ class Decor extends Prop {
         this.prefix = t.prefix;
         this.baseScale = t.scale;
         this.decorType = t.type; 
-        this.zIndex = t.zIndex;  
         
         this.sizeVar = 0.8 + Math.random() * 0.5; 
         
@@ -347,16 +345,14 @@ class Decor extends Prop {
         if (isSide) {
              let offset;
              if (sideSign === -1) { 
-                  // Слева смещение
                   offset = width * 0.85 + Math.random() * width * 0.2;
              } else { 
-                  // Справа смещение
                   offset = width * 0.55 + Math.random() * width * 0.2;
              }
              this.startX = cx + (sideSign * offset);
              
-             // Кулисы справа прижимаем к низу
-             this.progress = 0.7 + Math.random() * 0.3;
+             // Если это "кулиса", ставим её принудительно ближе
+             if (forcedProgress === null) this.progress = 0.7 + Math.random() * 0.3;
              
         } else {
              const roadWidth = (width * 0.02) + (width * 0.25 * this.progress);
@@ -557,7 +553,7 @@ function gameOver() {
 function populateForest() {
     gameState.decor = []; 
     
-    // 1. ЗАДНИЙ ПЛАН (Горизонт) - 40 шт
+    // 1. ЗАДНИЙ ПЛАН (Горизонт)
     for(let i=0; i<40; i++) {
         const p = 0.1 + Math.random() * 0.15; 
         gameState.decor.push(new Decor(p, 'tree', false));
@@ -568,37 +564,35 @@ function populateForest() {
         gameState.decor.push(new Decor(null, 'tree', true));
     }
 
-    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ - 12 шт
+    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ
     for(let i=0; i<12; i++) {
         const p = 0.05 + Math.random() * 0.7; 
         gameState.decor.push(new Decor(p, 'tree', false)); 
     }
 
-    // 4. КУСТЫ (70 шт)
+    // 4. КУСТЫ
     for(let i=0; i<70; i++) {
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, 'bush', false)); 
     }
 
-    // 5. ЦВЕТЫ (70 шт)
+    // 5. ЦВЕТЫ
     for(let i=0; i<70; i++) {
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, 'flower', false)); 
     }
 
-    // === 6. СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ (Твоя просьба) ===
+    // === ТВОИ СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ СЛЕВА ===
     
-    // А) Одно дерево совсем слева и близко
-    let treeLeftClose = new Decor(0.95, 'tree', false); // Progress почти 1 (близко)
-    // Ставим координату вручную (СЛЕВА)
-    treeLeftClose.startX = cx - (width * 0.6); 
+    // А) Одно дерево совсем слева и близко (isSide=true ставит его далеко, но мы вручную зададим)
+    let treeLeftClose = new Decor(0.95, 'tree', false); 
+    treeLeftClose.startX = cx - (width * 0.6); // Принудительно ставим слева
     treeLeftClose.targetX = treeLeftClose.startX;
     gameState.decor.push(treeLeftClose);
 
     // Б) Одно дерево посередине слева
-    let treeLeftMid = new Decor(0.5, 'tree', false); // Progress 0.5 (середина)
-    // Ставим координату вручную (СЛЕВА, но ближе к тропинке)
-    treeLeftMid.startX = cx - (width * 0.35);
+    let treeLeftMid = new Decor(0.5, 'tree', false); 
+    treeLeftMid.startX = cx - (width * 0.35); // Чуть ближе к дороге
     treeLeftMid.targetX = treeLeftMid.startX;
     gameState.decor.push(treeLeftMid);
 }
@@ -660,10 +654,37 @@ function loop(time) {
     
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // === СОРТИРОВКА (Z-INDEX) ===
+    // === УМНАЯ СОРТИРОВКА (SMART SORT) ===
+    // Правила:
+    // 1. Ближние (progress выше) перекрывают дальние.
+    // 2. Центральные (ближе к дороге) перекрывают боковые (на той же глубине).
+    // 3. Цветы > Кусты > Деревья (при прочих равных).
+    
     gameState.decor.sort((a,b) => {
-        if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
-        return a.progress - b.progress;
+        // Получаем актуальные позиции (даже если статика, на будущее)
+        const posA = a.getScreenPos();
+        const posB = b.getScreenPos();
+
+        let priorityA = a.progress;
+        let priorityB = b.progress;
+
+        // Бонус типам (Z-boost)
+        if (a.decorType === 'flower') priorityA += 0.15;
+        else if (a.decorType === 'bush') priorityA += 0.05;
+
+        if (b.decorType === 'flower') priorityB += 0.15;
+        else if (b.decorType === 'bush') priorityB += 0.05;
+
+        // Штраф за удаленность от центра (Side Penalty)
+        // Чтобы центральные кусты рисовали ПОВЕРХ корней боковых деревьев
+        const distA = Math.abs(posA.x - cx);
+        const distB = Math.abs(posB.x - cx);
+        const maxDist = width / 2;
+        
+        priorityA -= (distA / maxDist) * 0.2; 
+        priorityB -= (distB / maxDist) * 0.2;
+
+        return priorityA - priorityB;
     });
 
     gameState.decor.forEach(d => d.draw(ctx));
