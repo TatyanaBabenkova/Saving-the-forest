@@ -153,10 +153,11 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
+// zIndex: 1 = Деревья, 2 = Кусты, 3 = Цветы
 const DECOR_TYPES = [
-    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree' }, 
-    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush' }, 
-    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower' } 
+    { prefix: 'tree', count: 5, scale: 6.0, type: 'tree', zIndex: 1 }, 
+    { prefix: 'bush', count: 5, scale: 2.0, type: 'bush', zIndex: 2 }, 
+    { prefix: 'flower', count: 5, scale: 1.0, type: 'flower', zIndex: 3 } 
 ];
 
 const AudioSys = {
@@ -209,16 +210,19 @@ const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
-    score: 0, lives: 5, speed: 1, isRunning: false, isPaused: false,
+    score: 0, lives: 5, speed: 1, 
+    isRunning: false, isPaused: false, isCountdown: false,
     bins: [], trash: [], decor: [], particles: [],
-    lastTime: 0, spawnTimer: 0, decorTimer: 0
+    lastTime: 0, spawnTimer: 0, decorTimer: 0,
+    countdownValue: 3, countdownTimer: 0
 };
 
 class Prop {
     constructor(isTrash) {
         this.isTrash = isTrash;
         this.markedForDeletion = false;
-        this.baseSpeed = isTrash ? 0.002 : 0.0006; 
+        // ОЧЕНЬ МЕДЛЕННАЯ СКОРОСТЬ
+        this.baseSpeed = isTrash ? 0.002 : 0.0003; 
         this.progress = 0; 
         this.startX = cx;
         this.targetX = cx;
@@ -232,6 +236,9 @@ class Prop {
     update(dt) {
         if (this.isTrash) {
             this.progress += this.baseSpeed * gameState.speed * (dt / 16);
+        } else {
+            // ЛЕС ТЕПЕРЬ ДВИГАЕТСЯ (но медленно)
+            this.progress += this.baseSpeed * gameState.speed * (dt / 16);
         }
     }
 
@@ -241,7 +248,13 @@ class Prop {
                 this.markedForDeletion = true;
                 handleMiss();
             }
-        } 
+        } else {
+            // Лес не удаляем, если он ушел вниз, а помечаем для респауна?
+            // Нет, удаляем и создаем новый через спавнер
+            if (this.progress > 1.2) {
+                this.markedForDeletion = true;
+            }
+        }
     }
 
     getScreenPos() {
@@ -253,6 +266,8 @@ class Prop {
         }
         
         const curY = cy + (height - cy) * this.progress;
+        
+        // Линейная интерполяция между Start (Горизонт) и Target (Низ)
         const curX = this.startX + (this.targetX - this.startX) * this.progress;
 
         return { x: curX, y: curY, scale: scaleCurve };
@@ -330,43 +345,63 @@ class Decor extends Prop {
         this.prefix = t.prefix;
         this.baseScale = t.scale;
         this.decorType = t.type; 
+        this.zIndex = t.zIndex;  
         
         this.sizeVar = 0.8 + Math.random() * 0.5; 
         
+        // 1. ОПРЕДЕЛЯЕМ ПРОГРЕСС
         if (forcedProgress !== null) {
             this.progress = forcedProgress;
         } else {
-            this.progress = Math.random();
+            // Если создается в процессе игры - всегда на горизонте
+            // Если при старте (populateForest) - рандом
+            this.progress = (gameState.isCountdown || !gameState.isRunning) ? Math.random() : 0.0;
         }
 
         const isLeft = Math.random() > 0.5;
         const sideSign = isLeft ? -1 : 1;
 
+        // 2. РАСЧЕТ ТРАЕКТОРИИ (Lane)
+        // Чтобы объект двигался правильно, нам нужно знать его LaneFactor (насколько он далеко от центра)
+        
+        // Диапазон "смещения от центра" для данного объекта
+        let minLane, maxLane;
+        
         if (isSide) {
-             let offset;
-             if (sideSign === -1) { 
-                  offset = width * 0.85 + Math.random() * width * 0.2;
-             } else { 
-                  offset = width * 0.55 + Math.random() * width * 0.2;
-             }
-             this.startX = cx + (sideSign * offset);
-             
-             // Если это "кулиса", ставим её принудительно ближе
-             if (forcedProgress === null) this.progress = 0.7 + Math.random() * 0.3;
-             
+            // Кулисы: очень далеко
+            minLane = 0.55; maxLane = 0.85;
+            // Кулисам при старте даем большой прогресс
+            if (forcedProgress === null) this.progress = 0.7 + Math.random() * 0.3;
         } else {
-             const roadWidth = (width * 0.02) + (width * 0.25 * this.progress);
-             const minX = roadWidth + (width * 0.05); 
-             const maxX = width * 0.6 + (width * 0.3 * this.progress);
-             const xOffset = minX + Math.random() * (maxX - minX);
-             this.startX = cx + (sideSign * xOffset);
+            // Обычный лес: от "обочины" до "чащи"
+            minLane = 0.07; // Близко к дороге (0.02 дорога + 0.05 трава)
+            maxLane = 0.60; // Глубокий лес
         }
+        
+        // Случайная позиция в "полосе" (0..1)
+        const lanePosition = Math.random(); 
+        // Реальный коэффициент ширины (0.07 ... 0.60)
+        const laneFactor = minLane + lanePosition * (maxLane - minLane);
 
-        this.targetX = this.startX; 
+        // ТЕПЕРЬ САМОЕ ГЛАВНОЕ:
+        // Рассчитываем StartX (где он был бы на горизонте)
+        // и TargetX (куда он приедет внизу), чтобы он двигался по лучу.
+        
+        // Ширина дороги на горизонте: ~width * 0.02
+        // Ширина дороги внизу: ~width * 0.27
+        
+        const startOffset = (width * 0.02) + (width * laneFactor * 0.2); // Узко на горизонте
+        const targetOffset = (width * 0.27) + (width * laneFactor * 1.5); // Широко внизу
+        
+        this.startX = cx + (sideSign * startOffset);
+        this.targetX = cx + (sideSign * targetOffset);
     }
 
     update(dt) {
         super.update(dt);
+        const pos = this.getScreenPos();
+        const size = 350 * pos.scale * this.baseScale * this.sizeVar;
+        this.checkVisibility(pos.x, pos.y, size);
     }
 
     draw(ctx) {
@@ -439,7 +474,7 @@ class Particle {
 let dragItem = null;
 
 function handleStart(x, y) {
-    if (!gameState.isRunning || gameState.isPaused) return;
+    if (!gameState.isRunning || gameState.isPaused || gameState.isCountdown) return;
     
     let candidates = gameState.trash.filter(t => t.progress > 0.3);
     candidates.sort((a,b) => b.progress - a.progress);
@@ -549,22 +584,22 @@ function gameOver() {
     document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
 }
 
-// === ОБНОВЛЕННАЯ ГЕНЕРАЦИЯ ЛЕСА ===
+// === ГЕНЕРАЦИЯ ЛЕСА ===
 function populateForest() {
     gameState.decor = []; 
     
-    // 1. ЗАДНИЙ ПЛАН (Горизонт)
+    // 1. ЗАДНИЙ ПЛАН
     for(let i=0; i<40; i++) {
         const p = 0.1 + Math.random() * 0.15; 
         gameState.decor.push(new Decor(p, 'tree', false));
     }
 
-    // 2. БОКА (Кулисы) - 3 шт
+    // 2. БОКА
     for(let i=0; i<3; i++) {
         gameState.decor.push(new Decor(null, 'tree', true));
     }
 
-    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ
+    // 3. ОСНОВНАЯ МАССА
     for(let i=0; i<12; i++) {
         const p = 0.05 + Math.random() * 0.7; 
         gameState.decor.push(new Decor(p, 'tree', false)); 
@@ -582,18 +617,19 @@ function populateForest() {
         gameState.decor.push(new Decor(p, 'flower', false)); 
     }
 
-    // === 6. СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ (Твоя просьба) ===
+    // === СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ (Слева) ===
     
-    // А) Одно дерево совсем слева и близко
+    // А) Близко слева
     let treeLeftClose = new Decor(0.95, 'tree', false); 
-    treeLeftClose.startX = cx - (width * 0.6); // Принудительно ставим слева
-    treeLeftClose.targetX = treeLeftClose.startX;
+    // Вручную переопределяем траекторию, чтобы оно уезжало влево
+    treeLeftClose.startX = cx - (width * 0.05); // Старт
+    treeLeftClose.targetX = cx - (width * 0.8); // Финиш (уедет влево)
     gameState.decor.push(treeLeftClose);
 
-    // Б) Одно дерево посередине слева
+    // Б) Середина слева
     let treeLeftMid = new Decor(0.5, 'tree', false); 
-    treeLeftMid.startX = cx - (width * 0.35); // Чуть ближе к дороге
-    treeLeftMid.targetX = treeLeftMid.startX;
+    treeLeftMid.startX = cx - (width * 0.04);
+    treeLeftMid.targetX = cx - (width * 0.5); 
     gameState.decor.push(treeLeftMid);
 }
 
@@ -605,7 +641,10 @@ function startGame() {
     pauseBtn.textContent = "II Пауза";
     
     gameState = {
-        score: 0, lives: 5, speed: 1, isRunning: true, isPaused: false,
+        score: 0, lives: 5, speed: 1, 
+        isRunning: true, isPaused: false,
+        // ВКЛЮЧАЕМ ОТСЧЕТ
+        isCountdown: true, countdownValue: 3, countdownTimer: 0,
         bins: [], trash: [], decor: [], particles: [],
         lastTime: performance.now(), spawnTimer: 0, decorTimer: 0
     };
@@ -641,48 +680,59 @@ function loop(time) {
         shakeTimer--;
     }
 
-    gameState.spawnTimer += dt;
-    gameState.speed = 1 + (gameState.score / 250); 
+    // === ЛОГИКА ОТСЧЕТА ===
+    if (gameState.isCountdown) {
+        // Лес и мусор не двигаются, только рисуются
+        
+        // Обновляем таймер
+        gameState.countdownTimer += dt;
+        if (gameState.countdownTimer > 1000) {
+            gameState.countdownValue--;
+            gameState.countdownTimer = 0;
+            if (gameState.countdownValue < 0) {
+                gameState.isCountdown = false; // Поехали!
+            }
+        }
+    } else {
+        // Игра идет
+        gameState.spawnTimer += dt;
+        gameState.decorTimer += dt;
+        gameState.speed = 1 + (gameState.score / 250); 
 
-    if (gameState.spawnTimer > 2500 / gameState.speed) {
-        gameState.trash.push(new Trash());
-        gameState.spawnTimer = 0;
+        if (gameState.spawnTimer > 2500 / gameState.speed) {
+            gameState.trash.push(new Trash());
+            gameState.spawnTimer = 0;
+        }
+        
+        // Спавн декора (чтобы лес был бесконечным)
+        if (gameState.decorTimer > 50) { 
+            gameState.decor.push(new Decor());
+            gameState.decorTimer = 0;
+        }
+
+        gameState.decor.forEach(d => d.update(dt));
+        gameState.trash.forEach(t => t.update(dt));
     }
     
-    gameState.decor.forEach(d => d.update(dt));
-    gameState.trash.forEach(t => t.update(dt));
-    
+    // Рисуем всё (и в паузе, и в игре)
+    gameState.decor = gameState.decor.filter(d => !d.markedForDeletion);
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
-    // === УМНАЯ СОРТИРОВКА (SMART SORT) ===
-    // Правила:
-    // 1. Ближние (progress выше) перекрывают дальние.
-    // 2. Центральные (ближе к дороге) перекрывают боковые (на той же глубине).
-    // 3. Цветы > Кусты > Деревья (при прочих равных).
-    
+    // Сортировка Z-Index
     gameState.decor.sort((a,b) => {
-        // Получаем актуальные позиции (даже если статика, на будущее)
+        // Сначала по "слоям" (цветы > кусты > деревья)
+        // НО с учетом расстояния до центра (чтобы центральные кусты крыли боковые деревья)
         const posA = a.getScreenPos();
         const posB = b.getScreenPos();
-
-        let priorityA = a.progress;
-        let priorityB = b.progress;
-
-        // Бонус типам (Z-boost)
-        if (a.decorType === 'flower') priorityA += 0.15;
-        else if (a.decorType === 'bush') priorityA += 0.05;
-
-        if (b.decorType === 'flower') priorityB += 0.15;
-        else if (b.decorType === 'bush') priorityB += 0.05;
-
-        // Штраф за удаленность от центра (Side Penalty)
-        // Чтобы центральные кусты рисовали ПОВЕРХ корней боковых деревьев
+        
+        let priorityA = a.progress + (a.zIndex * 0.1); 
+        let priorityB = b.progress + (b.zIndex * 0.1);
+        
+        // Штраф за удаленность от центра
         const distA = Math.abs(posA.x - cx);
         const distB = Math.abs(posB.x - cx);
-        const maxDist = width / 2;
-        
-        priorityA -= (distA / maxDist) * 0.2; 
-        priorityB -= (distB / maxDist) * 0.2;
+        priorityA -= (distA / width) * 0.3;
+        priorityB -= (distB / width) * 0.3;
 
         return priorityA - priorityB;
     });
@@ -698,6 +748,31 @@ function loop(time) {
     gameState.bins.forEach(b => b.draw(ctx));
     gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
     gameState.particles = gameState.particles.filter(p => p.life > 0);
+
+    // === РИСУЕМ ЦИФРЫ ОТСЧЕТА ===
+    if (gameState.isCountdown && gameState.countdownValue >= 0) {
+        ctx.save();
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 5;
+        ctx.font = 'bold 200px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Эффект пульсации/исчезновения
+        const alpha = 1 - (gameState.countdownTimer / 1000);
+        const scale = 1 + (gameState.countdownTimer / 2000);
+        
+        ctx.globalAlpha = alpha;
+        ctx.translate(cx, height/2);
+        ctx.scale(scale, scale);
+        
+        const text = gameState.countdownValue === 0 ? "START!" : gameState.countdownValue;
+        ctx.strokeText(text, 0, 0);
+        ctx.fillText(text, 0, 0);
+        
+        ctx.restore();
+    }
 
     if (shakeTimer > 0) ctx.restore();
     requestAnimationFrame(loop);
