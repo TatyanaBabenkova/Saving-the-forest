@@ -191,8 +191,8 @@ const Loader = {
         });
     },
     async init() {
-        // !!! ЗДЕСЬ Я ОСТАВИЛ JPG, ПОТОМУ ЧТО ФАЙЛ НАЗЫВАЕТСЯ bg_forest.jpg
-        const promises = [this.loadImg('bg', ASSETS_PATH + 'bg_forest.jpg')];
+      
+        const promises = [this.loadImg('bg', ASSETS_PATH + 'bg_forest.png')];
         
         // Загружаем мусор и баки
         for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
