@@ -341,18 +341,23 @@ class Decor extends Prop {
             this.progress = Math.random();
         }
 
-        // Вернули равномерное распределение (0.5), так как деревьев стало мало
         const isLeft = Math.random() > 0.5;
         const sideSign = isLeft ? -1 : 1;
 
         if (isSide) {
              let offset;
+             // ИСПРАВЛЕНИЕ: Двигаем деревья "кулисы" ниже и дальше
              if (sideSign === -1) { 
                   offset = width * 0.85 + Math.random() * width * 0.2;
              } else { 
                   offset = width * 0.55 + Math.random() * width * 0.2;
              }
              this.startX = cx + (sideSign * offset);
+             
+             // ВАЖНО: Кулисы должны быть близко (внизу), чтобы не висеть
+             // Принудительно ставим progress > 0.7
+             this.progress = 0.7 + Math.random() * 0.3;
+             
         } else {
              const roadWidth = (width * 0.02) + (width * 0.25 * this.progress);
              const minX = roadWidth + (width * 0.05); 
@@ -552,31 +557,33 @@ function gameOver() {
 function populateForest() {
     gameState.decor = []; 
     
-    // 1. ЗАДНИЙ ПЛАН (Деревья далеко) - Уменьшено до 10
-    for(let i=0; i<10; i++) {
+    // 1. ЗАДНИЙ ПЛАН (Горизонт) - УВЕЛИЧИЛИ КОЛИЧЕСТВО (40 шт)
+    for(let i=0; i<40; i++) {
         const p = 0.1 + Math.random() * 0.15; 
         gameState.decor.push(new Decor(p, 'tree', false));
     }
 
-    // 2. БОКА (Кулисы) - Уменьшено до 4
-    for(let i=0; i<4; i++) {
-        const p = 0.4 + Math.random() * 0.6;
-        gameState.decor.push(new Decor(p, 'tree', true));
+    // 2. БОКА (Кулисы) - УМЕНЬШИЛИ (3 шт), только для рамки
+    for(let i=0; i<3; i++) {
+        // progress здесь не важен, он переопределяется внутри конструктора для isSide=true
+        gameState.decor.push(new Decor(null, 'tree', true));
     }
 
-    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ - Уменьшено до 20 (редкий лес)
-    for(let i=0; i<20; i++) {
-        const p = 0.05 + Math.random() * 0.95; 
+    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ - УМЕНЬШИЛИ (12 шт)
+    // Чтобы было свободно вблизи
+    for(let i=0; i<12; i++) {
+        // Больше деревьев в средней зоне, меньше у носа
+        const p = 0.05 + Math.random() * 0.7; 
         gameState.decor.push(new Decor(p, 'tree', false)); 
     }
 
-    // 4. ДОБАВЛЯЕМ МНОГО КУСТОВ (70 шт)
+    // 4. КУСТЫ (70 шт) - Везде
     for(let i=0; i<70; i++) {
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, 'bush', false)); 
     }
 
-    // 5. ДОБАВЛЯЕМ МНОГО ЦВЕТОВ (70 шт)
+    // 5. ЦВЕТЫ (70 шт) - Везде
     for(let i=0; i<70; i++) {
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, 'flower', false)); 
@@ -641,8 +648,6 @@ function loop(time) {
     gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
 
     // === СОРТИРОВКА (Z-INDEX) ===
-    // 1. Сортируем по типу: Дерево(1) -> Куст(2) -> Цветок(3)
-    // 2. Внутри типа сортируем по дальности (progress)
     gameState.decor.sort((a,b) => {
         if (a.zIndex !== b.zIndex) return a.zIndex - b.zIndex;
         return a.progress - b.progress;
