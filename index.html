@@ -582,9 +582,9 @@ function populateForest() {
         gameState.decor.push(new Decor(p, 'flower', false)); 
     }
 
-    // === ТВОИ СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ СЛЕВА ===
+    // === 6. СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ (Твоя просьба) ===
     
-    // А) Одно дерево совсем слева и близко (isSide=true ставит его далеко, но мы вручную зададим)
+    // А) Одно дерево совсем слева и близко
     let treeLeftClose = new Decor(0.95, 'tree', false); 
     treeLeftClose.startX = cx - (width * 0.6); // Принудительно ставим слева
     treeLeftClose.targetX = treeLeftClose.startX;
