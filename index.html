@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эко-Тропа: Сортировка</title>
     <style>
-        /* Фикс для iOS */
+        /* Фикс для iOS Safari */
         html { height: -webkit-fill-available; }
         body {
             margin: 0; padding: 0; overflow: hidden;
@@ -21,15 +21,16 @@
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
+            display: flex; flex-direction: column; justify-content: flex-start;
         }
 
-        /* --- БАЗОВЫЙ СТИЛЬ ПАНЕЛИ (ДЛЯ МОБИЛЬНЫХ - ПОЛОСА СВЕРХУ) --- */
+        /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
         .hud-panel {
             pointer-events: auto;
             background: rgba(0, 0, 0, 0.7);
             width: 100%;
             box-sizing: border-box;
-            padding: 10px 15px;
+            padding: 10px 20px;
             border-radius: 0 0 20px 20px;
             display: flex;
             color: white;
@@ -38,65 +39,35 @@
             z-index: 10;
             justify-content: space-between;
             align-items: center;
-            /* По умолчанию (мобильный вертикальный) - элементы в ряд или два ряда */
-            flex-wrap: wrap; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* Элементы панели */
-        .hud-group { display: flex; align-items: center; gap: 15px; }
+        #pause-btn {
+            background: #FF9800; border: 2px solid #fff; color: white; font-weight: bold;
+            border-radius: 20px; cursor: pointer; padding: 5px 20px; font-size: 16px;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        #pause-btn:active { transform: scale(0.95); }
+
+        .stat-block { display: flex; align-items: center; gap: 5px; }
         .score-text { font-size: 20px; font-weight: bold; color: white; white-space: nowrap; }
         .speed-text { font-size: 20px; font-weight: bold; color: #FFEB3B; white-space: nowrap; }
 
-        /* Листочки */
         #lives-container { display: flex; align-items: center; height: 30px; }
         .life-leaf {
             width: 35px; height: 35px; object-fit: contain; margin-left: -10px;
             filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5)); transition: transform 0.3s;
         }
 
-        #pause-btn {
-            background: #FF9800; border: 2px solid #fff; color: white; font-weight: bold;
-            border-radius: 20px; cursor: pointer; padding: 5px 20px; font-size: 16px;
-            white-space: nowrap;
+        /* АДАПТАЦИЯ ПАНЕЛИ */
+        @media (orientation: portrait) {
+            .hud-panel { flex-direction: column; gap: 8px; align-items: stretch; padding-bottom: 15px; }
+            .hud-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         }
-        #pause-btn:active { transform: scale(0.95); }
-
-        /* === АДАПТАЦИЯ (МЕДИА ЗАПРОСЫ) === */
-
-        /* 1. МОБИЛЬНЫЙ ВЕРТИКАЛЬНЫЙ (ПОРТРЕТ) */
-        @media (max-width: 1023px) and (orientation: portrait) {
-            .hud-panel {
-                flex-direction: row; 
-                justify-content: space-between;
-            }
-            .hud-group { gap: 10px; }
-            /* Скрываем слова "Очки" и "Ск", оставляем цифры, если места мало */
-            .hud-label { display: none; }
-        }
-
-        /* 2. МОБИЛЬНЫЙ ГОРИЗОНТАЛЬНЫЙ (ЛАНДШАФТ) */
-        @media (max-width: 1023px) and (orientation: landscape) {
-            .hud-panel {
-                padding: 5px 20px; height: 50px;
-            }
-            .hud-label { display: none; }
-        }
-
-        /* 3. КОМПЬЮТЕР/ПЛАНШЕТ (ДЕСКТОП) - ВОЗВРАЩАЕМ ПАНЕЛЬ ВПРАВО */
-        @media (min-width: 1024px) {
-            .hud-panel {
-                position: absolute;
-                top: 20px; right: 20px; left: auto; /* Сбрасываем left/width 100% */
-                width: 220px;
-                border-radius: 15px; /* Полное скругление */
-                flex-direction: column; /* Вертикальный стек */
-                align-items: flex-end; /* Прижать вправо */
-                gap: 15px;
-                background: rgba(0, 0, 0, 0.6);
-            }
-            .hud-group { width: 100%; justify-content: space-between; }
-            #pause-btn { width: 100%; }
-            .hud-label { display: inline; } /* Показываем слова */
+        @media (orientation: landscape) {
+            .hud-panel { flex-direction: row; gap: 20px; height: 60px; padding: 5px 30px; }
+            .hud-label { display: none; } 
+            @media (min-width: 800px) { .hud-label { display: inline; } }
         }
 
         /* --- СТАРТОВЫЙ ЭКРАН --- */
@@ -118,13 +89,27 @@
         h1 { font-size: 8vh; margin: 0 0 10px 0; text-shadow: 0 5px 10px black; text-align: center; }
         .subtitle { font-size: 18px; margin-bottom: 20px; text-shadow: 1px 1px 2px black; text-align: center; }
 
+        /* ОБУЧЕНИЕ (ЯЩИКИ) */
         .tutorial-container {
-            display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;
+            display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap;
             justify-content: center; max-width: 95%;
         }
         .tut-item { display: flex; flex-direction: column; align-items: center; width: 55px; }
         .tut-img { width: 100%; height: auto; margin-bottom: 5px; filter: drop-shadow(0 5px 5px black); }
         .tut-label { font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 8px; white-space: nowrap; }
+
+        /* УВЕЛИЧЕНИЕ БАКОВ НА КОМПЬЮТЕРЕ (Desktop) */
+        @media (min-width: 1024px) {
+            .tut-item { width: 110px; } /* В 2 раза больше */
+            .tut-label { font-size: 16px; padding: 4px 10px; }
+            h1 { font-size: 80px; }
+            .subtitle { font-size: 24px; }
+        }
+
+        @media (max-height: 500px) {
+            .tut-item { width: 40px; } h1 { font-size: 40px; margin-bottom: 5px; }
+            .subtitle { font-size: 14px; margin-bottom: 10px; } .tutorial-container { margin-bottom: 10px; gap: 10px; }
+        }
 
         .btn {
             background: #4CAF50; border: none; padding: 15px 50px;
@@ -146,6 +131,7 @@
             z-index: 15; pointer-events: none; text-transform: uppercase; letter-spacing: 5px;
         }
         .hidden { display: none !important; }
+        
         .start-decor-trash {
             position: absolute; bottom: -20px; width: 15vw; max-width: 150px;
             filter: blur(2px) brightness(0.8); z-index: -1;
@@ -156,13 +142,16 @@
 
     <div id="ui-layer">
         <div class="hud-panel">
-            <div class="hud-group">
+            <div class="hud-row" style="flex: 1; justify-content: flex-start; gap: 20px;">
                 <button id="pause-btn">II Пауза</button>
-                <span class="score-text"><span class="hud-label">Очки: </span><span id="score-el">0</span></span>
+                <div class="stat-block">
+                    <span class="score-text">Очки: <span id="score-el">0</span></span>
+                </div>
             </div>
-            
-            <div class="hud-group" style="justify-content: flex-end;">
-                <span class="speed-text"><span class="hud-label">Ск: </span><span id="speed-el">1</span></span>
+            <div class="hud-row" style="flex: 1; justify-content: flex-end; gap: 20px;">
+                <div class="stat-block">
+                    <span class="speed-text">Ск: <span id="speed-el">1</span></span>
+                </div>
                 <div id="lives-container"></div>
             </div>
         </div>
@@ -288,8 +277,10 @@ class Trash {
         this.isDragging = false;
         this.dragX = 0; this.dragY = 0;
 
-        this.startX = cx + (Math.random() - 0.5) * 50; 
-        this.targetX = cx + (Math.random() - 0.5) * (width * 0.5); 
+        // === ИСПРАВЛЕНИЕ: ОТНОСИТЕЛЬНАЯ ПОЗИЦИЯ (LANE) ===
+        // Храним не пиксели, а смещение от центра (-0.5 до 0.5)
+        // Чтобы при повороте экрана мусор не улетал
+        this.lane = (Math.random() - 0.5); 
     }
 
     update(dt) {
@@ -305,7 +296,17 @@ class Trash {
     getScreenPos() {
         const scale = this.progress * this.progress;
         const curY = cy + (height - cy) * this.progress;
-        const curX = this.startX + (this.targetX - this.startX) * this.progress;
+        
+        // ДИНАМИЧЕСКИЙ РАСЧЕТ X КАЖДЫЙ КАДР
+        // Мусор вылетает узко (startSpread = 50px) и разлетается широко (targetSpread = 50% ширины)
+        const startSpread = 50; 
+        const targetSpread = width * 0.5;
+        
+        const currentStartX = cx + (this.lane * startSpread);
+        const currentTargetX = cx + (this.lane * targetSpread);
+        
+        const curX = currentStartX + (currentTargetX - currentStartX) * this.progress;
+        
         return { x: curX, y: curY, scale: scale };
     }
 
@@ -317,10 +318,13 @@ class Trash {
         
         if (finalScale < 0.05) return;
 
+        // === МУСОР КРУПНЫЙ В ЛЮБОМ РЕЖИМЕ ===
         let visualScale = 0.4 + (finalScale * 0.6);
         if (this.isDragging) visualScale = 1.0;
 
-        let maxSize = Math.min(height * 0.25, 220);
+        // Расчет размера: берем 25% от МЕНЬШЕЙ стороны экрана (чтобы в горизонте не был мелким)
+        const minDim = Math.min(width, height); 
+        let maxSize = Math.min(minDim * 0.35, 220); // 35% от меньшей стороны
         let size = maxSize * visualScale; 
 
         const res = Loader.get(`${this.type.prefix}${this.skinId}`);
@@ -354,21 +358,48 @@ class Bin {
 
     recalculate(index, total) {
         const isPortrait = height > width;
-        const isDesktop = width >= 1024; // Точное определение десктопа
+        const isMobile = width < 900; 
 
-        // 1. ВЕРТИКАЛЬНО (Телефон): ОГРОМНЫЕ БАКИ
+        // 1. ВЕРТИКАЛЬНО (Mobile): ШАХМАТНЫЙ ПОРЯДОК
         if (isPortrait) {
-            const margin = 2; // Почти без отступа
+            const margin = 2;
             const availableW = width - (margin * 2);
-            const binW = availableW / total; // Растягиваем на всю ширину
+            const binW = availableW / total;
             
-            this.w = binW - 2; // Максимальная ширина
+            this.w = binW - 2; 
             this.h = this.w * 1.3;
             this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-            this.y = 90; // Под панелью
+            
+            // Базовый Y
+            let baseY = 120;
+            // ШАХМАТНЫЙ ПОРЯДОК: Четные (0, 2, 4) выше, Нечетные (1, 3) ниже
+            if (index % 2 !== 0) {
+                this.y = baseY + 60; // Спускаем 2-й и 4-й баки
+            } else {
+                this.y = baseY;
+            }
         } 
-        // 2. ДЕСКТОП (ПК): Классический вид (сдвинуты влево от панели)
-        else if (isDesktop) {
+        // 2. ГОРИЗОНТАЛЬНО (Mobile): ВОРОТА (2+3)
+        else if (isMobile) {
+            this.w = Math.min(width * 0.16, 140);
+            this.h = this.w * 1.3;
+            this.y = 90;
+
+            const centerGap = width * 0.25; 
+            const sideWidth = (width - centerGap) / 2; 
+
+            if (index < 2) {
+                const step = sideWidth / 2;
+                this.x = (index * step) + (step/2) - (this.w/2);
+            } else {
+                const rightIndex = index - 2; 
+                const step = sideWidth / 3;
+                const startX = width - sideWidth;
+                this.x = startX + (rightIndex * step) + (step/2) - (this.w/2);
+            }
+        }
+        // 3. ПК (Desktop)
+        else {
             const rightPanelSpace = 250; 
             const margin = 20;
             const availableW = width - (margin * 2) - rightPanelSpace;
@@ -378,26 +409,6 @@ class Bin {
             this.h = this.w * 1.3;
             this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
             this.y = 15;
-        }
-        // 3. ГОРИЗОНТАЛЬНО (Телефон): ВОРОТА (2+3)
-        else {
-            this.w = Math.min(width * 0.16, 140);
-            this.h = this.w * 1.3;
-            this.y = 70; 
-
-            const centerGap = width * 0.25; 
-            const sideWidth = (width - centerGap) / 2; 
-
-            if (index < 2) {
-                const step = sideWidth / 2;
-                this.x = (index * step) + (step/2) - (this.w/2);
-            } 
-            else {
-                const rightIndex = index - 2; 
-                const step = sideWidth / 3;
-                const startX = width - sideWidth;
-                this.x = startX + (rightIndex * step) + (step/2) - (this.w/2);
-            }
         }
     }
     
@@ -444,8 +455,10 @@ function handleStart(x, y) {
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
+        // Хитбокс тоже зависит от мин. стороны
+        const minDim = Math.min(width, height); 
         let visualScale = 0.4 + (pos.scale * 0.6);
-        let maxSize = Math.min(height * 0.25, 220);
+        let maxSize = Math.min(minDim * 0.35, 220);
         let size = maxSize * visualScale; 
         
         const dx = x - pos.x;
