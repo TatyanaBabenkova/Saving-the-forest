@@ -82,7 +82,8 @@
                 top: 20px; 
                 left: 20px; 
                 right: auto; 
-                width: 300px; /* ИСПРАВЛЕНО: Ширина 300px, чтобы всё влезало */
+                /* ИСПРАВЛЕНО: Ширина 320px - теперь точно влезет всё */
+                width: 320px; 
                 border-radius: 15px;
                 flex-direction: column; 
                 align-items: flex-start;
@@ -376,14 +377,19 @@ class Bin {
         if (isPortrait) {
             const margin = 2;
             const availableW = width - (margin * 2);
-            const binW = availableW / total;
             
-            this.w = binW - 2; 
+            // ИСПРАВЛЕНО: Делаем баки БОЛЬШЕ (1/4 экрана вместо 1/5)
+            // Так как они разнесены по высоте, они могут быть шире
+            const binW = availableW / 4.2; 
+            
+            this.w = binW;
             this.h = this.w * 1.3;
-            this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
+            
+            // Пересчитываем позицию, чтобы они все равно были в 5 колонок, но "пухлые"
+            const colWidth = availableW / total;
+            this.x = margin + (index * colWidth) + (colWidth / 2) - (this.w / 2);
             
             let baseY = 120;
-            // ШАХМАТНЫЙ ПОРЯДОК: Еще ниже для 2 и 4 (+130px)
             if (index % 2 !== 0) {
                 this.y = baseY + 130; 
             } else {
