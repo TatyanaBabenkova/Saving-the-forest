@@ -51,7 +51,6 @@
 
         .stat-block { display: flex; align-items: center; gap: 5px; }
         
-        /* Тексты всегда видны полностью */
         .hud-label { display: inline !important; } 
         
         .score-text { font-size: 20px; font-weight: bold; color: white; white-space: nowrap; }
@@ -81,9 +80,9 @@
             .hud-panel {
                 position: absolute;
                 top: 20px; 
-                left: 20px; /* Панель слева */
+                left: 20px; 
                 right: auto; 
-                width: 280px; /* ИСПРАВЛЕНО: Увеличил ширину, чтобы всё влезало */
+                width: 300px; /* ИСПРАВЛЕНО: Ширина 300px, чтобы всё влезало */
                 border-radius: 15px;
                 flex-direction: column; 
                 align-items: flex-start;
@@ -384,8 +383,9 @@ class Bin {
             this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
             
             let baseY = 120;
+            // ШАХМАТНЫЙ ПОРЯДОК: Еще ниже для 2 и 4 (+130px)
             if (index % 2 !== 0) {
-                this.y = baseY + 60; 
+                this.y = baseY + 130; 
             } else {
                 this.y = baseY;
             }
