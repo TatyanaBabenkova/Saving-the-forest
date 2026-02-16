@@ -346,16 +346,16 @@ class Decor extends Prop {
 
         if (isSide) {
              let offset;
-             // ИСПРАВЛЕНИЕ: Двигаем деревья "кулисы" ниже и дальше
              if (sideSign === -1) { 
+                  // Слева смещение
                   offset = width * 0.85 + Math.random() * width * 0.2;
              } else { 
+                  // Справа смещение
                   offset = width * 0.55 + Math.random() * width * 0.2;
              }
              this.startX = cx + (sideSign * offset);
              
-             // ВАЖНО: Кулисы должны быть близко (внизу), чтобы не висеть
-             // Принудительно ставим progress > 0.7
+             // Кулисы справа прижимаем к низу
              this.progress = 0.7 + Math.random() * 0.3;
              
         } else {
@@ -557,37 +557,50 @@ function gameOver() {
 function populateForest() {
     gameState.decor = []; 
     
-    // 1. ЗАДНИЙ ПЛАН (Горизонт) - УВЕЛИЧИЛИ КОЛИЧЕСТВО (40 шт)
+    // 1. ЗАДНИЙ ПЛАН (Горизонт) - 40 шт
     for(let i=0; i<40; i++) {
         const p = 0.1 + Math.random() * 0.15; 
         gameState.decor.push(new Decor(p, 'tree', false));
     }
 
-    // 2. БОКА (Кулисы) - УМЕНЬШИЛИ (3 шт), только для рамки
+    // 2. БОКА (Кулисы) - 3 шт
     for(let i=0; i<3; i++) {
-        // progress здесь не важен, он переопределяется внутри конструктора для isSide=true
         gameState.decor.push(new Decor(null, 'tree', true));
     }
 
-    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ - УМЕНЬШИЛИ (12 шт)
-    // Чтобы было свободно вблизи
+    // 3. ОСНОВНАЯ МАССА ДЕРЕВЬЕВ - 12 шт
     for(let i=0; i<12; i++) {
-        // Больше деревьев в средней зоне, меньше у носа
         const p = 0.05 + Math.random() * 0.7; 
         gameState.decor.push(new Decor(p, 'tree', false)); 
     }
 
-    // 4. КУСТЫ (70 шт) - Везде
+    // 4. КУСТЫ (70 шт)
     for(let i=0; i<70; i++) {
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, 'bush', false)); 
     }
 
-    // 5. ЦВЕТЫ (70 шт) - Везде
+    // 5. ЦВЕТЫ (70 шт)
     for(let i=0; i<70; i++) {
         const p = 0.05 + Math.random() * 0.95; 
         gameState.decor.push(new Decor(p, 'flower', false)); 
     }
+
+    // === 6. СПЕЦИАЛЬНЫЕ ДЕРЕВЬЯ (Твоя просьба) ===
+    
+    // А) Одно дерево совсем слева и близко
+    let treeLeftClose = new Decor(0.95, 'tree', false); // Progress почти 1 (близко)
+    // Ставим координату вручную (СЛЕВА)
+    treeLeftClose.startX = cx - (width * 0.6); 
+    treeLeftClose.targetX = treeLeftClose.startX;
+    gameState.decor.push(treeLeftClose);
+
+    // Б) Одно дерево посередине слева
+    let treeLeftMid = new Decor(0.5, 'tree', false); // Progress 0.5 (середина)
+    // Ставим координату вручную (СЛЕВА, но ближе к тропинке)
+    treeLeftMid.startX = cx - (width * 0.35);
+    treeLeftMid.targetX = treeLeftMid.startX;
+    gameState.decor.push(treeLeftMid);
 }
 
 function startGame() {
