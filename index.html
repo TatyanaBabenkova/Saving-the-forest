@@ -5,17 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>Эко-Тропа: Сортировка</title>
     <style>
-        /* Фиксы высоты для мобильных браузеров */
+        /* Фиксы высоты для мобильных */
         html { height: -webkit-fill-available; }
         body {
             margin: 0; padding: 0; overflow: hidden;
             background-color: #333;
             touch-action: none;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* Используем динамическую высоту вьюпорта */
-            height: 100dvh; 
-            width: 100vw;
-            /* Запасной вариант */
+            height: 100dvh; width: 100vw;
             min-height: -webkit-fill-available; 
         }
         canvas { display: block; width: 100%; height: 100%; transition: filter 0.3s; }
@@ -27,13 +24,13 @@
             display: flex; flex-direction: column; justify-content: flex-start;
         }
 
-        /* --- ВЕРХНЯЯ ПАНЕЛЬ (Базовый стиль для мобильных) --- */
+        /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
         .hud-panel {
             pointer-events: auto;
             background: rgba(0, 0, 0, 0.7);
             width: 100%;
             box-sizing: border-box;
-            padding: 10px 15px;
+            padding: 10px 20px;
             border-radius: 0 0 20px 20px;
             display: flex;
             color: white;
@@ -42,6 +39,7 @@
             z-index: 10;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
         #pause-btn {
@@ -52,6 +50,10 @@
         #pause-btn:active { transform: scale(0.95); }
 
         .stat-block { display: flex; align-items: center; gap: 5px; }
+        
+        /* Тексты всегда видны полностью */
+        .hud-label { display: inline !important; } 
+        
         .score-text { font-size: 20px; font-weight: bold; color: white; white-space: nowrap; }
         .speed-text { font-size: 20px; font-weight: bold; color: #FFEB3B; white-space: nowrap; }
 
@@ -61,37 +63,32 @@
             filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5)); transition: transform 0.3s;
         }
 
-        /* === АДАПТАЦИЯ (МЕДИА ЗАПРОСЫ) === */
+        /* === АДАПТАЦИЯ === */
 
-        /* 1. МОБИЛЬНЫЙ ВЕРТИКАЛЬНЫЙ (ПОРТРЕТ) */
-        @media (max-width: 1023px) and (orientation: portrait) {
-            .hud-panel { flex-direction: row; justify-content: space-between; }
-            .hud-label { display: none; }
+        /* 1. ПОРТРЕТ (Телефон вертикально) */
+        @media (orientation: portrait) {
+            .hud-panel { flex-direction: column; gap: 8px; align-items: stretch; padding-bottom: 15px; }
+            .hud-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         }
 
-        /* 2. МОБИЛЬНЫЙ ГОРИЗОНТАЛЬНЫЙ (ЛАНДШАФТ) */
-        @media (max-width: 1023px) and (orientation: landscape) {
-            .hud-panel { padding: 5px 20px; height: 50px; }
-            .hud-label { display: none; }
+        /* 2. ЛАНДШАФТ (Телефон горизонтально) */
+        @media (orientation: landscape) {
+            .hud-panel { flex-direction: row; gap: 20px; height: 60px; padding: 5px 30px; }
         }
 
-        /* 3. КОМПЬЮТЕР/ПЛАНШЕТ (ДЕСКТОП) - ПАНЕЛЬ СЛЕВА */
+        /* 3. ДЕСКТОП (ПК) - ПАНЕЛЬ СЛЕВА */
         @media (min-width: 1024px) {
             .hud-panel {
                 position: absolute;
-                top: 20px; 
-                left: 20px; /* ТЕПЕРЬ СЛЕВА */
-                right: auto;
-                width: 220px;
+                top: 20px; left: 20px; right: auto; width: 220px;
                 border-radius: 15px;
-                flex-direction: column; /* Вертикальный стек */
-                align-items: flex-start; /* Прижать влево */
+                flex-direction: column; 
+                align-items: flex-start;
                 gap: 15px;
                 background: rgba(0, 0, 0, 0.6);
             }
             .stat-block { width: 100%; justify-content: space-between; }
             #pause-btn { width: 100%; }
-            .hud-label { display: inline; }
         }
 
         /* --- СТАРТОВЫЙ ЭКРАН --- */
@@ -169,7 +166,7 @@
             </div>
             <div class="hud-row" style="flex: 1; justify-content: flex-end; gap: 20px;">
                 <div class="stat-block">
-                    <span class="speed-text"><span class="hud-label">Ск: </span><span id="speed-el">1</span></span>
+                    <span class="speed-text"><span class="hud-label">Скорость: </span><span id="speed-el">1</span></span>
                 </div>
                 <div id="lives-container"></div>
             </div>
@@ -436,9 +433,9 @@ class Bin {
         let drawX = this.x;
         let drawY = this.y;
 
-        // === ЭФФЕКТ УВЕЛИЧЕНИЯ ПРИ НАВЕДЕНИИ (25%) ===
+        // === ЭФФЕКТ УВЕЛИЧЕНИЯ (30%) ===
         if (this.isHovered) {
-            const scale = 1.25; // Увеличиваем на 25%
+            const scale = 1.30; 
             drawW = this.w * scale;
             drawH = this.h * scale;
             drawX = this.x - (drawW - this.w) / 2;
