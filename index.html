@@ -5,205 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эко-Тропа: Сортировка</title>
     <style>
-        /* Фикс высоты для мобильных браузеров (Safari/Chrome) */
+        /* Фикс для iOS Safari */
         html { height: -webkit-fill-available; }
         body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
+            margin: 0; padding: 0; overflow: hidden;
             background-color: #333;
             touch-action: none;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            height: 100vh; 
-            height: 100dvh; 
-            min-height: -webkit-fill-available;
+            height: 100vh; height: 100dvh; min-height: -webkit-fill-available;
             width: 100vw;
         }
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            transition: filter 0.3s;
-        }
+        canvas { display: block; width: 100%; height: 100%; transition: filter 0.3s; }
         .blur-effect { filter: blur(8px); }
 
         #ui-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
+            display: flex; flex-direction: column; justify-content: flex-start;
         }
 
-        /* --- ИНТЕРФЕЙС (HUD) --- */
+        /* --- ВЕРХНЯЯ ПАНЕЛЬ (TOP BAR) --- */
         .hud-panel {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 15px;
-            border-radius: 15px;
             pointer-events: auto;
+            background: rgba(0, 0, 0, 0.7); /* Темная полоса */
+            width: 100%; /* На всю ширину */
+            box-sizing: border-box;
+            padding: 10px 20px;
+            border-radius: 0 0 20px 20px; /* Закругляем только низ */
             display: flex;
-            flex-direction: column;
             color: white;
             text-shadow: 1px 1px 2px black;
             backdrop-filter: blur(5px);
             z-index: 10;
-            transition: all 0.3s;
-            box-sizing: border-box;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* КНОПКА ПАУЗЫ */
+        /* Кнопка Пауза */
         #pause-btn {
-            background: #FF9800; border: 2px solid #fff;
-            color: white; font-weight: bold;
-            border-radius: 20px; cursor: pointer;
-            padding: 5px 20px; font-size: 16px;
-            white-space: nowrap;
+            background: #FF9800; border: 2px solid #fff; color: white; font-weight: bold;
+            border-radius: 20px; cursor: pointer; padding: 5px 20px; font-size: 16px;
+            white-space: nowrap; flex-shrink: 0;
         }
         #pause-btn:active { transform: scale(0.95); }
 
-        /* ТЕКСТЫ */
-        .score-text { font-size: 20px; font-weight: bold; color: white; }
-        .speed-text { font-size: 20px; font-weight: bold; color: #FFEB3B; }
+        /* Текстовые блоки */
+        .stat-block { display: flex; align-items: center; gap: 5px; }
+        .score-text { font-size: 20px; font-weight: bold; color: white; white-space: nowrap; }
+        .speed-text { font-size: 20px; font-weight: bold; color: #FFEB3B; white-space: nowrap; }
 
-        /* ЛИСТОЧКИ ЖИЗНИ */
-        #lives-container {
-            display: flex;
-            align-items: center;
-            height: 35px;
-        }
+        /* Листочки */
+        #lives-container { display: flex; align-items: center; height: 30px; }
         .life-leaf {
-            width: 35px; height: 35px;
-            object-fit: contain;
-            margin-left: -10px;
-            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5));
-            transition: transform 0.3s;
+            width: 35px; height: 35px; object-fit: contain; margin-left: -10px;
+            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5)); transition: transform 0.3s;
         }
 
-        /* === АДАПТАЦИЯ (МЕДИА ЗАПРОСЫ) === */
+        /* === АДАПТАЦИЯ ИНТЕРФЕЙСА === */
 
-        /* 1. ПОРТРЕТ (Телефон вертикально) - ДВЕ СТРОКИ */
+        /* 1. ПОРТРЕТ (Телефон вертикально): Две строки */
         @media (orientation: portrait) {
             .hud-panel {
-                top: 10px; left: 10px; right: 10px; /* Растягиваем по ширине */
-                width: auto;
-                gap: 5px;
+                flex-direction: column; gap: 8px; align-items: stretch;
+                padding-bottom: 15px;
             }
-            /* Верхняя строка: Пауза | Очки */
-            .hud-top {
-                display: flex; justify-content: space-between; align-items: center; width: 100%;
-            }
-            /* Нижняя строка: Скорость | Жизни */
-            .hud-bottom {
-                display: flex; justify-content: space-between; align-items: center; width: 100%;
-            }
+            .hud-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         }
 
-        /* 2. ЛАНДШАФТ (Телефон горизонтально) - КОМПАКТНО СЛЕВА */
-        @media (orientation: landscape) and (max-height: 600px) {
+        /* 2. ЛАНДШАФТ (Телефон горизонтально): Одна строка */
+        @media (orientation: landscape) {
             .hud-panel {
-                top: 10px; left: 10px;
-                width: 180px;
-                gap: 8px;
+                flex-direction: row; gap: 20px; height: 60px;
+                padding: 5px 30px;
             }
-            .hud-top {
-                display: flex; justify-content: space-between; align-items: center;
-            }
-            .hud-bottom {
-                display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
-            }
-            #lives-container { margin-top: 5px; }
+            /* Скрываем лишние слова на узких экранах, если надо */
+            .hud-label { display: none; } /* Оставим только цифры и иконки если тесно */
+            @media (min-width: 800px) { .hud-label { display: inline; } }
         }
-
-        /* 3. ДЕСКТОП (ПК) - СПРАВА */
-        @media (min-width: 1024px) {
-            .hud-panel {
-                top: 20px; right: 20px; width: 220px;
-                gap: 15px;
-            }
-            .hud-top, .hud-bottom {
-                display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
-            }
-            #pause-btn { width: 100%; }
-            .hud-row-pc { display: flex; justify-content: space-between; width: 100%; }
-        }
-
 
         /* --- СТАРТОВЫЙ ЭКРАН --- */
         #start-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 20; pointer-events: auto;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: white; background-color: #2E7D32; overflow: hidden;
         }
-
         .start-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: url('IMG/bg_forest.png') no-repeat center bottom;
-            background-size: cover;
-            filter: blur(6px); transform: scale(1.1); z-index: -2;
+            background-size: cover; filter: blur(6px); transform: scale(1.1); z-index: -2;
         }
         .start-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.3); z-index: -1;
         }
-
         h1 { font-size: 8vh; margin: 0 0 10px 0; text-shadow: 0 5px 10px black; text-align: center; }
         .subtitle { font-size: 18px; margin-bottom: 20px; text-shadow: 1px 1px 2px black; text-align: center; }
 
-        /* ОБУЧЕНИЕ (ЯЩИКИ) */
+        /* Обучение */
         .tutorial-container {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            justify-content: center;
-            max-width: 95%;
+            display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap;
+            justify-content: center; max-width: 95%;
         }
-        .tut-item {
-            display: flex; flex-direction: column; align-items: center;
-            width: 50px; /* Размер иконки */
-        }
+        .tut-item { display: flex; flex-direction: column; align-items: center; width: 50px; }
         .tut-img { width: 100%; height: auto; margin-bottom: 5px; filter: drop-shadow(0 5px 5px black); }
-        .tut-label { 
-            font-size: 11px; font-weight: bold; 
-            background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 8px; 
-            white-space: nowrap;
-        }
+        .tut-label { font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 8px; white-space: nowrap; }
 
-        /* Для горизонтальных телефонов делаем обучение поменьше */
         @media (max-height: 500px) {
-            .tut-item { width: 40px; }
-            h1 { font-size: 40px; margin-bottom: 5px; }
-            .subtitle { font-size: 14px; margin-bottom: 10px; }
-            .tutorial-container { margin-bottom: 10px; gap: 10px; }
+            .tut-item { width: 40px; } h1 { font-size: 40px; margin-bottom: 5px; }
+            .subtitle { font-size: 14px; margin-bottom: 10px; } .tutorial-container { margin-bottom: 10px; gap: 10px; }
         }
 
         .btn {
             background: #4CAF50; border: none; padding: 15px 50px;
-            color: white; font-size: 24px; cursor: pointer;
-            border-radius: 15px; font-weight: bold;
+            color: white; font-size: 24px; cursor: pointer; border-radius: 15px; font-weight: bold;
             box-shadow: 0 6px 0 #2E7D32; z-index: 10;
         }
         .btn:active { transform: scale(0.95); box-shadow: 0 3px 0 #2E7D32; }
 
         #game-over-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; z-index: 20; pointer-events: auto;
+            background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; color: white; z-index: 20; pointer-events: auto;
         }
         
         #pause-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); display: flex;
-            align-items: center; justify-content: center;
-            color: white; font-size: 40px; font-weight: bold;
-            text-shadow: 0 5px 15px black; z-index: 15; pointer-events: none;
-            text-transform: uppercase; letter-spacing: 5px;
+            background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 40px; font-weight: bold; text-shadow: 0 5px 15px black;
+            z-index: 15; pointer-events: none; text-transform: uppercase; letter-spacing: 5px;
         }
         .hidden { display: none !important; }
         
-        /* Декор на старте */
         .start-decor-trash {
             position: absolute; bottom: -20px; width: 15vw; max-width: 150px;
             filter: blur(2px) brightness(0.8); z-index: -1;
@@ -214,15 +148,21 @@
 
     <div id="ui-layer">
         <div class="hud-panel">
-            <div class="hud-top">
-                <button id="pause-btn">II Пауза</button>
-                <span class="score-text">Очки: <span id="score-el">0</span></span>
-            </div>
             
-            <div class="hud-bottom">
-                <span class="speed-text">Ск: <span id="speed-el">1</span></span>
+            <div class="hud-row" style="flex: 1; justify-content: flex-start; gap: 20px;">
+                <button id="pause-btn">II Пауза</button>
+                <div class="stat-block">
+                    <span class="score-text">Очки: <span id="score-el">0</span></span>
+                </div>
+            </div>
+
+            <div class="hud-row" style="flex: 1; justify-content: flex-end; gap: 20px;">
+                <div class="stat-block">
+                    <span class="speed-text">Ск: <span id="speed-el">1</span></span>
+                </div>
                 <div id="lives-container"></div>
             </div>
+
         </div>
     </div>
 
@@ -327,18 +267,11 @@ const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
-    score: 0, 
-    lives: 5, 
-    speedLevel: 1,      
-    itemsSorted: 0,     
-    speedMultiplier: 1, 
-    
+    score: 0, lives: 5, speedLevel: 1, itemsSorted: 0, speedMultiplier: 1, 
     isRunning: false, isPaused: false,
     bins: [], trash: [], particles: [],
     lastTime: 0, spawnTimer: 0
 };
-
-// --- ФИЗИКА И ОБЪЕКТЫ ---
 
 class Trash {
     constructor() {
@@ -382,8 +315,7 @@ class Trash {
         
         if (finalScale < 0.05) return;
 
-        // === УВЕЛИЧИЛИ РАЗМЕР МУСОРА ДЛЯ ТЕЛЕФОНОВ ===
-        // Старт с 40% размера (было 30%)
+        // КРУПНЫЙ МУСОР ДЛЯ МОБИЛЬНЫХ
         let visualScale = 0.4 + (finalScale * 0.6);
         if (this.isDragging) visualScale = 1.0;
 
@@ -413,7 +345,6 @@ class Trash {
     }
 }
 
-// === КЛАСС BIN (НОВАЯ ЛОГИКА) ===
 class Bin {
     constructor(typeObj, index, total) {
         this.type = typeObj;
@@ -424,7 +355,7 @@ class Bin {
         const isPortrait = height > width;
         const isMobile = width < 900; 
 
-        // 1. ВЕРТИКАЛЬНО (Portrait)
+        // 1. ВЕРТИКАЛЬНО: Спускаем ниже панели
         if (isPortrait) {
             const margin = 5;
             const availableW = width - (margin * 2);
@@ -433,53 +364,45 @@ class Bin {
             this.w = binW - 2; 
             this.h = this.w * 1.3;
             this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-            
-            // Опустили ниже (140px), чтобы не наезжать на HUD
-            this.y = 140; 
+            this.y = 120; // Под верхней панелью
         } 
-        // 2. ГОРИЗОНТАЛЬНО (Mobile Landscape - ВОРОТА)
+        // 2. ГОРИЗОНТАЛЬНО (Mobile): ВОРОТА
         else if (isMobile) {
-            // ОГРОМНЫЕ БАКИ
-            // Размеры: ~16% от ширины экрана (было меньше)
             this.w = Math.min(width * 0.16, 140);
             this.h = this.w * 1.3;
-            
-            // Опускаем ниже (60px), чтобы не перекрываться левой панелью
-            this.y = 60;
+            this.y = 90; // Под верхней панелью
 
-            const centerGap = width * 0.25; // Свободный центр 25%
+            const centerGap = width * 0.25; 
             const sideWidth = (width - centerGap) / 2; 
 
             // СЛЕВА 2 бака
             if (index < 2) {
                 const step = sideWidth / 2;
-                // Равномерно в левой части
                 this.x = (index * step) + (step/2) - (this.w/2);
             } 
             // СПРАВА 3 бака
             else {
-                const rightIndex = index - 2; // 0, 1, 2
+                const rightIndex = index - 2; 
                 const step = sideWidth / 3;
                 const startX = width - sideWidth;
                 this.x = startX + (rightIndex * step) + (step/2) - (this.w/2);
             }
         }
-        // 3. ПК (Desktop)
+        // 3. ПК
         else {
-            const rightPanelSpace = 250; 
             const margin = 20;
-            const availableW = width - (margin * 2) - rightPanelSpace;
+            const availableW = width - (margin * 2);
             const binW = availableW / total;
             
             this.w = Math.min(240, binW - 10); 
             this.h = this.w * 1.3;
             this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-            this.y = 15;
+            this.y = 80; // Чуть ниже, так как панель теперь сверху
         }
     }
     
     checkHit(x, y) { 
-        const buffer = 50; // Большая зона попадания
+        const buffer = 50; 
         return x > this.x - buffer && 
                x < this.x + this.w + buffer && 
                y > this.y - buffer && 
