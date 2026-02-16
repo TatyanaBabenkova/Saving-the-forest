@@ -17,11 +17,9 @@
             display: block;
             transition: filter 0.3s;
         }
-        /* Эффект размытия при повышении уровня */
-        .blur-effect {
-            filter: blur(8px);
-        }
+        .blur-effect { filter: blur(8px); }
 
+        /* ИНТЕРФЕЙС (UI) */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -29,80 +27,75 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            display: flex;
-            justify-content: space-between; /* Очки слева, панель справа */
-            padding: 20px;
-            box-sizing: border-box;
         }
 
-        /* Очки слева */
-        .score-box {
-            color: white;
-            text-shadow: 2px 2px 4px black;
-            font-size: 32px;
-            font-weight: bold;
-            z-index: 5;
-        }
-
-        /* ПАНЕЛЬ СПРАВА (Жизни, Скорость, Пауза) */
-        .right-panel {
+        /* КОМПАКТНАЯ ПАНЕЛЬ СПРАВА */
+        .hud-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px; /* Отступ справа */
+            width: 200px; /* Фиксированная ширина */
+            background: rgba(0, 0, 0, 0.6); /* Темная полупрозрачная подложка */
+            padding: 15px;
+            border-radius: 15px;
             pointer-events: auto;
             display: flex;
             flex-direction: column;
-            align-items: flex-end; /* Прижать к правому краю */
-            gap: 15px;
-            background: rgba(0, 0, 0, 0.5); /* Полупрозрачная подложка */
-            padding: 15px;
-            border-radius: 15px;
+            gap: 10px;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             backdrop-filter: blur(5px);
-            z-index: 5;
         }
 
-        /* Контейнер для листочков */
+        /* Элементы внутри панели */
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .speed-text { color: #FFEB3B; }
+        .score-text { font-size: 20px; }
+
+        /* ЛИСТОЧКИ ЖИЗНИ */
         #lives-container {
             display: flex;
-            flex-direction: row-reverse; /* Чтобы исчезали справа налево */
+            justify-content: flex-end; /* Выравнивание вправо */
             height: 40px;
-            align-items: center;
+            margin-top: 5px;
         }
         .life-leaf {
             width: 40px;
-            height: auto;
+            height: 40px;
+            object-fit: contain;
             margin-left: -10px; /* Наложение друг на друга */
             filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.5));
             transition: transform 0.3s, opacity 0.3s;
         }
 
-        .speed-label {
-            color: #FFEB3B;
-            font-size: 24px;
-            font-weight: bold;
-            text-transform: uppercase;
-            text-shadow: 1px 1px 2px black;
-        }
-
+        /* КНОПКА ПАУЗЫ */
         #pause-btn {
             background: #FF9800;
             border: 2px solid #fff;
             color: white;
-            font-size: 18px;
-            padding: 8px 20px;
+            font-size: 16px;
+            padding: 5px 15px;
             border-radius: 20px;
             cursor: pointer;
             font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            width: 100%; /* На всю ширину панели */
             transition: transform 0.1s;
         }
         #pause-btn:active { transform: scale(0.95); }
-        
+
         /* СТАРТОВЫЙ ЭКРАН */
         #start-screen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 20; /* Поверх всего */
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20;
             pointer-events: auto;
             display: flex;
             flex-direction: column;
@@ -110,34 +103,31 @@
             justify-content: center;
             color: white;
             overflow: hidden;
-            background-color: #2E7D32; /* Цвет подложки на всякий случай */
+            background-color: #2E7D32;
         }
 
-        /* Фон стартового экрана (размытый) */
         .start-bg {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: url('IMG/bg_forest.png') no-repeat center bottom;
             background-size: cover;
-            filter: blur(8px); /* РАЗМЫТИЕ ФОНА */
-            transform: scale(1.1); /* Чтобы убрать белые края от блюра */
+            filter: blur(6px);
+            transform: scale(1.1);
             z-index: -2;
         }
         
-        /* Затемнение, чтобы текст читался */
         .start-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0,0,0,0.3);
             z-index: -1;
         }
 
-        /* Декор внизу стартового экрана */
         .start-decor-trash {
             position: absolute;
             bottom: -20px;
             width: 150px;
-            filter: blur(3px) brightness(0.8);
+            filter: blur(2px) brightness(0.8);
             z-index: -1;
         }
 
@@ -163,7 +153,6 @@
             cursor: pointer;
             border-radius: 15px;
             margin-top: 30px;
-            transition: transform 0.1s;
             font-weight: bold;
             box-shadow: 0 6px 0 #2E7D32;
             z-index: 10;
@@ -195,15 +184,20 @@
 <body>
 
     <div id="ui-layer">
-        <div class="score-box">
-            <span id="score-el">Очки: 0</span>
-        </div>
-
-        <div class="right-panel">
+        <div class="hud-panel">
             <button id="pause-btn">II Пауза</button>
-            <span id="speed-el" class="speed-label">Скорость: 1</span>
-            <div id="lives-container">
-                </div>
+            
+            <div class="hud-row">
+                <span>Очки:</span>
+                <span id="score-el" class="score-text">0</span>
+            </div>
+            
+            <div class="hud-row">
+                <span>Скорость:</span>
+                <span id="speed-el" class="speed-text">1</span>
+            </div>
+
+            <div id="lives-container"></div>
         </div>
     </div>
 
@@ -214,7 +208,7 @@
         <div class="start-overlay"></div>
         <img src="IMG/trash_bottle1.png" class="start-decor-trash" style="left: 10%; bottom: 20px; transform: rotate(-15deg);">
         <img src="IMG/trash_can1.png" class="start-decor-trash" style="right: 15%; bottom: 40px; transform: rotate(10deg); width: 120px;">
-        <img src="IMG/trash_apple1.png" class="start-decor-trash" style="left: 40%; bottom: -10px; width: 100px; filter: blur(5px);">
+        <img src="IMG/trash_apple1.png" class="start-decor-trash" style="left: 40%; bottom: -10px; width: 100px; filter: blur(4px);">
 
         <h1>Эко-Тропа</h1>
         <p style="font-size: 24px; text-shadow: 1px 1px 2px black;">Сортируй мусор, спасай лес!</p>
@@ -244,9 +238,6 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-/**
- * АУДИО
- */
 const AudioSys = {
     ctx: null,
     init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
@@ -266,8 +257,6 @@ const AudioSys = {
     playSuccess() { this.playTone(500, 'sine', 0.1); setTimeout(() => this.playTone(1000, 'sine', 0.2), 100); },
     playError() { this.playTone(150, 'sawtooth', 0.3, 0.2); },
     playPop() { this.playTone(600, 'triangle', 0.05, 0.05); },
-    
-    // Звук повышения уровня
     playLevelUp() { 
         this.playTone(400, 'sine', 0.1, 0.2); 
         setTimeout(() => this.playTone(600, 'sine', 0.1, 0.2), 100);
@@ -275,9 +264,6 @@ const AudioSys = {
     }
 };
 
-/**
- * ЗАГРУЗЧИК
- */
 const Loader = {
     images: {},
     loadImg(key, src) {
@@ -289,10 +275,9 @@ const Loader = {
         });
     },
     async init() {
-        // Фоновая картинка (PNG)
         const promises = [
-            this.loadImg('bg', ASSETS_PATH + 'bg_forest.png'),
-            this.loadImg('leaf', ASSETS_PATH + 'leaf.png') // Листочек жизни
+            this.loadImg('bg', ASSETS_PATH + 'bg_forest.png'), // PNG
+            this.loadImg('leaf', ASSETS_PATH + 'leaf.png')
         ];
         
         for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
@@ -304,9 +289,6 @@ const Loader = {
     get(key) { return this.images[key]; }
 };
 
-/**
- * ИГРА
- */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
@@ -314,21 +296,18 @@ let width, height, cx, cy;
 let gameState = {
     score: 0, 
     lives: 5, 
-    speedLevel: 1,      // Число для интерфейса (1, 2, 3...)
-    itemsSorted: 0,     // Счетчик собранного мусора
-    speedMultiplier: 1, // Реальный множитель скорости движения
+    speedLevel: 1,      
+    itemsSorted: 0,     
+    speedMultiplier: 1, 
     
     isRunning: false, isPaused: false,
     bins: [], trash: [], particles: [],
     lastTime: 0, spawnTimer: 0
 };
 
-// --- ФИЗИКА И ОБЪЕКТЫ ---
-
 class Trash {
     constructor() {
         this.markedForDeletion = false;
-        
         this.baseSpeed = 0.002; 
         this.progress = 0; 
 
@@ -345,9 +324,7 @@ class Trash {
 
     update(dt) {
         if (!this.isDragging) {
-            // Скорость умножается на multiplier
             this.progress += this.baseSpeed * gameState.speedMultiplier * (dt / 16);
-            
             if (this.progress > 1.1) {
                 this.markedForDeletion = true;
                 handleMiss();
@@ -401,16 +378,26 @@ class Trash {
 class Bin {
     constructor(typeObj, index, total) {
         this.type = typeObj;
+        
+        // === ИСПРАВЛЕНИЕ РАСПОЛОЖЕНИЯ БАКОВ ===
+        // Баки занимают только левые 80% экрана, чтобы не заезжать под панель справа
+        // 250px резервируем справа под панель
+        const rightPanelSpace = 250; 
         const margin = 20;
-        const availableW = width - (margin * 2);
+        
+        // Доступная ширина = Ширина экрана - Отступы - Место под панель
+        const availableW = width - (margin * 2) - rightPanelSpace;
+        
         const binW = availableW / total;
         
         this.w = Math.min(240, binW - 10); 
         this.h = this.w * 1.3;
         
+        // Центрируем внутри "левой зоны"
         this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
         this.y = 15;
     }
+    
     checkHit(x, y) { 
         return x > this.x - 40 && 
                x < this.x + this.w + 40 && 
@@ -449,8 +436,6 @@ class Particle {
     }
 }
 
-// --- УПРАВЛЕНИЕ ---
-
 let dragItem = null;
 
 function handleStart(x, y) {
@@ -482,18 +467,12 @@ function handleEnd(x, y) {
         let hitBin = gameState.bins.find(b => b.checkHit(x, y));
         if (hitBin) {
             if (hitBin.type.id === dragItem.type.id) {
-                // ПРАВИЛЬНАЯ СОРТИРОВКА
                 gameState.score += 10;
                 gameState.itemsSorted++;
-                
                 AudioSys.playSuccess();
                 createParticles(x, y, hitBin.type.color);
-                
-                // Проверка уровня
                 checkLevelUp();
-                
             } else {
-                // ОШИБКА
                 gameState.score = Math.max(0, gameState.score - 5);
                 AudioSys.playError();
                 createParticles(x, y, '#555');
@@ -508,17 +487,12 @@ function handleEnd(x, y) {
     }
 }
 
-// --- СИСТЕМА УРОВНЕЙ ---
 function checkLevelUp() {
-    // Каждые 20 предметов
     if (gameState.itemsSorted > 0 && gameState.itemsSorted % 20 === 0) {
         gameState.speedLevel++;
-        gameState.speedMultiplier += 0.2; // Увеличиваем скорость на 20%
-        
-        AudioSys.playLevelUp(); // Звук
-        triggerBlurEffect();    // Эффект
-        
-        // Сразу обновляем интерфейс, чтобы видно было новую цифру
+        gameState.speedMultiplier += 0.2; 
+        AudioSys.playLevelUp(); 
+        triggerBlurEffect();    
         updateHUD();
     }
 }
@@ -527,7 +501,7 @@ function triggerBlurEffect() {
     canvas.classList.add('blur-effect');
     setTimeout(() => {
         canvas.classList.remove('blur-effect');
-    }, 500); // 0.5 секунды
+    }, 500); 
 }
 
 const pauseBtn = document.getElementById('pause-btn');
@@ -586,27 +560,22 @@ function handleMiss() {
 let shakeTimer = 0;
 function triggerShake() { shakeTimer = 15; }
 
-// --- ОБНОВЛЕНИЕ HUD (ЛИСТОЧКИ И СКОРОСТЬ) ---
 function updateHUD() {
-    // 1. Обновляем очки
-    document.getElementById('score-el').textContent = `Очки: ${gameState.score}`;
+    document.getElementById('score-el').textContent = `${gameState.score}`;
+    document.getElementById('speed-el').textContent = `${gameState.speedLevel}`;
     
-    // 2. Обновляем цифру скорости
-    document.getElementById('speed-el').textContent = `Скорость: ${gameState.speedLevel}`;
-    
-    // 3. Обновляем листочки
     const container = document.getElementById('lives-container');
-    container.innerHTML = ''; // Очищаем
-    
+    container.innerHTML = ''; 
     const leafRes = Loader.get('leaf');
-    // Рисуем столько листочков, сколько жизней
     for(let i=0; i < gameState.lives; i++) {
         const img = document.createElement('img');
         if (leafRes && leafRes.loaded) {
             img.src = leafRes.img.src;
         } else {
-            // Если картинка не прогрузилась, ставим плейсхолдер
-            img.style.backgroundColor = 'green';
+            // Фолбэк, если картинка не нашлась
+            img.style.width = '30px';
+            img.style.height = '30px';
+            img.style.backgroundColor = '#4CAF50';
             img.style.borderRadius = '50%';
         }
         img.className = 'life-leaf';
@@ -630,9 +599,9 @@ function startGame() {
     gameState = {
         score: 0, 
         lives: 5, 
-        speedLevel: 1,      // Старт с 1
-        itemsSorted: 0,     // Сброс счетчика
-        speedMultiplier: 1, // Множитель 1.0
+        speedLevel: 1,      
+        itemsSorted: 0,     
+        speedMultiplier: 1, 
         
         isRunning: true, isPaused: false,
         bins: [], trash: [], particles: [],
@@ -640,7 +609,7 @@ function startGame() {
     };
     
     createBins(); 
-    updateHUD(); // Сразу рисуем листочки и скорость
+    updateHUD(); 
     resize();
     requestAnimationFrame(loop);
 }
@@ -654,7 +623,6 @@ function loop(time) {
 
     ctx.clearRect(0, 0, width, height);
 
-    // Рисуем фон
     const bgRes = Loader.get('bg');
     if (bgRes && bgRes.loaded) ctx.drawImage(bgRes.img, 0, 0, width, height);
     else {
@@ -672,8 +640,6 @@ function loop(time) {
 
     gameState.spawnTimer += dt;
     
-    // Частота появления зависит от множителя скорости
-    // Чем быстрее игра, тем чаще мусор (2500 -> 2000 -> 1600...)
     const spawnInterval = 2500 / gameState.speedMultiplier;
     
     if (gameState.spawnTimer > spawnInterval) {
