@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эко-Тропа: Сортировка</title>
     <style>
-        /* Фикс высоты для мобильных браузеров */
+        /* Фикс высоты для мобильных браузеров (Safari/Chrome) */
         html { height: -webkit-fill-available; }
         body {
             margin: 0;
@@ -42,46 +42,27 @@
             pointer-events: auto;
             display: flex;
             flex-direction: column;
-            gap: 5px;
             color: white;
             text-shadow: 1px 1px 2px black;
             backdrop-filter: blur(5px);
             z-index: 10;
             transition: all 0.3s;
+            box-sizing: border-box;
         }
 
-        /* СТИЛИ ДЛЯ ПК (по умолчанию) */
-        @media (min-width: 1024px) {
-            .hud-panel {
-                top: 20px; right: 20px; width: 220px;
-            }
+        /* КНОПКА ПАУЗЫ */
+        #pause-btn {
+            background: #FF9800; border: 2px solid #fff;
+            color: white; font-weight: bold;
+            border-radius: 20px; cursor: pointer;
+            padding: 5px 20px; font-size: 16px;
+            white-space: nowrap;
         }
+        #pause-btn:active { transform: scale(0.95); }
 
-        /* МОБИЛЬНЫЙ ВЕРТИКАЛЬНЫЙ (PORTRAIT) */
-        @media (orientation: portrait) and (max-width: 1023px) {
-            .hud-panel {
-                top: 10px; left: 10px; right: 10px; /* Растянуть сверху */
-                flex-direction: row; /* В строчку */
-                justify-content: space-between;
-                align-items: center;
-                height: 50px;
-            }
-            .hud-info { display: flex; gap: 15px; align-items: center; }
-            #pause-btn { padding: 5px 10px; font-size: 14px; }
-        }
-
-        /* МОБИЛЬНЫЙ ГОРИЗОНТАЛЬНЫЙ (LANDSCAPE) - Панель слева! */
-        @media (orientation: landscape) and (max-height: 600px) {
-            .hud-panel {
-                top: 10px; 
-                left: 10px; /* СЛЕВА */
-                width: 160px; /* Компактная ширина */
-            }
-            #lives-container { justify-content: flex-start; } /* Листочки от левого края */
-        }
-
-        .score-text { font-size: 20px; font-weight: bold; white-space: nowrap; }
-        .speed-text { color: #FFEB3B; font-weight: bold; }
+        /* ТЕКСТЫ */
+        .score-text { font-size: 20px; font-weight: bold; color: white; }
+        .speed-text { font-size: 20px; font-weight: bold; color: #FFEB3B; }
 
         /* ЛИСТОЧКИ ЖИЗНИ */
         #lives-container {
@@ -92,18 +73,59 @@
         .life-leaf {
             width: 35px; height: 35px;
             object-fit: contain;
-            margin-right: -10px; /* Наложение */
+            margin-left: -10px;
             filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5));
             transition: transform 0.3s;
         }
 
-        #pause-btn {
-            background: #FF9800; border: 2px solid #fff;
-            color: white; font-weight: bold;
-            border-radius: 20px; cursor: pointer;
-            padding: 5px 15px;
+        /* === АДАПТАЦИЯ (МЕДИА ЗАПРОСЫ) === */
+
+        /* 1. ПОРТРЕТ (Телефон вертикально) - ДВЕ СТРОКИ */
+        @media (orientation: portrait) {
+            .hud-panel {
+                top: 10px; left: 10px; right: 10px; /* Растягиваем по ширине */
+                width: auto;
+                gap: 5px;
+            }
+            /* Верхняя строка: Пауза | Очки */
+            .hud-top {
+                display: flex; justify-content: space-between; align-items: center; width: 100%;
+            }
+            /* Нижняя строка: Скорость | Жизни */
+            .hud-bottom {
+                display: flex; justify-content: space-between; align-items: center; width: 100%;
+            }
         }
-        #pause-btn:active { transform: scale(0.95); }
+
+        /* 2. ЛАНДШАФТ (Телефон горизонтально) - КОМПАКТНО СЛЕВА */
+        @media (orientation: landscape) and (max-height: 600px) {
+            .hud-panel {
+                top: 10px; left: 10px;
+                width: 180px;
+                gap: 8px;
+            }
+            .hud-top {
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .hud-bottom {
+                display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+            }
+            #lives-container { margin-top: 5px; }
+        }
+
+        /* 3. ДЕСКТОП (ПК) - СПРАВА */
+        @media (min-width: 1024px) {
+            .hud-panel {
+                top: 20px; right: 20px; width: 220px;
+                gap: 15px;
+            }
+            .hud-top, .hud-bottom {
+                display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+            }
+            #pause-btn { width: 100%; }
+            .hud-row-pc { display: flex; justify-content: space-between; width: 100%; }
+        }
+
 
         /* --- СТАРТОВЫЙ ЭКРАН --- */
         #start-screen {
@@ -122,34 +144,38 @@
         }
         .start-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); z-index: -1;
+            background: rgba(0,0,0,0.3); z-index: -1;
         }
 
         h1 { font-size: 8vh; margin: 0 0 10px 0; text-shadow: 0 5px 10px black; text-align: center; }
         .subtitle { font-size: 18px; margin-bottom: 20px; text-shadow: 1px 1px 2px black; text-align: center; }
 
-        /* ОБУЧЕНИЕ НА СТАРТЕ (ЯЩИКИ) */
+        /* ОБУЧЕНИЕ (ЯЩИКИ) */
         .tutorial-container {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             margin-bottom: 30px;
             flex-wrap: wrap;
             justify-content: center;
-            max-width: 90%;
+            max-width: 95%;
         }
         .tut-item {
             display: flex; flex-direction: column; align-items: center;
-            width: 60px;
+            width: 50px; /* Размер иконки */
         }
         .tut-img { width: 100%; height: auto; margin-bottom: 5px; filter: drop-shadow(0 5px 5px black); }
-        .tut-label { font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 2px 5px; border-radius: 5px; }
+        .tut-label { 
+            font-size: 11px; font-weight: bold; 
+            background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 8px; 
+            white-space: nowrap;
+        }
 
+        /* Для горизонтальных телефонов делаем обучение поменьше */
         @media (max-height: 500px) {
-            /* Уменьшаем обучение для горизонтальных телефонов */
-            .tut-item { width: 45px; }
+            .tut-item { width: 40px; }
             h1 { font-size: 40px; margin-bottom: 5px; }
             .subtitle { font-size: 14px; margin-bottom: 10px; }
-            .tutorial-container { margin-bottom: 10px; }
+            .tutorial-container { margin-bottom: 10px; gap: 10px; }
         }
 
         .btn {
@@ -176,20 +202,24 @@
             text-transform: uppercase; letter-spacing: 5px;
         }
         .hidden { display: none !important; }
+        
+        /* Декор на старте */
+        .start-decor-trash {
+            position: absolute; bottom: -20px; width: 15vw; max-width: 150px;
+            filter: blur(2px) brightness(0.8); z-index: -1;
+        }
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
         <div class="hud-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div class="hud-top">
                 <button id="pause-btn">II Пауза</button>
-                <div class="hud-info">
-                    <span class="score-text">Очки: <span id="score-el">0</span></span>
-                </div>
+                <span class="score-text">Очки: <span id="score-el">0</span></span>
             </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-top: 5px;">
+            <div class="hud-bottom">
                 <span class="speed-text">Ск: <span id="speed-el">1</span></span>
                 <div id="lives-container"></div>
             </div>
@@ -203,7 +233,7 @@
         <div class="start-overlay"></div>
         
         <h1>Эко-Тропа</h1>
-        <p class="subtitle">Сортируй мусор по правильным бакам!</p>
+        <p class="subtitle">Перетаскивай мусор в правильные баки!</p>
 
         <div class="tutorial-container">
             <div class="tut-item"><img src="IMG/bin_organic.png" class="tut-img"><span class="tut-label">Еда</span></div>
@@ -214,6 +244,9 @@
         </div>
 
         <button class="btn" id="start-btn">В Путь</button>
+        
+        <img src="IMG/trash_bottle1.png" class="start-decor-trash" style="left: 5%; bottom: 10px; transform: rotate(-15deg);">
+        <img src="IMG/trash_can1.png" class="start-decor-trash" style="right: 5%; bottom: 10px; transform: rotate(10deg);">
     </div>
 
     <div id="game-over-screen" class="hidden">
@@ -305,6 +338,8 @@ let gameState = {
     lastTime: 0, spawnTimer: 0
 };
 
+// --- ФИЗИКА И ОБЪЕКТЫ ---
+
 class Trash {
     constructor() {
         this.markedForDeletion = false;
@@ -347,13 +382,10 @@ class Trash {
         
         if (finalScale < 0.05) return;
 
-        // === МУСОР ТЕПЕРЬ КРУПНЕЕ ===
-        // Увеличили минимальный размер и максимальный
-        // Раньше начинался с 0, теперь scale всегда чуть больше (0.1 + scale)
-        let visualScale = finalScale;
-        if (!this.isDragging) {
-             visualScale = 0.3 + (finalScale * 0.7); // Старт с 30% размера
-        }
+        // === УВЕЛИЧИЛИ РАЗМЕР МУСОРА ДЛЯ ТЕЛЕФОНОВ ===
+        // Старт с 40% размера (было 30%)
+        let visualScale = 0.4 + (finalScale * 0.6);
+        if (this.isDragging) visualScale = 1.0;
 
         let maxSize = Math.min(height * 0.25, 220);
         let size = maxSize * visualScale; 
@@ -381,6 +413,7 @@ class Trash {
     }
 }
 
+// === КЛАСС BIN (НОВАЯ ЛОГИКА) ===
 class Bin {
     constructor(typeObj, index, total) {
         this.type = typeObj;
@@ -389,10 +422,10 @@ class Bin {
 
     recalculate(index, total) {
         const isPortrait = height > width;
-        const isMobile = width < 900; // Планка мобильной версии
+        const isMobile = width < 900; 
 
+        // 1. ВЕРТИКАЛЬНО (Portrait)
         if (isPortrait) {
-            // ВЕРТИКАЛЬНО: Спускаем ниже, под панель
             const margin = 5;
             const availableW = width - (margin * 2);
             const binW = availableW / total;
@@ -400,32 +433,39 @@ class Bin {
             this.w = binW - 2; 
             this.h = this.w * 1.3;
             this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-            this.y = 140; // НИЖЕ (было 80)
+            
+            // Опустили ниже (140px), чтобы не наезжать на HUD
+            this.y = 140; 
         } 
+        // 2. ГОРИЗОНТАЛЬНО (Mobile Landscape - ВОРОТА)
         else if (isMobile) {
-            // ГОРИЗОНТАЛЬНО (Телефон): ОГРОМНЫЕ БАКИ
-            // Растягиваем на 90% ширины
-            const margin = width * 0.05; 
-            const availableW = width - (margin * 2);
-            const binW = availableW / total;
-
-            this.w = binW - 5; // Почти вплотную
+            // ОГРОМНЫЕ БАКИ
+            // Размеры: ~16% от ширины экрана (было меньше)
+            this.w = Math.min(width * 0.16, 140);
             this.h = this.w * 1.3;
             
-            // Если высота бака слишком большая для экрана, ограничиваем
-            if (this.h > height * 0.4) {
-                this.h = height * 0.4;
-                this.w = this.h / 1.3;
-                // Пересчитываем X с учетом новой ширины, чтобы центрировать в слоте
-                this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-            } else {
-                this.x = margin + (index * binW) + (binW / 2) - (this.w / 2);
-            }
+            // Опускаем ниже (60px), чтобы не перекрываться левой панелью
+            this.y = 60;
 
-            this.y = 20; 
+            const centerGap = width * 0.25; // Свободный центр 25%
+            const sideWidth = (width - centerGap) / 2; 
+
+            // СЛЕВА 2 бака
+            if (index < 2) {
+                const step = sideWidth / 2;
+                // Равномерно в левой части
+                this.x = (index * step) + (step/2) - (this.w/2);
+            } 
+            // СПРАВА 3 бака
+            else {
+                const rightIndex = index - 2; // 0, 1, 2
+                const step = sideWidth / 3;
+                const startX = width - sideWidth;
+                this.x = startX + (rightIndex * step) + (step/2) - (this.w/2);
+            }
         }
+        // 3. ПК (Desktop)
         else {
-            // ПК (Десктоп)
             const rightPanelSpace = 250; 
             const margin = 20;
             const availableW = width - (margin * 2) - rightPanelSpace;
@@ -439,8 +479,7 @@ class Bin {
     }
     
     checkHit(x, y) { 
-        // Увеличенная зона попадания для пальца
-        const buffer = 50;
+        const buffer = 50; // Большая зона попадания
         return x > this.x - buffer && 
                x < this.x + this.w + buffer && 
                y > this.y - buffer && 
@@ -482,8 +521,7 @@ function handleStart(x, y) {
 
     for (let t of candidates) {
         const pos = t.getScreenPos();
-        // Используем визуальный размер для хитбокса
-        let visualScale = 0.3 + (pos.scale * 0.7);
+        let visualScale = 0.4 + (pos.scale * 0.6);
         let maxSize = Math.min(height * 0.25, 220);
         let size = maxSize * visualScale; 
         
@@ -619,7 +657,7 @@ function updateHUD() {
         if (leafRes && leafRes.loaded) {
             img.src = leafRes.img.src;
         } else {
-            img.style.width = '30px'; img.style.height = '30px'; img.style.backgroundColor = 'green';
+            img.style.width = '30px'; img.style.height = '30px'; img.style.backgroundColor = '#4CAF50'; img.style.borderRadius = '50%';
         }
         img.className = 'life-leaf';
         container.appendChild(img);
