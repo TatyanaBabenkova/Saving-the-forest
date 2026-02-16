@@ -643,7 +643,7 @@ function startGame() {
         score: 0, lives: 5, speedLevel: 1, itemsSorted: 0, speedMultiplier: 1, 
         isRunning: true, isPaused: false,
         bins: [], trash: [], particles: [],
-        lastTime: performance.now(), spawnTimer: 0
+        lastTime: performance.now(), spawnTimer: 2000 // Ускоренный первый старт
     };
     
     createBins(); 
