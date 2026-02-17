@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Финальное выравнивание</title>
+    <title>Эко-Тропа: Финальная Версия</title>
     <style>
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
@@ -44,7 +44,7 @@
             background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); 
         }
         
-        .start-content { margin-top: 25vh; display: flex; flex-direction: column; align-items: center; max-width: 90%; }
+        .start-content { margin-top: 20vh; display: flex; flex-direction: column; align-items: center; max-width: 90%; }
 
         .btn { 
             pointer-events: auto; background: #4CAF50; border: none; 
@@ -67,9 +67,14 @@
         .tut-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
         .tut-img { width: 90%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
         
+        /* Надписи только в портретном режиме */
         .bin-label { 
             font-size: 13px; font-weight: bold; background: #000; color: #fff;
-            padding: 3px 6px; border-radius: 4px; margin-bottom: 5px; white-space: nowrap;
+            padding: 3px 6px; border-radius: 4px; margin-top: 5px; white-space: nowrap;
+            display: none; /* По умолчанию скрыто */
+        }
+        @media (orientation: portrait) {
+            .bin-label { display: block; }
         }
 
         #lives-container { display: flex; gap: 10px; align-items: center; }
@@ -91,7 +96,7 @@
                     <button id="pause-btn-hud">ПАУЗА</button>
                 </div>
             </div>
-            <div class="hud-row hud-lives-row">
+            <div class="hud-row hud-center hud-lives-row">
                 <div id="lives-container"></div>
             </div>
         </div>
@@ -167,7 +172,6 @@ const Loader = {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let W, H, gameState = { running: false, paused: false };
-let commonLabelY = 0; // Единая линия для всех надписей
 
 class Bin {
     constructor(cfg, i, total) {
@@ -175,45 +179,39 @@ class Bin {
         this.updatePos(i, total);
     }
     updatePos(i, total) {
-        let isLandscape = W > H;
-        let maxHFactor = isLandscape ? 0.25 : 0.45; 
-        let maxPossibleH = H * maxHFactor; 
+        let isL = W > H;
+        let maxH = H * (isL ? 0.25 : 0.45); 
         let gap = W / total;
-
-        // Фиксируем общую высоту надписей для всего ряда
-        commonLabelY = H - maxPossibleH - 25;
-
-        const imgKey = isLandscape ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
+        const imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
         const img = Loader.imgs[imgKey];
         if (img) {
-            let ratio = img.width / img.height;
-            this.h = maxPossibleH;
-            this.w = this.h * ratio;
-            if (this.w > gap * 0.98) { 
-                this.w = gap * 0.98; 
-                this.h = this.w / ratio; 
-            }
+            let r = img.width / img.height;
+            this.h = maxH; this.w = this.h * r;
+            if (this.w > gap * 0.98) { this.w = gap * 0.98; this.h = this.w / r; }
         }
         this.x = i * gap + (gap - this.w) / 2;
-        // Баки выравниваем по нижнему краю
-        this.y = H - this.h - 15; 
+        // В вертикальном режиме поднимаем чуть выше, чтобы надпись влезла под бак
+        this.y = H - this.h - (isL ? 15 : 45); 
     }
     draw() {
-        let isLandscape = W > H;
-        let imgKey = isLandscape ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
+        let isL = W > H;
+        const imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
         let img = Loader.imgs[imgKey];
         if(!img) return;
+        
         let sw = this.w * this.scale, sh = this.h * this.scale;
-        
-        ctx.fillStyle = "black";
-        ctx.font = "bold 13px Segoe UI"; 
-        ctx.textAlign = "center";
-        
-        // РИСУЕМ НАДПИСЬ НА ЕДИНОЙ ЛИНИИ
-        let textW = ctx.measureText(this.cfg.name).width + 10;
-        ctx.fillRect(this.x + this.w/2 - textW/2, commonLabelY - 14, textW, 18);
-        ctx.fillStyle = "white";
-        ctx.fillText(this.cfg.name, this.x + this.w/2, commonLabelY);
+
+        // НАДПИСИ ПОД БАКАМИ ТОЛЬКО В ВЕРТИКАЛЬНОМ РЕЖИМЕ
+        if (!isL) {
+            ctx.fillStyle = "black";
+            ctx.font = "bold 13px Segoe UI"; 
+            ctx.textAlign = "center";
+            let labelY = this.y + this.h + 20;
+            let textW = ctx.measureText(this.cfg.name).width + 10;
+            ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 14, textW, 18);
+            ctx.fillStyle = "white";
+            ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
+        }
 
         ctx.drawImage(img, this.x - (sw-this.w)/2, this.y - (sh-this.h)/2, sw, sh);
         if(this.scale > 1) this.scale -= 0.05;
@@ -222,8 +220,8 @@ class Bin {
 
 class Trash {
     constructor() {
-        let keys = Object.keys(TYPES);
-        this.cfg = TYPES[keys[Math.floor(Math.random()*keys.length)]];
+        let ks = Object.keys(TYPES);
+        this.cfg = TYPES[ks[Math.floor(Math.random()*ks.length)]];
         this.skin = Math.floor(Math.random()*5)+1;
         this.p = 0; this.lane = (Math.random()-0.5)*1.6;
         this.fly = false; this.t = 0; this.vs = 1;
@@ -248,7 +246,10 @@ class Trash {
                 gameState.speedL++; gameState.speed += 0.2;
                 document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedL;
             }
-        } else { gameState.score = Math.max(0, gameState.score - 5); AudioSys.err(); }
+        } else { 
+            gameState.score = Math.max(0, gameState.score - 5); 
+            AudioSys.err(); // ОШИБКА ИЗДАЕТ ЗВУК
+        }
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
@@ -284,11 +285,7 @@ function handleMiss() {
 function updateHUD() {
     let c = document.getElementById('lives-container'); c.innerHTML = '';
     let leaf = Loader.imgs['leaf'];
-    if(leaf) {
-        for(let i=0; i<gameState.lives; i++) {
-            c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`;
-        }
-    }
+    if(leaf) for(let i=0; i<gameState.lives; i++) c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`;
 }
 
 function updateStartScreenTutorial() {
@@ -296,7 +293,11 @@ function updateStartScreenTutorial() {
     const isL = W > H; container.innerHTML = '';
     Object.keys(TYPES).forEach(k => {
         const t = TYPES[k]; const img = isL ? t.imgSm : t.img;
-        container.innerHTML += `<div class="tut-item"><span class="bin-label">${t.name}</span><img src="${ASSETS}${img}" class="tut-img"></div>`;
+        container.innerHTML += `
+            <div class="tut-item">
+                <img src="${ASSETS}${img}" class="tut-img">
+                <span class="bin-label">${t.name}</span>
+            </div>`;
     });
 }
 
