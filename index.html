@@ -2,192 +2,72 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-    <title>Эко-Тропа: Сортировка</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Эко-Тропа: Реакция</title>
     <style>
         html { height: -webkit-fill-available; }
         body {
             margin: 0; padding: 0; overflow: hidden;
             background-color: #333;
             touch-action: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             height: 100dvh; width: 100vw;
-            min-height: -webkit-fill-available; 
         }
-        canvas { display: block; width: 100%; height: 100%; transition: filter 0.3s; }
-        .blur-effect { filter: blur(8px); }
+        canvas { display: block; width: 100%; height: 100%; }
 
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            display: flex; flex-direction: column; justify-content: flex-start;
+            pointer-events: none; z-index: 10;
         }
 
-        /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
         .hud-panel {
-            pointer-events: auto;
-            background: rgba(0, 0, 0, 0.7);
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px 20px;
-            border-radius: 0 0 20px 20px;
-            display: flex;
-            color: white;
-            text-shadow: 1px 1px 2px black;
-            backdrop-filter: blur(5px);
-            z-index: 10;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            pointer-events: auto; background: rgba(0, 0, 0, 0.6);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 20px; color: white; backdrop-filter: blur(5px);
         }
 
         #pause-btn {
-            background: #FF9800; border: 2px solid #fff; color: white; font-weight: bold;
-            border-radius: 20px; cursor: pointer; padding: 5px 20px; font-size: 16px;
-            white-space: nowrap; flex-shrink: 0;
-        }
-        #pause-btn:active { transform: scale(0.95); }
-
-        .stat-block { display: flex; align-items: center; gap: 5px; }
-        .hud-label { display: inline !important; } 
-        .score-text { font-size: 20px; font-weight: bold; color: white; white-space: nowrap; }
-        .speed-text { font-size: 20px; font-weight: bold; color: #FFEB3B; white-space: nowrap; }
-
-        #lives-container { display: flex; align-items: center; height: 30px; }
-        .life-leaf {
-            width: 35px; height: 35px; object-fit: contain; margin-left: -10px;
-            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5)); transition: transform 0.3s;
+            background: #FF9800; border: 2px solid #fff; color: white;
+            border-radius: 15px; cursor: pointer; padding: 5px 15px;
         }
 
-        /* === АДАПТАЦИЯ === */
-        @media (orientation: portrait) {
-            .hud-panel { flex-direction: column; gap: 8px; align-items: stretch; padding-bottom: 15px; }
-            .hud-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-        }
-        @media (orientation: landscape) {
-            .hud-panel { flex-direction: row; gap: 20px; height: 60px; padding: 5px 30px; }
-        }
-        @media (min-width: 1024px) {
-            .hud-panel {
-                position: absolute; top: 20px; left: 20px; right: auto; 
-                width: 320px; 
-                border-radius: 15px; flex-direction: column; align-items: flex-start;
-                gap: 15px; background: rgba(0, 0, 0, 0.6);
-                height: auto !important; padding-bottom: 20px;
-            }
-            .stat-block { width: 100%; justify-content: space-between; }
-            #pause-btn { width: 100%; }
-            .hud-label { display: inline; }
-        }
-
-        /* --- СТАРТОВЫЙ ЭКРАН --- */
-        #start-screen {
+        /* Экраны */
+        .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 20; pointer-events: auto;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: white; background-color: #2E7D32; overflow: hidden;
+            color: white; z-index: 100; pointer-events: auto; text-align: center;
         }
-        .start-bg {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: url('IMG/bg_forest.png') no-repeat center bottom;
-            background-size: cover; filter: blur(6px); transform: scale(1.1); z-index: -2;
-        }
-        .start-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.3); z-index: -1;
-        }
-        h1 { font-size: 8vh; margin: 0 0 10px 0; text-shadow: 0 5px 10px black; text-align: center; }
-        .subtitle { font-size: 18px; margin-bottom: 20px; text-shadow: 1px 1px 2px black; text-align: center; }
-
-        .tutorial-container {
-            display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;
-            justify-content: center; max-width: 95%;
-        }
-        .tut-item { display: flex; flex-direction: column; align-items: center; width: 55px; }
-        .tut-img { width: 100%; height: auto; margin-bottom: 5px; filter: drop-shadow(0 5px 5px black); }
-        .tut-label { font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 8px; white-space: nowrap; }
-
-        @media (min-width: 1024px) {
-            .tut-item { width: 110px; } .tut-label { font-size: 16px; padding: 4px 10px; }
-            h1 { font-size: 80px; } .subtitle { font-size: 24px; }
-        }
-        @media (max-height: 500px) {
-            .tut-item { width: 40px; } h1 { font-size: 40px; margin-bottom: 5px; }
-            .subtitle { font-size: 14px; margin-bottom: 10px; } .tutorial-container { margin-bottom: 10px; gap: 10px; }
-        }
-
-        .btn {
-            background: #4CAF50; border: none; padding: 15px 50px;
-            color: white; font-size: 24px; cursor: pointer; border-radius: 15px; font-weight: bold;
-            box-shadow: 0 6px 0 #2E7D32; z-index: 10;
-        }
-        .btn:active { transform: scale(0.95); box-shadow: 0 3px 0 #2E7D32; }
-
-        #game-over-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; color: white; z-index: 20; pointer-events: auto;
-        }
-        
-        #pause-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 40px; font-weight: bold; text-shadow: 0 5px 15px black;
-            z-index: 15; pointer-events: none; text-transform: uppercase; letter-spacing: 5px;
-        }
+        #start-screen { background: rgba(46, 125, 50, 0.9); }
+        #game-over-screen { background: rgba(0, 0, 0, 0.85); }
         .hidden { display: none !important; }
-        .start-decor-trash {
-            position: absolute; bottom: -20px; width: 15vw; max-width: 150px;
-            filter: blur(2px) brightness(0.8); z-index: -1;
+        .btn {
+            background: #4CAF50; border: none; padding: 15px 40px;
+            color: white; font-size: 24px; cursor: pointer; border-radius: 15px;
+            box-shadow: 0 6px 0 #2E7D32; font-weight: bold;
         }
+        .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #2E7D32; }
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
         <div class="hud-panel">
-            <div class="hud-row" style="flex: 1; justify-content: flex-start; gap: 20px;">
-                <button id="pause-btn">II Пауза</button>
-                <div class="stat-block">
-                    <span class="score-text"><span class="hud-label">Очки: </span><span id="score-el">0</span></span>
-                </div>
-            </div>
-            <div class="hud-row" style="flex: 1; justify-content: flex-end; gap: 20px;">
-                <div class="stat-block">
-                    <span class="speed-text"><span class="hud-label">Скорость: </span><span id="speed-el">1</span></span>
-                </div>
-                <div id="lives-container"></div>
-            </div>
+            <div>Очки: <span id="score-el">0</span></div>
+            <button id="pause-btn">ПАУЗА</button>
+            <div id="lives-container"></div>
         </div>
     </div>
 
-    <div id="pause-overlay" class="hidden">ПАУЗА</div>
-
-    <div id="start-screen">
-        <div class="start-bg"></div>
-        <div class="start-overlay"></div>
-        
+    <div id="start-screen" class="screen">
         <h1>Эко-Тропа</h1>
-        <p class="subtitle">Перетаскивай мусор в правильные баки!</p>
-
-        <div class="tutorial-container">
-            <div class="tut-item"><img src="IMG/bin_organic.png" class="tut-img"><span class="tut-label">Еда</span></div>
-            <div class="tut-item"><img src="IMG/bin_paper.png" class="tut-img"><span class="tut-label">Бумага</span></div>
-            <div class="tut-item"><img src="IMG/bin_plastic.png" class="tut-img"><span class="tut-label">Пластик</span></div>
-            <div class="tut-item"><img src="IMG/bin_met.png" class="tut-img"><span class="tut-label">Металл</span></div>
-            <div class="tut-item"><img src="IMG/bin_glass.png" class="tut-img"><span class="tut-label">Стекло</span></div>
-        </div>
-
-        <button class="btn" id="start-btn">В Путь</button>
-        
-        <img src="IMG/trash_bottle1.png" class="start-decor-trash" style="left: 5%; bottom: 10px; transform: rotate(-15deg);">
-        <img src="IMG/trash_can1.png" class="start-decor-trash" style="right: 5%; bottom: 10px; transform: rotate(10deg);">
+        <p>Кликай на бак, чтобы отправить в него ближайший мусор!</p>
+        <button class="btn" id="start-btn">ИГРАТЬ</button>
     </div>
 
-    <div id="game-over-screen" class="hidden">
+    <div id="game-over-screen" class="screen hidden">
         <h1>Конец игры</h1>
-        <p id="final-score" style="font-size: 30px;">Твой счет: 0</p>
-        <button class="btn" id="restart-btn">Заново</button>
+        <p id="final-score">Счет: 0</p>
+        <button class="btn" id="restart-btn">ЗАНОГО</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -196,8 +76,8 @@
 /**
  * НАСТРОЙКИ
  */
-const ASSETS_PATH = 'IMG/'; 
-const HORIZON_Y = 0.44; 
+const ASSETS_PATH = 'IMG/';
+const HORIZON_Y = 0.45; // Где начинается дорога (высота горизонта)
 
 const TYPES = {
     ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
@@ -207,58 +87,27 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-const AudioSys = {
-    ctx: null,
-    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
-    playTone(freq, type, duration, vol=0.1) {
-        if (!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start();
-        osc.stop(this.ctx.currentTime + duration);
-    },
-    playSuccess() { this.playTone(500, 'sine', 0.1); setTimeout(() => this.playTone(1000, 'sine', 0.2), 100); },
-    playError() { this.playTone(150, 'sawtooth', 0.3, 0.2); },
-    playPop() { this.playTone(600, 'triangle', 0.05, 0.05); },
-    playLevelUp() { 
-        this.playTone(400, 'sine', 0.1, 0.2); 
-        setTimeout(() => this.playTone(600, 'sine', 0.1, 0.2), 100);
-        setTimeout(() => this.playTone(800, 'sine', 0.3, 0.2), 200);
-    }
-};
-
+// Загрузчик (упрощенный для краткости)
 const Loader = {
     images: {},
-    loadImg(key, src) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.src = src;
-            img.onload = () => { this.images[key] = { img: img, loaded: true }; resolve(); };
-            img.onerror = () => { this.images[key] = { img: null, loaded: false }; resolve(); };
-        });
-    },
     async init() {
-        const promises = [
-            this.loadImg('bg', ASSETS_PATH + 'bg_forest.png'), 
-            this.loadImg('leaf', ASSETS_PATH + 'leaf.png')
-        ];
-        // Загрузка баков
-        for (let key in TYPES) promises.push(this.loadImg(`bin_${TYPES[key].id}`, ASSETS_PATH + TYPES[key].binImg));
-        // Загрузка мусора
-        for (let key in TYPES) {
-            for (let i = 1; i <= 5; i++) promises.push(this.loadImg(`${TYPES[key].prefix}${i}`, `${ASSETS_PATH}${TYPES[key].prefix}${i}.png`));
+        const toLoad = {
+            'bg': ASSETS_PATH + 'bg_forest.png',
+            'leaf': ASSETS_PATH + 'leaf.png'
+        };
+        for (let k in TYPES) toLoad[`bin_${TYPES[k].id}`] = ASSETS_PATH + TYPES[k].binImg;
+        
+        // Загрузим хотя бы по паре видов мусора для теста
+        for (let k in TYPES) {
+            for (let i=1; i<=3; i++) toLoad[`${TYPES[k].prefix}${i}`] = `${ASSETS_PATH}${TYPES[k].prefix}${i}.png`;
         }
-        // ЗАГРУЗКА ЖИВОТНЫХ (animal1...animal10)
-        for (let i = 1; i <= 10; i++) {
-            promises.push(this.loadImg(`animal${i}`, `${ASSETS_PATH}animal${i}.png`));
+
+        for (let key in toLoad) {
+            const img = new Image();
+            img.src = toLoad[key];
+            await new Promise(r => img.onload = r);
+            this.images[key] = img;
         }
-        await Promise.all(promises);
     },
     get(key) { return this.images[key]; }
 };
@@ -268,336 +117,205 @@ const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
-    score: 0, lives: 5, speedLevel: 1, itemsSorted: 0, speedMultiplier: 1, 
-    isRunning: false, isPaused: false,
-    bins: [], trash: [], particles: [],
-    lastTime: 0, spawnTimer: 0,
-    activeAnimal: null // Текущее показываемое животное
+    score: 0, lives: 5, speed: 1, 
+    isRunning: false,
+    bins: [], trash: [],
+    spawnTimer: 0, lastTime: 0
 };
-
-// Функция для перемешивания
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
-class Trash {
-    constructor() {
-        this.markedForDeletion = false;
-        this.baseSpeed = 0.002; 
-        this.progress = 0; 
-
-        const keys = Object.keys(TYPES);
-        this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
-        this.skinId = Math.floor(Math.random() * 5) + 1;
-        
-        this.isDragging = false;
-        this.dragX = 0; this.dragY = 0;
-        this.lane = (Math.random() - 0.5); 
-    }
-
-    update(dt) {
-        if (!this.isDragging) {
-            this.progress += this.baseSpeed * gameState.speedMultiplier * (dt / 16);
-            if (this.progress > 1.1) {
-                this.markedForDeletion = true;
-                handleMiss();
-            }
-        }
-    }
-
-    getScreenPos() {
-        const scale = this.progress * this.progress;
-        const curY = cy + (height - cy) * this.progress;
-        
-        const startSpread = 50; 
-        const targetSpread = width * 0.5;
-        
-        const currentStartX = cx + (this.lane * startSpread);
-        const currentTargetX = cx + (this.lane * targetSpread);
-        
-        const curX = currentStartX + (currentTargetX - currentStartX) * this.progress;
-        
-        return { x: curX, y: curY, scale: scale };
-    }
-
-    draw(ctx) {
-        const pos = this.getScreenPos();
-        let drawX = this.isDragging ? this.dragX : pos.x;
-        let drawY = this.isDragging ? this.dragY : pos.y;
-        let finalScale = this.isDragging ? 1.0 : pos.scale;
-        
-        if (finalScale < 0.05) return;
-
-        let visualScale = 0.4 + (finalScale * 0.6);
-        if (this.isDragging) visualScale = 1.0;
-
-        const minDim = Math.min(width, height); 
-        // === УВЕЛИЧЕННЫЙ МУСОР ===
-        let maxSize = Math.min(minDim * 0.5, 330); 
-        let size = maxSize * visualScale; 
-
-        const res = Loader.get(`${this.type.prefix}${this.skinId}`);
-        ctx.save();
-        ctx.translate(drawX, drawY);
-        
-        if (!this.isDragging) {
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.beginPath();
-            ctx.ellipse(0, size/2, size/3, size/6, 0, 0, Math.PI*2);
-            ctx.fill();
-        }
-
-        if (res && res.loaded) {
-            ctx.drawImage(res.img, -size/2, -size/2, size, size);
-        } else {
-            ctx.fillStyle = this.type.color;
-            ctx.beginPath();
-            ctx.arc(0, 0, size/2.5, 0, Math.PI*2);
-            ctx.fill();
-        }
-        ctx.restore();
-    }
-}
 
 class Bin {
     constructor(typeObj, index, total) {
         this.type = typeObj;
-        this.isHovered = false;
+        this.scale = 1.0;
         this.recalculate(index, total);
     }
 
     recalculate(index, total) {
-        const isPortrait = height > width;
-        const isMobile = width < 900; 
-
-        if (isPortrait) {
-            const margin = 2;
-            const availableW = width - (margin * 2);
-            // Большие баки (1/2.8 ширины)
-            const binW = availableW / 2.8; 
-            
-            this.w = binW; 
-            this.h = this.w * 1.3;
-            
-            const colWidth = availableW / total;
-            this.x = margin + (index * colWidth) + (colWidth / 2) - (this.w / 2);
-            
-            let baseY = 120;
-            if (index % 2 !== 0) {
-                this.y = baseY + 130; 
-            } else {
-                this.y = baseY;
-            }
-        } 
-        else if (isMobile) {
-            this.w = Math.min(width * 0.13, 110);
-            this.h = this.w * 1.3;
-            this.y = 70; 
-
-            const centerGap = width * 0.25; 
-            const sideWidth = (width - centerGap) / 2; 
-
-            if (index < 2) {
-                const step = sideWidth / 2;
-                this.x = (index * step) + (step/2) - (this.w/2);
-            } else {
-                const rightIndex = index - 2; 
-                const step = sideWidth / 3;
-                const startX = width - sideWidth;
-                this.x = startX + (rightIndex * step) + (step/2) - (this.w/2);
-            }
-        }
-        else {
-            const leftPanelSpace = 250; 
-            const margin = 20;
-            const availableW = width - (margin * 2) - leftPanelSpace;
-            const binW = availableW / total;
-            
-            // Размер баков на ПК (180px)
-            this.w = Math.min(180, binW - 10); 
-            this.h = this.w * 1.3;
-            this.x = leftPanelSpace + margin + (index * binW) + (binW / 2) - (this.w / 2);
-            this.y = 15;
-        }
-    }
-    
-    checkHit(x, y) { 
-        const buffer = 50; 
-        return x > this.x - buffer && 
-               x < this.x + this.w + buffer && 
-               y > this.y - buffer && 
-               y < this.y + this.h + buffer; 
+        // Баки внизу экрана, притоплены на 1/3
+        const gap = width / total;
+        this.w = Math.min(gap * 0.8, 150);
+        this.h = this.w * 1.3;
+        this.x = (index * gap) + (gap / 2) - (this.w / 2);
+        this.y = height - (this.h * 0.7); // 70% высоты снаружи, остальное "за экраном"
     }
 
     draw(ctx) {
-        let drawW = this.w;
-        let drawH = this.h;
-        let drawX = this.x;
-        let drawY = this.y;
-
-        if (this.isHovered) {
-            const scale = 1.30; 
-            drawW = this.w * scale;
-            drawH = this.h * scale;
-            drawX = this.x - (drawW - this.w) / 2;
-            drawY = this.y - (drawH - this.h) / 2;
-        }
-
-        const res = Loader.get(`bin_${this.type.id}`);
-        if (res && res.loaded) ctx.drawImage(res.img, drawX, drawY, drawW, drawH);
-        else {
-            ctx.fillStyle = this.type.color;
-            ctx.fillRect(drawX, drawY, drawW, drawH);
-        }
-    }
-}
-
-class Particle {
-    constructor(x, y, color) {
-        this.x = x; this.y = y;
-        this.vx = (Math.random() - 0.5) * 20;
-        this.vy = (Math.random() - 0.5) * 20;
-        this.life = 1.0; this.color = color;
-    }
-    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
-    draw(ctx) {
-        ctx.globalAlpha = Math.max(0, this.life);
-        ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, 10, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1;
-    }
-}
-
-let dragItem = null;
-
-function handleStart(x, y) {
-    if (!gameState.isRunning || gameState.isPaused) return;
-    
-    let candidates = gameState.trash.filter(t => t.progress > 0.3);
-    candidates.sort((a,b) => b.progress - a.progress);
-
-    for (let t of candidates) {
-        const pos = t.getScreenPos();
-        const minDim = Math.min(width, height); 
-        let visualScale = 0.4 + (pos.scale * 0.6);
-        let maxSize = Math.min(minDim * 0.5, 330);
-        let size = maxSize * visualScale; 
+        ctx.save();
+        const drawW = this.w * this.scale;
+        const drawH = this.h * this.scale;
+        const img = Loader.get(`bin_${this.type.id}`);
         
-        const dx = x - pos.x;
-        const dy = y - pos.y;
+        // Центрирование при увеличении
+        const offsetX = (drawW - this.w) / 2;
+        const offsetY = (drawH - this.h) / 2;
+
+        if (img) ctx.drawImage(img, this.x - offsetX, this.y - offsetY, drawW, drawH);
+        ctx.restore();
         
-        if (Math.sqrt(dx*dx + dy*dy) < size) { 
-            dragItem = t;
-            t.isDragging = true;
-            t.dragX = x; t.dragY = y;
-            AudioSys.playPop();
-            break; 
-        }
+        if (this.scale > 1.0) this.scale -= 0.05; // Возвращаем размер
+    }
+
+    isClicked(px, py) {
+        return px > this.x && px < this.x + this.w && py > this.y;
     }
 }
 
-function handleMove(x, y) { 
-    if (dragItem) { 
-        dragItem.dragX = x; dragItem.dragY = y; 
-    } 
-}
+class Trash {
+    constructor() {
+        const keys = Object.keys(TYPES);
+        this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
+        this.skin = Math.floor(Math.random() * 3) + 1;
+        this.progress = 0; // 0 - горизонт, 1 - игрок
+        this.lane = (Math.random() - 0.5) * 2; // Разброс по дороге
+        
+        this.flying = false; // Летит ли в бак
+        this.flyProgress = 0;
+        this.startX = 0; this.startY = 0;
+        this.targetBin = null;
+    }
 
-function handleEnd(x, y) {
-    if (dragItem) {
-        let hitBin = gameState.bins.find(b => b.checkHit(x, y));
-        if (hitBin) {
-            if (hitBin.type.id === dragItem.type.id) {
-                gameState.score += 10;
-                gameState.itemsSorted++;
-                AudioSys.playSuccess();
-                createParticles(x, y, hitBin.type.color);
-                checkLevelUp();
-                
-                // === ПРОВЕРКА НА ПОЯВЛЕНИЕ ЖИВОТНОГО (Каждые 10 штук) ===
-                if (gameState.itemsSorted % 10 === 0) {
-                    spawnAnimalReward();
-                }
+    update(dt) {
+        if (this.flying) {
+            this.flyProgress += 0.08; 
+            if (this.flyProgress >= 1) this.onReachBin();
+            return;
+        }
 
-            } else {
-                gameState.score = Math.max(0, gameState.score - 5);
-                AudioSys.playError();
-                createParticles(x, y, '#555');
-                triggerShake();
-            }
-            dragItem.markedForDeletion = true;
+        this.progress += 0.002 * gameState.speed * (dt / 16);
+        if (this.progress > 1.0) {
+            this.remove = true;
+            handleMiss();
+        }
+    }
+
+    onReachBin() {
+        this.remove = true;
+        if (this.targetBin.type.id === this.type.id) {
+            gameState.score += 10;
         } else {
-            dragItem.isDragging = false;
+            gameState.score = Math.max(0, gameState.score - 5);
+            handleMiss();
         }
-        updateHUD();
-        dragItem = null;
+        document.getElementById('score-el').innerText = gameState.score;
+    }
+
+    draw(ctx) {
+        let x, y, size;
+        const minDim = Math.min(width, height);
+
+        if (this.flying) {
+            // Полет по кривой Безье (простая интерполяция с "горбом")
+            const t = this.flyProgress;
+            const targetX = this.targetBin.x + this.targetBin.w / 2;
+            const targetY = this.targetBin.y + this.targetBin.h / 3;
+            
+            x = this.startX + (targetX - this.startX) * t;
+            // Делаем дугу: вычитаем значение параболы из Y
+            y = this.startY + (targetY - this.startY) * t - Math.sin(t * Math.PI) * 100;
+            size = minDim * 0.15;
+        } else {
+            // Обычное движение по дороге
+            const p = this.progress;
+            x = cx + (this.lane * (width * 0.4) * p);
+            y = cy + (height - cy) * p;
+            size = (minDim * 0.3) * (0.2 + p * 0.8);
+        }
+
+        const img = Loader.get(`${this.type.prefix}${this.skin}`);
+        if (img) ctx.drawImage(img, x - size/2, y - size/2, size, size);
     }
 }
 
-// === ФУНКЦИЯ ПОЯВЛЕНИЯ ЖИВОТНОГО ===
-function spawnAnimalReward() {
-    const id = Math.floor(Math.random() * 10) + 1; // animal1...animal10
+function handleMiss() {
+    gameState.lives--;
+    updateLivesHUD();
+    if (gameState.lives <= 0) endGame();
+}
+
+function updateLivesHUD() {
+    const container = document.getElementById('lives-container');
+    container.innerHTML = '❤️'.repeat(gameState.lives);
+}
+
+function onClick(e) {
+    if (!gameState.isRunning) return;
+    const px = e.clientX || e.touches[0].clientX;
+    const py = e.clientY || e.touches[0].clientY;
+
+    const clickedBin = gameState.bins.find(b => b.isClicked(px, py));
     
-    // Позиция: Случайно по ширине (с отступами), и в нижней части экрана
-    const animX = Math.random() * (width * 0.7) + (width * 0.15); // Центр 70% ширины
-    const animY = height * 0.65 + (Math.random() * height * 0.15); // Низ, но не самый край
+    if (clickedBin) {
+        clickedBin.scale = 1.3; // Эффект нажатия
+        
+        // Ищем самый ближний мусор (максимальный progress), который еще не летит
+        let nearest = gameState.trash
+            .filter(t => !t.flying && t.progress > 0.1)
+            .sort((a, b) => b.progress - a.progress)[0];
+
+        if (nearest) {
+            // Рассчитываем текущие экранные координаты для начала полета
+            const p = nearest.progress;
+            nearest.startX = cx + (nearest.lane * (width * 0.4) * p);
+            nearest.startY = cy + (height - cy) * p;
+            
+            nearest.flying = true;
+            nearest.targetBin = clickedBin;
+        }
+    }
+}
+
+function loop(time) {
+    if (!gameState.isRunning) return;
+    const dt = time - gameState.lastTime;
+    gameState.lastTime = time;
+
+    ctx.clearRect(0, 0, width, height);
     
-    gameState.activeAnimal = {
-        key: `animal${id}`,
-        x: animX,
-        y: animY,
-        life: 3.0, // Секунды жизни
-        scale: 0   // Для анимации появления
-    };
-    AudioSys.playSuccess(); // Доп звук
-}
+    // Фон
+    const bg = Loader.get('bg');
+    if (bg) ctx.drawImage(bg, 0, 0, width, height);
 
-function checkLevelUp() {
-    if (gameState.itemsSorted > 0 && gameState.itemsSorted % 20 === 0) {
-        gameState.speedLevel++;
-        gameState.speedMultiplier += 0.2; 
-        AudioSys.playLevelUp(); 
-        triggerBlurEffect();    
-        updateHUD();
+    // Спавн
+    gameState.spawnTimer += dt;
+    if (gameState.spawnTimer > 2000 / gameState.speed) {
+        gameState.trash.push(new Trash());
+        gameState.spawnTimer = 0;
     }
+
+    // Мусор
+    gameState.trash.forEach(t => {
+        t.update(dt);
+        t.draw(ctx);
+    });
+    gameState.trash = gameState.trash.filter(t => !t.remove);
+
+    // Баки (всегда сверху мусора)
+    gameState.bins.forEach(b => b.draw(ctx));
+
+    requestAnimationFrame(loop);
 }
 
-function triggerBlurEffect() {
-    canvas.classList.add('blur-effect');
-    setTimeout(() => {
-        canvas.classList.remove('blur-effect');
-    }, 500); 
+function startGame() {
+    gameState.isRunning = true;
+    gameState.score = 0;
+    gameState.lives = 5;
+    gameState.trash = [];
+    gameState.speed = 1;
+    gameState.lastTime = performance.now();
+    
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    
+    resize();
+    updateLivesHUD();
+    requestAnimationFrame(loop);
 }
 
-const pauseBtn = document.getElementById('pause-btn');
-const pauseOverlay = document.getElementById('pause-overlay');
-
-pauseBtn.onclick = () => {
-    gameState.isPaused = !gameState.isPaused;
-    if (gameState.isPaused) {
-        pauseBtn.textContent = "▶ Продолжить";
-        pauseOverlay.classList.remove('hidden');
-    } else {
-        pauseBtn.textContent = "II Пауза";
-        pauseOverlay.classList.add('hidden');
-        gameState.lastTime = performance.now(); 
-        requestAnimationFrame(loop);
-    }
-};
-
-window.addEventListener('resize', resize);
-canvas.addEventListener('mousedown', e => handleStart(e.clientX, e.clientY));
-canvas.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
-canvas.addEventListener('mouseup', e => handleEnd(e.clientX, e.clientY));
-canvas.addEventListener('touchstart', e => { e.preventDefault(); handleStart(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
-canvas.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
-canvas.addEventListener('touchend', e => { e.preventDefault(); handleEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
-
-document.getElementById('start-btn').onclick = startGame;
-document.getElementById('restart-btn').onclick = startGame;
+function endGame() {
+    gameState.isRunning = false;
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = "Счет: " + gameState.score;
+}
 
 function resize() {
     width = window.innerWidth;
@@ -605,185 +323,23 @@ function resize() {
     canvas.width = width;
     canvas.height = height;
     cx = width / 2;
-    cy = height * HORIZON_Y; 
-    
-    if (gameState.bins.length > 0) {
-        gameState.bins.forEach((bin, i) => bin.recalculate(i, gameState.bins.length));
-    }
+    cy = height * HORIZON_Y;
+
+    // Создаем баки в ряд
+    const keys = Object.keys(TYPES);
+    gameState.bins = keys.map((k, i) => new Bin(TYPES[k], i, keys.length));
 }
 
-function createBins() {
-    gameState.bins = [];
-    
-    // Перемешиваем типы баков перед созданием
-    let keys = Object.keys(TYPES);
-    shuffleArray(keys);
-    
-    const count = keys.length;
-    for (let i = 0; i < count; i++) {
-        let typeKey = keys[i];
-        gameState.bins.push(new Bin(TYPES[typeKey], i, count));
-    }
-}
+window.addEventListener('resize', resize);
+window.addEventListener('mousedown', onClick);
+window.addEventListener('touchstart', onClick);
+document.getElementById('start-btn').onclick = startGame;
+document.getElementById('restart-btn').onclick = startGame;
 
-function createParticles(x, y, c) { for(let i=0; i<15; i++) gameState.particles.push(new Particle(x, y, c)); }
-
-function handleMiss() { 
-    gameState.lives--; 
-    AudioSys.playError(); 
-    triggerShake(); 
-    updateHUD(); 
-    if (gameState.lives <= 0) gameOver(); 
-}
-
-let shakeTimer = 0;
-function triggerShake() { shakeTimer = 15; }
-
-function updateHUD() {
-    document.getElementById('score-el').textContent = `${gameState.score}`;
-    document.getElementById('speed-el').textContent = `${gameState.speedLevel}`;
-    
-    const container = document.getElementById('lives-container');
-    container.innerHTML = ''; 
-    const leafRes = Loader.get('leaf');
-    for(let i=0; i < gameState.lives; i++) {
-        const img = document.createElement('img');
-        if (leafRes && leafRes.loaded) {
-            img.src = leafRes.img.src;
-        } else {
-            img.style.width = '30px'; img.style.height = '30px'; img.style.backgroundColor = '#4CAF50'; img.style.borderRadius = '50%';
-        }
-        img.className = 'life-leaf';
-        container.appendChild(img);
-    }
-}
-
-function gameOver() {
-    gameState.isRunning = false;
-    document.getElementById('game-over-screen').classList.remove('hidden');
-    document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
-}
-
-function startGame() {
-    AudioSys.init();
-    document.getElementById('start-screen').style.display = 'none';
-    document.getElementById('game-over-screen').classList.add('hidden');
-    pauseOverlay.classList.add('hidden');
-    pauseBtn.textContent = "II Пауза";
-    
-    gameState = {
-        score: 0, lives: 5, speedLevel: 1, itemsSorted: 0, speedMultiplier: 1, 
-        isRunning: true, isPaused: false,
-        bins: [], trash: [], particles: [],
-        lastTime: performance.now(), spawnTimer: 2000,
-        activeAnimal: null // Сброс животного
-    };
-    
-    createBins(); 
-    updateHUD(); 
+Loader.init().then(() => {
     resize();
-    requestAnimationFrame(loop);
-}
-
-function loop(time) {
-    if (!gameState.isRunning) return;
-    if (gameState.isPaused) return; 
-
-    const dt = time - gameState.lastTime;
-    gameState.lastTime = time;
-
-    ctx.clearRect(0, 0, width, height);
-
-    const bgRes = Loader.get('bg');
-    if (bgRes && bgRes.loaded) {
-        const imgRatio = bgRes.img.width / bgRes.img.height;
-        const canvasRatio = width / height;
-        let drawW, drawH, drawX, drawY;
-        if (canvasRatio > imgRatio) {
-            drawW = width; drawH = width / imgRatio; drawX = 0; drawY = height - drawH; 
-        } else {
-            drawW = height * imgRatio; drawH = height; drawX = (width - drawW) / 2; drawY = 0;
-        }
-        ctx.drawImage(bgRes.img, drawX, drawY, drawW, drawH);
-    } else {
-        const grad = ctx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, '#87CEEB'); grad.addColorStop(HORIZON_Y, '#ccc'); 
-        grad.addColorStop(1, '#1B5E20');
-        ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
-    }
-
-    // === ИСПРАВЛЕНИЕ ДРОЖАНИЯ ===
-    let isShaking = false;
-    if (shakeTimer > 0) {
-        isShaking = true;
-        ctx.save();
-        ctx.translate((Math.random()-0.5)*15, (Math.random()-0.5)*15);
-        shakeTimer--;
-    }
-
-    // === ОТРИСОВКА ЖИВОТНОГО (ПОСЛЕ ФОНА, ДО МУСОРА) ===
-    if (gameState.activeAnimal) {
-        gameState.activeAnimal.life -= dt / 1000;
-        
-        // Анимация увеличения (Pop Up)
-        if (gameState.activeAnimal.scale < 1) gameState.activeAnimal.scale += 0.05;
-        
-        // Рисуем
-        const animRes = Loader.get(gameState.activeAnimal.key);
-        if (animRes && animRes.loaded) {
-            const size = Math.min(width, height) * 0.4 * gameState.activeAnimal.scale;
-            ctx.save();
-            ctx.translate(gameState.activeAnimal.x, gameState.activeAnimal.y);
-            // Тень
-            ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 20;
-            ctx.drawImage(animRes.img, -size/2, -size/2, size, size);
-            ctx.restore();
-        }
-
-        if (gameState.activeAnimal.life <= 0) gameState.activeAnimal = null;
-    }
-
-    gameState.spawnTimer += dt;
-    const spawnInterval = 2500 / gameState.speedMultiplier;
-    
-    if (gameState.spawnTimer > spawnInterval) {
-        gameState.trash.push(new Trash());
-        gameState.spawnTimer = 0;
-    }
-    
-    let roadTrash = []; let draggedTrash = [];
-    gameState.trash.forEach(t => {
-        t.update(dt);
-        if (t.isDragging) draggedTrash.push(t); else roadTrash.push(t);
-    });
-    gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
-
-    roadTrash.sort((a,b) => a.progress - b.progress);
-    roadTrash.forEach(t => t.draw(ctx));
-
-    gameState.bins.forEach(b => b.isHovered = false);
-    if (dragItem) {
-        let hoverBin = gameState.bins.find(b => b.checkHit(dragItem.dragX, dragItem.dragY));
-        if (hoverBin) {
-            hoverBin.isHovered = true;
-        }
-    }
-    gameState.bins.forEach(b => b.draw(ctx));
-
-    draggedTrash.forEach(t => t.draw(ctx));
-
-    gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
-    gameState.particles = gameState.particles.filter(p => p.life > 0);
-
-    // === ИСПРАВЛЕНИЕ ДРОЖАНИЯ (ВОССТАНОВЛЕНИЕ) ===
-    if (isShaking) {
-        ctx.restore();
-    }
-
-    requestAnimationFrame(loop);
-}
-
-Loader.init().then(() => { resize(); console.log("Ready"); });
+    console.log("Assets loaded");
+});
 
 </script>
 </body>
