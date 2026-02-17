@@ -31,11 +31,20 @@
             background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); 
         }
         
+        /* Спустили блок старта ниже */
+        .start-content {
+            margin-top: 25vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 85%;
+        }
+
         .btn { 
             pointer-events: auto; background: #4CAF50; border: none; 
-            padding: 12px 40px; color: white; font-size: 22px; font-weight: bold; 
+            padding: 14px 45px; color: white; font-size: 24px; font-weight: bold; 
             border-radius: 15px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
-            margin-top: 15px;
+            margin-top: 25px;
         }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
         
@@ -44,17 +53,18 @@
             border-radius: 10px; cursor: pointer; padding: 5px 10px; font-size: 14px;
         }
 
-        /* Контейнеры на заставке снизу */
         .tutorial-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
             display: flex; justify-content: space-around; align-items: flex-end;
-            padding-bottom: 5px; pointer-events: none;
+            padding-bottom: 10px; pointer-events: none;
         }
         .tut-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .tut-img { width: 85%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
-        .tut-label { 
-            font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.7); 
-            padding: 2px 4px; border-radius: 5px; margin-bottom: 2px; white-space: nowrap;
+        .tut-img { width: 90%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
+        
+        /* Черные плашки названий как на заставке */
+        .bin-label { 
+            font-size: 11px; font-weight: bold; background: #000; color: #fff;
+            padding: 2px 8px; border-radius: 5px; margin-bottom: 4px; white-space: nowrap;
         }
 
         #lives-container { display: flex; gap: 5px; }
@@ -62,9 +72,9 @@
         .hidden { display: none !important; }
 
         @media (max-height: 500px) {
-            h1 { font-size: 24px; margin: 2px; }
+            .start-content { margin-top: 15vh; }
+            h1 { font-size: 24px; }
             .btn { padding: 8px 30px; font-size: 18px; }
-            .tut-label { font-size: 10px; }
         }
     </style>
 </head>
@@ -86,19 +96,21 @@
 
     <div id="start-screen" class="screen">
         <div class="screen-bg"></div>
-        <h1 style="margin-top: 20px;">Эко-Тропа</h1>
-        <p style="max-width: 80%; font-size: 16px; margin: 10px 0;">
-            Помоги очистить лес! Нажимай на баки внизу, чтобы поймать летящий мусор. <br>
-            Не допускай, чтобы мусор упал на траву!
-        </p>
-        <button class="btn" id="start-btn">В ПУТЬ</button>
+        <div class="start-content">
+            <h1>Эко-Тропа</h1>
+            <p style="font-size: 18px; line-height: 1.4; text-shadow: 1px 1px 2px #000;">
+                Помоги очистить лес! Нажимай на баки внизу, чтобы поймать летящий мусор. <br>
+                Не допускай, чтобы мусор упал на траву!
+            </p>
+            <button class="btn" id="start-btn">В ПУТЬ</button>
+        </div>
         
         <div class="tutorial-overlay">
-            <div class="tut-item"><span class="tut-label">Органика</span><img src="IMG/bin_organic.png" class="tut-img"></div>
-            <div class="tut-item"><span class="tut-label">Бумага</span><img src="IMG/bin_paper.png" class="tut-img"></div>
-            <div class="tut-item"><span class="tut-label">Пластик</span><img src="IMG/bin_plastic.png" class="tut-img"></div>
-            <div class="tut-item"><span class="tut-label">Металл</span><img src="IMG/bin_met.png" class="tut-img"></div>
-            <div class="tut-item"><span class="tut-label">Стекло</span><img src="IMG/bin_glass.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Органика</span><img src="IMG/bin_organic.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Бумага</span><img src="IMG/bin_paper.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Пластик</span><img src="IMG/bin_plastic.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Металл</span><img src="IMG/bin_met.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Стекло</span><img src="IMG/bin_glass.png" class="tut-img"></div>
         </div>
     </div>
 
@@ -114,16 +126,15 @@
 <script>
 const ASSETS = 'IMG/';
 const TYPES = {
-    ORG: { id: 'organic', img: 'bin_organic.png', pref: 'trash_apple' },
-    PAP: { id: 'paper', img: 'bin_paper.png', pref: 'trash_newspaper' },
-    PLA: { id: 'plastic', img: 'bin_plastic.png', pref: 'trash_bottle' },
-    MET: { id: 'metal', img: 'bin_met.png', pref: 'trash_can' },
-    GLA: { id: 'glass', img: 'bin_glass.png', pref: 'trash_jar' }
+    ORG: { id: 'organic', name: 'Органика', img: 'bin_organic.png', pref: 'trash_apple' },
+    PAP: { id: 'paper', name: 'Бумага', img: 'bin_paper.png', pref: 'trash_newspaper' },
+    PLA: { id: 'plastic', name: 'Пластик', img: 'bin_plastic.png', pref: 'trash_bottle' },
+    MET: { id: 'metal', name: 'Металл', img: 'bin_met.png', pref: 'trash_can' },
+    GLA: { id: 'glass', name: 'Стекло', img: 'bin_glass.png', pref: 'trash_jar' }
 };
 
 const AudioSys = {
-    ctx: null,
-    isMuted: false,
+    ctx: null, isMuted: false,
     init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
     play(f, t, d) {
         if(!this.ctx || this.isMuted) return;
@@ -170,15 +181,15 @@ class Bin {
     }
     updatePos(i, total) {
         let isLandscape = W > H;
-        let maxHFactor = isLandscape ? 0.25 : 0.3; 
+        // Увеличено на 20% для вертикальной раскладки (портрета)
+        let maxHFactor = isLandscape ? 0.25 : 0.38; 
         let maxH = H * maxHFactor; 
         let gap = W / total;
 
         const img = Loader.imgs['b_' + this.cfg.id];
         if (img) {
             let nativeRatio = img.width / img.height;
-            // Увеличиваем на 10%
-            this.h = maxH * 1.1;
+            this.h = maxH;
             this.w = this.h * nativeRatio;
             if (this.w > gap * 0.95) {
                 this.w = gap * 0.95;
@@ -186,12 +197,26 @@ class Bin {
             }
         }
         this.x = i * gap + (gap - this.w) / 2;
-        this.y = H - this.h - 5; 
+        this.y = H - this.h - 25; // Оставили место под подписи
     }
     draw() {
         let img = Loader.imgs['b_'+this.cfg.id];
         if(!img) return;
         let sw = this.w * this.scale, sh = this.h * this.scale;
+        
+        // Отрисовка подписи
+        ctx.fillStyle = "black";
+        ctx.font = "bold 10px Segoe UI";
+        ctx.textAlign = "center";
+        let labelY = this.y + this.h + 15;
+        
+        // Рисуем плашку под текстом
+        let textW = ctx.measureText(this.cfg.name).width + 10;
+        ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 10, textW, 14);
+        
+        ctx.fillStyle = "white";
+        ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
+
         ctx.drawImage(img, this.x - (sw-this.w)/2, this.y - (sh-this.h)/2, sw, sh);
         if(this.scale > 1) this.scale -= 0.05;
     }
@@ -204,11 +229,14 @@ class Trash {
         this.skin = Math.floor(Math.random()*5)+1;
         this.p = 0; this.lane = (Math.random()-0.5)*1.7;
         this.fly = false; this.t = 0;
+        this.vScale = 1; // Для эффекта уменьшения
     }
     update(dt) {
         if(gameState.paused) return;
         if(this.fly) { 
-            this.t += 0.08; 
+            this.t += 0.08;
+            // Уменьшаем мусор, когда он залетает за бак
+            if(this.t > 0.7) this.vScale = Math.max(0, 1 - (this.t - 0.7) * 3.3);
             if(this.t >= 1) this.resolve(); 
         } else { 
             this.p += 0.0022 * (gameState.speed || 1) * (dt/16); 
@@ -238,14 +266,14 @@ class Trash {
             let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2;
             x = this.sx + (tx-this.sx)*this.t; 
             y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*180;
-            s = sz * 0.8;
+            s = sz * 0.8 * this.vScale; // Применяем уменьшение
         } else {
             x = W/2 + (this.lane * W * 0.45 * this.p); 
             y = H*0.44 + (H-H*0.44)*this.p;
             s = sz * (0.18 + this.p*0.82);
         }
         let img = Loader.imgs[this.cfg.pref+this.skin];
-        if(img) ctx.drawImage(img, x-s/2, y-s/2, s, s);
+        if(img && this.vScale > 0) ctx.drawImage(img, x-s/2, y-s/2, s, s);
     }
 }
 
@@ -254,9 +282,7 @@ function spawnAnimal() {
     gameState.animal = { 
         img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], 
         x: W/2 + (side * W * 0.35), 
-        y: H * 0.35, 
-        life: 2.5, 
-        s: 0 
+        y: H * 0.35, life: 2.5, s: 0 
     };
 }
 
@@ -277,7 +303,7 @@ function updateHUD() {
 
 function input(ex, ey) {
     if(!gameState.running || gameState.paused) return;
-    let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 50);
+    let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 30);
     if(b) {
         let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0];
         if(t) { 
