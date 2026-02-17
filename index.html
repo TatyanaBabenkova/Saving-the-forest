@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эко-Тропа: Реакция</title>
     <style>
-        html { height: -webkit-fill-available; }
         body {
             margin: 0; padding: 0; overflow: hidden;
-            background-color: #333;
+            background-color: #2E7D32;
             touch-action: none;
             font-family: 'Segoe UI', sans-serif;
             height: 100dvh; width: 100vw;
@@ -24,60 +23,70 @@
             pointer-events: auto; background: rgba(0, 0, 0, 0.6);
             display: flex; justify-content: space-between; align-items: center;
             padding: 10px 20px; color: white; backdrop-filter: blur(5px);
+            border-radius: 0 0 15px 15px;
         }
 
         #pause-btn {
-            background: #FF9800; border: 2px solid #fff; color: white;
-            border-radius: 15px; cursor: pointer; padding: 5px 15px;
+            background: #FF9800; border: 2px solid #fff; color: white; font-weight: bold;
+            border-radius: 20px; cursor: pointer; padding: 5px 15px;
         }
 
-        /* Экраны */
+        #lives-container { display: flex; align-items: center; gap: 2px; }
+        .life-leaf { width: 30px; height: 30px; object-fit: contain; }
+
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: white; z-index: 100; pointer-events: auto; text-align: center;
         }
-        #start-screen { background: rgba(46, 125, 50, 0.9); }
-        #game-over-screen { background: rgba(0, 0, 0, 0.85); }
-        .hidden { display: none !important; }
+        
+        /* Фон для экранов с размытием */
+        .screen-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('IMG/bg_forest.png') no-repeat center center;
+            background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1);
+        }
+
         .btn {
-            background: #4CAF50; border: none; padding: 15px 40px;
+            background: #4CAF50; border: none; padding: 15px 45px;
             color: white; font-size: 24px; cursor: pointer; border-radius: 15px;
-            box-shadow: 0 6px 0 #2E7D32; font-weight: bold;
+            box-shadow: 0 6px 0 #2E7D32; font-weight: bold; margin-top: 20px;
         }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #2E7D32; }
+
+        h1 { font-size: 48px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); margin: 10px; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
         <div class="hud-panel">
-            <div>Очки: <span id="score-el">0</span></div>
+            <div style="font-size: 20px; font-weight: bold;">Очки: <span id="score-el">0</span></div>
             <button id="pause-btn">ПАУЗА</button>
             <div id="lives-container"></div>
         </div>
     </div>
 
     <div id="start-screen" class="screen">
+        <div class="screen-bg"></div>
         <h1>Эко-Тропа</h1>
-        <p>Кликай на бак, чтобы отправить в него ближайший мусор!</p>
-        <button class="btn" id="start-btn">ИГРАТЬ</button>
+        <p style="font-size: 18px; padding: 0 20px;">Кликай на бак, в который должен попасть ближайший мусор!</p>
+        <button class="btn" id="start-btn">В ПУТЬ</button>
     </div>
 
     <div id="game-over-screen" class="screen hidden">
+        <div class="screen-bg" style="filter: grayscale(1) blur(5px);"></div>
         <h1>Конец игры</h1>
-        <p id="final-score">Счет: 0</p>
-        <button class="btn" id="restart-btn">ЗАНОГО</button>
+        <p id="final-score" style="font-size: 28px;">Счет: 0</p>
+        <button class="btn" id="restart-btn">ЗАНОВО</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
 <script>
-/**
- * НАСТРОЙКИ
- */
 const ASSETS_PATH = 'IMG/';
-const HORIZON_Y = 0.45; // Где начинается дорога (высота горизонта)
+const HORIZON_Y = 0.44; 
 
 const TYPES = {
     ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
@@ -87,27 +96,26 @@ const TYPES = {
     GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
 };
 
-// Загрузчик (упрощенный для краткости)
 const Loader = {
     images: {},
     async init() {
-        const toLoad = {
-            'bg': ASSETS_PATH + 'bg_forest.png',
-            'leaf': ASSETS_PATH + 'leaf.png'
-        };
-        for (let k in TYPES) toLoad[`bin_${TYPES[k].id}`] = ASSETS_PATH + TYPES[k].binImg;
-        
-        // Загрузим хотя бы по паре видов мусора для теста
+        const promises = [];
+        const toLoad = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
+        for (let i=1; i<=10; i++) toLoad[`animal${i}`] = `animal${i}.png`;
         for (let k in TYPES) {
-            for (let i=1; i<=3; i++) toLoad[`${TYPES[k].prefix}${i}`] = `${ASSETS_PATH}${TYPES[k].prefix}${i}.png`;
+            toLoad[`bin_${TYPES[k].id}`] = TYPES[k].binImg;
+            for (let i=1; i<=5; i++) toLoad[`${TYPES[k].prefix}${i}`] = `${TYPES[k].prefix}${i}.png`;
         }
 
         for (let key in toLoad) {
-            const img = new Image();
-            img.src = toLoad[key];
-            await new Promise(r => img.onload = r);
-            this.images[key] = img;
+            promises.push(new Promise(resolve => {
+                const img = new Image();
+                img.src = ASSETS_PATH + toLoad[key];
+                img.onload = () => { this.images[key] = img; resolve(); };
+                img.onerror = () => resolve(); 
+            }));
         }
+        await Promise.all(promises);
     },
     get(key) { return this.images[key]; }
 };
@@ -117,9 +125,9 @@ const ctx = canvas.getContext('2d');
 let width, height, cx, cy;
 
 let gameState = {
-    score: 0, lives: 5, speed: 1, 
+    score: 0, lives: 5, itemsSorted: 0, speed: 1,
     isRunning: false,
-    bins: [], trash: [],
+    bins: [], trash: [], activeAnimal: null,
     spawnTimer: 0, lastTime: 0
 };
 
@@ -129,34 +137,20 @@ class Bin {
         this.scale = 1.0;
         this.recalculate(index, total);
     }
-
     recalculate(index, total) {
-        // Баки внизу экрана, притоплены на 1/3
         const gap = width / total;
-        this.w = Math.min(gap * 0.8, 150);
+        this.w = Math.min(gap * 0.85, 140);
         this.h = this.w * 1.3;
         this.x = (index * gap) + (gap / 2) - (this.w / 2);
-        this.y = height - (this.h * 0.7); // 70% высоты снаружи, остальное "за экраном"
+        this.y = height - (this.h * 0.75); 
     }
-
     draw(ctx) {
-        ctx.save();
-        const drawW = this.w * this.scale;
-        const drawH = this.h * this.scale;
         const img = Loader.get(`bin_${this.type.id}`);
-        
-        // Центрирование при увеличении
-        const offsetX = (drawW - this.w) / 2;
-        const offsetY = (drawH - this.h) / 2;
-
-        if (img) ctx.drawImage(img, this.x - offsetX, this.y - offsetY, drawW, drawH);
-        ctx.restore();
-        
-        if (this.scale > 1.0) this.scale -= 0.05; // Возвращаем размер
-    }
-
-    isClicked(px, py) {
-        return px > this.x && px < this.x + this.w && py > this.y;
+        if (!img) return;
+        const dw = this.w * this.scale;
+        const dh = this.h * this.scale;
+        ctx.drawImage(img, this.x - (dw-this.w)/2, this.y - (dh-this.h)/2, dw, dh);
+        if (this.scale > 1.0) this.scale -= 0.05;
     }
 }
 
@@ -164,102 +158,96 @@ class Trash {
     constructor() {
         const keys = Object.keys(TYPES);
         this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
-        this.skin = Math.floor(Math.random() * 3) + 1;
-        this.progress = 0; // 0 - горизонт, 1 - игрок
-        this.lane = (Math.random() - 0.5) * 2; // Разброс по дороге
-        
-        this.flying = false; // Летит ли в бак
-        this.flyProgress = 0;
-        this.startX = 0; this.startY = 0;
-        this.targetBin = null;
+        this.skin = Math.floor(Math.random() * 5) + 1;
+        this.progress = 0;
+        this.lane = (Math.random() - 0.5) * 1.8;
+        this.flying = false;
+        this.flyT = 0;
     }
-
     update(dt) {
         if (this.flying) {
-            this.flyProgress += 0.08; 
-            if (this.flyProgress >= 1) this.onReachBin();
+            this.flyT += 0.07;
+            if (this.flyT >= 1) this.resolve();
             return;
         }
-
-        this.progress += 0.002 * gameState.speed * (dt / 16);
-        if (this.progress > 1.0) {
-            this.remove = true;
-            handleMiss();
-        }
+        this.progress += 0.0025 * gameState.speed * (dt / 16);
+        if (this.progress > 1.05) { this.remove = true; handleMiss(); }
     }
-
-    onReachBin() {
+    resolve() {
         this.remove = true;
         if (this.targetBin.type.id === this.type.id) {
             gameState.score += 10;
+            gameState.itemsSorted++;
+            if (gameState.itemsSorted % 10 === 0) spawnAnimal();
         } else {
             gameState.score = Math.max(0, gameState.score - 5);
             handleMiss();
         }
         document.getElementById('score-el').innerText = gameState.score;
     }
-
     draw(ctx) {
-        let x, y, size;
-        const minDim = Math.min(width, height);
-
+        let x, y, s;
+        const sizeBase = Math.min(width, height) * 0.35;
         if (this.flying) {
-            // Полет по кривой Безье (простая интерполяция с "горбом")
-            const t = this.flyProgress;
-            const targetX = this.targetBin.x + this.targetBin.w / 2;
-            const targetY = this.targetBin.y + this.targetBin.h / 3;
-            
-            x = this.startX + (targetX - this.startX) * t;
-            // Делаем дугу: вычитаем значение параболы из Y
-            y = this.startY + (targetY - this.startY) * t - Math.sin(t * Math.PI) * 100;
-            size = minDim * 0.15;
+            const tx = this.targetBin.x + this.targetBin.w/2;
+            const ty = this.targetBin.y + this.targetBin.h/2;
+            x = this.sx + (tx - this.sx) * this.flyT;
+            y = this.sy + (ty - this.sy) * this.flyT - Math.sin(this.flyT * Math.PI) * 150;
+            s = sizeBase * 0.8;
         } else {
-            // Обычное движение по дороге
-            const p = this.progress;
-            x = cx + (this.lane * (width * 0.4) * p);
-            y = cy + (height - cy) * p;
-            size = (minDim * 0.3) * (0.2 + p * 0.8);
+            x = cx + (this.lane * (width * 0.45) * this.progress);
+            y = cy + (height - cy) * this.progress;
+            s = sizeBase * (0.15 + this.progress * 0.85);
         }
-
         const img = Loader.get(`${this.type.prefix}${this.skin}`);
-        if (img) ctx.drawImage(img, x - size/2, y - size/2, size, size);
+        if (img) ctx.drawImage(img, x - s/2, y - s/2, s, s);
     }
+}
+
+function spawnAnimal() {
+    const id = Math.floor(Math.random() * 10) + 1;
+    gameState.activeAnimal = {
+        img: Loader.get(`animal${id}`),
+        x: width * (0.2 + Math.random() * 0.6),
+        y: height * 0.6,
+        life: 2.5,
+        scale: 0
+    };
 }
 
 function handleMiss() {
     gameState.lives--;
-    updateLivesHUD();
+    updateHUD();
     if (gameState.lives <= 0) endGame();
 }
 
-function updateLivesHUD() {
+function updateHUD() {
     const container = document.getElementById('lives-container');
-    container.innerHTML = '❤️'.repeat(gameState.lives);
+    container.innerHTML = '';
+    const leafImg = Loader.get('leaf');
+    for (let i=0; i<gameState.lives; i++) {
+        const img = document.createElement('img');
+        img.src = leafImg ? leafImg.src : '';
+        img.className = 'life-leaf';
+        container.appendChild(img);
+    }
 }
 
 function onClick(e) {
     if (!gameState.isRunning) return;
-    const px = e.clientX || e.touches[0].clientX;
-    const py = e.clientY || e.touches[0].clientY;
-
-    const clickedBin = gameState.bins.find(b => b.isClicked(px, py));
-    
-    if (clickedBin) {
-        clickedBin.scale = 1.3; // Эффект нажатия
-        
-        // Ищем самый ближний мусор (максимальный progress), который еще не летит
-        let nearest = gameState.trash
-            .filter(t => !t.flying && t.progress > 0.1)
-            .sort((a, b) => b.progress - a.progress)[0];
-
-        if (nearest) {
-            // Рассчитываем текущие экранные координаты для начала полета
-            const p = nearest.progress;
-            nearest.startX = cx + (nearest.lane * (width * 0.4) * p);
-            nearest.startY = cy + (height - cy) * p;
-            
-            nearest.flying = true;
-            nearest.targetBin = clickedBin;
+    const touch = e.clientX ? e : e.touches[0];
+    const bin = gameState.bins.find(b => 
+        touch.clientX > b.x && touch.clientX < b.x + b.w && touch.clientY > b.y
+    );
+    if (bin) {
+        bin.scale = 1.3;
+        const target = gameState.trash.filter(t => !t.flying && t.progress > 0.05)
+                                     .sort((a,b) => b.progress - a.progress)[0];
+        if (target) {
+            target.flying = true;
+            target.targetBin = bin;
+            target.sx = cx + (target.lane * (width * 0.45) * target.progress);
+            target.sy = cy + (height - cy) * target.progress;
         }
     }
 }
@@ -271,43 +259,49 @@ function loop(time) {
 
     ctx.clearRect(0, 0, width, height);
     
-    // Фон
+    // Отрисовка ФОНА с сохранением пропорций
     const bg = Loader.get('bg');
-    if (bg) ctx.drawImage(bg, 0, 0, width, height);
+    if (bg) {
+        const scale = Math.max(width / bg.width, height / bg.height);
+        const nw = bg.width * scale, nh = bg.height * scale;
+        ctx.drawImage(bg, (width - nw) / 2, (height - nh) / 2, nw, nh);
+    }
 
-    // Спавн
     gameState.spawnTimer += dt;
-    if (gameState.spawnTimer > 2000 / gameState.speed) {
+    if (gameState.spawnTimer > 2200 / gameState.speed) {
         gameState.trash.push(new Trash());
         gameState.spawnTimer = 0;
     }
 
-    // Мусор
-    gameState.trash.forEach(t => {
-        t.update(dt);
-        t.draw(ctx);
-    });
+    gameState.trash.forEach(t => { t.update(dt); t.draw(ctx); });
     gameState.trash = gameState.trash.filter(t => !t.remove);
-
-    // Баки (всегда сверху мусора)
     gameState.bins.forEach(b => b.draw(ctx));
+
+    if (gameState.activeAnimal) {
+        const a = gameState.activeAnimal;
+        a.life -= dt/1000;
+        if (a.scale < 1) a.scale += 0.1;
+        if (a.img) {
+            const s = Math.min(width, height) * 0.4 * a.scale;
+            ctx.drawImage(a.img, a.x - s/2, a.y - s/2, s, s);
+        }
+        if (a.life <= 0) gameState.activeAnimal = null;
+    }
 
     requestAnimationFrame(loop);
 }
 
 function startGame() {
-    gameState.isRunning = true;
-    gameState.score = 0;
-    gameState.lives = 5;
-    gameState.trash = [];
-    gameState.speed = 1;
-    gameState.lastTime = performance.now();
-    
+    gameState = {
+        score: 0, lives: 5, itemsSorted: 0, speed: 1,
+        isRunning: true, bins: [], trash: [], activeAnimal: null,
+        spawnTimer: 2000, lastTime: performance.now()
+    };
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
-    
+    document.getElementById('score-el').innerText = '0';
     resize();
-    updateLivesHUD();
+    updateHUD();
     requestAnimationFrame(loop);
 }
 
@@ -318,14 +312,9 @@ function endGame() {
 }
 
 function resize() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
-    cx = width / 2;
-    cy = height * HORIZON_Y;
-
-    // Создаем баки в ряд
+    width = window.innerWidth; height = window.innerHeight;
+    canvas.width = width; canvas.height = height;
+    cx = width / 2; cy = height * HORIZON_Y;
     const keys = Object.keys(TYPES);
     gameState.bins = keys.map((k, i) => new Bin(TYPES[k], i, keys.length));
 }
@@ -336,11 +325,7 @@ window.addEventListener('touchstart', onClick);
 document.getElementById('start-btn').onclick = startGame;
 document.getElementById('restart-btn').onclick = startGame;
 
-Loader.init().then(() => {
-    resize();
-    console.log("Assets loaded");
-});
-
+Loader.init().then(() => { resize(); });
 </script>
 </body>
 </html>
