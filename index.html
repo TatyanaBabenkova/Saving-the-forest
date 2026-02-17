@@ -74,11 +74,11 @@
         <h1>Эко-Тропа</h1>
         
         <div class="tutorial-container">
-            <div class="tut-item"><img src="IMG/bin_organic.jpg" class="tut-img"><span class="tut-label">Органика</span></div>
-            <div class="tut-item"><img src="IMG/bin_paper.jpg" class="tut-img"><span class="tut-label">Бумага</span></div>
-            <div class="tut-item"><img src="IMG/bin_plastic.jpg" class="tut-img"><span class="tut-label">Пластик</span></div>
-            <div class="tut-item"><img src="IMG/bin_met.jpg" class="tut-img"><span class="tut-label">Металл</span></div>
-            <div class="tut-item"><img src="IMG/bin_glass.jpg" class="tut-img"><span class="tut-label">Стекло</span></div>
+            <div class="tut-item"><img src="IMG/bin_organic.png" class="tut-img"><span class="tut-label">Органика</span></div>
+            <div class="tut-item"><img src="IMG/bin_paper.png" class="tut-img"><span class="tut-label">Бумага</span></div>
+            <div class="tut-item"><img src="IMG/bin_plastic.png" class="tut-img"><span class="tut-label">Пластик</span></div>
+            <div class="tut-item"><img src="IMG/bin_met.png" class="tut-img"><span class="tut-label">Металл</span></div>
+            <div class="tut-item"><img src="IMG/bin_glass.png" class="tut-img"><span class="tut-label">Стекло</span></div>
         </div>
 
         <button class="btn" id="start-btn">В ПУТЬ</button>
@@ -95,12 +95,13 @@
 
 <script>
 const ASSETS = 'IMG/';
+// Здесь исправлены расширения на .png
 const TYPES = {
-    ORG: { id: 'organic', img: 'bin_organic.jpg', pref: 'trash_apple' },
-    PAP: { id: 'paper', img: 'bin_paper.jpg', pref: 'trash_newspaper' },
-    PLA: { id: 'plastic', img: 'bin_plastic.jpg', pref: 'trash_bottle' },
-    MET: { id: 'metal', img: 'bin_met.jpg', pref: 'trash_can' },
-    GLA: { id: 'glass', img: 'bin_glass.jpg', pref: 'trash_jar' }
+    ORG: { id: 'organic', img: 'bin_organic.png', pref: 'trash_apple' },
+    PAP: { id: 'paper', img: 'bin_paper.png', pref: 'trash_newspaper' },
+    PLA: { id: 'plastic', img: 'bin_plastic.png', pref: 'trash_bottle' },
+    MET: { id: 'metal', img: 'bin_met.png', pref: 'trash_can' },
+    GLA: { id: 'glass', img: 'bin_glass.png', pref: 'trash_jar' }
 };
 
 const AudioSys = {
@@ -125,11 +126,12 @@ const AudioSys = {
 const Loader = {
     imgs: {},
     async load() {
+        // Фоновые файлы и листочки - png
         const list = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
-        for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
+        for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png'; // Животные - png
         Object.keys(TYPES).forEach(k => {
             list['b_'+TYPES[k].id] = TYPES[k].img;
-            for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
+            for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png'; // Мусор - png
         });
         for(let k in list) {
             let img = new Image();
