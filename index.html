@@ -8,7 +8,6 @@
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
             overflow: hidden; background: #2E7D32; 
-            /* 2. Единый шрифт без засечек везде */
             font-family: 'Segoe UI', 'Roboto', Helvetica, Arial, sans-serif; 
             -webkit-font-smoothing: antialiased;
         }
@@ -16,16 +15,13 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
         
-        /* 1. Фон на всю высоту (прозрачный градиент вместо черной полосы) */
         .hud { 
             pointer-events: auto; 
             background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
             color: white; 
             padding: 10px 15px; display: flex; 
-            /* Убрали border-bottom */
         }
         
-        /* 3. Стиль "капсул" для счета и рекорда */
         .stat-capsule {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -67,12 +63,10 @@
         
         .start-content { margin-top: 15vh; display: flex; flex-direction: column; align-items: center; max-width: 90%; }
         
-        /* 1. Заголовок: Салатовый с обводкой */
         h1 {
-            color: #76FF03; /* Яркий салатовый */
+            color: #76FF03;
             font-size: 42px;
             margin: 0 0 20px 0;
-            /* Имитация обводки через тени */
             text-shadow: 
                 2px 2px 0 #1B5E20, -1px -1px 0 #1B5E20,  
                 1px -1px 0 #1B5E20, -1px 1px 0 #1B5E20, 
@@ -98,7 +92,6 @@
         .tut-i { display: flex; flex-direction: column; align-items: center; flex: 1; }
         .tut-img { width: 90%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
         
-        /* Единый шрифт без засечек для подписей */
         .bin-l { 
             font-family: 'Segoe UI', 'Roboto', sans-serif;
             font-size: 13px; font-weight: bold; background: #000; color: #fff; 
@@ -109,7 +102,6 @@
         .life-leaf { width: 55px; height: 55px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); } 
         .hidden { display: none !important; }
         
-        /* Желтый цвет для скорости */
         .speed-val { color: #FFEB3B; margin-left: 5px; }
     </style>
 </head>
@@ -117,8 +109,7 @@
     <div id="ui-layer">
         <div class="hud">
             <div class="hud-row">
-                <div class="stat-capsule">🏆 <span id="record-text" style="margin-left:5px">0</span></div>
-                <div class="stat-capsule" style="margin-left: 10px;">⭐ <span id="stat-text" style="margin-left:5px">0</span></div>
+                <div class="stat-capsule">⭐ <span id="stat-text" style="margin-left:5px">0</span></div>
             </div>
             
             <div class="hud-row">
@@ -145,7 +136,6 @@
                 Если мусор пересечет <b>красную линию</b> — лесной листочек завянет. <br>
                 Будь внимателен, скорость растет!
             </p>
-            <div style="margin-top: 10px; font-size: 14px; opacity: 0.9;" class="stat-capsule">Ваш рекорд: <span id="start-record">0</span></div>
             <br>
             <button class="btn" id="start-btn">В ПУТЬ</button>
         </div>
@@ -156,7 +146,6 @@
         <div class="screen-bg" style="filter:grayscale(1) blur(10px);"></div>
         <h1>Игра окончена</h1>
         <p id="final-score" style="font-size:32px; font-weight:bold; margin-bottom:10px;"></p>
-        <p id="new-record-msg" style="color: #FFEB3B; font-size: 20px; font-weight: bold; display: none; margin-bottom: 20px;">🎉 НОВЫЙ РЕКОРД! 🎉</p>
         <button class="btn" id="restart-btn">ЗАНОВО</button>
     </div>
 
@@ -193,7 +182,6 @@ const AudioSys = {
 const Loader = {
     imgs: {},
     async load() {
-        // Загружаем основные ассеты
         const list = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
         for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
         Object.keys(TYPES).forEach(k => {
@@ -201,7 +189,6 @@ const Loader = {
             list['b_sm_'+TYPES[k].id] = TYPES[k].imgSm;
             for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
         });
-        // Промис для важных картинок (фон и баки) можно было бы отделить, но оставим как есть для надежности
         for(let k in list) {
             let img = new Image(); img.src = ASSETS + list[k];
             await new Promise(r => { img.onload = r; img.onerror = r; });
@@ -214,7 +201,8 @@ const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2
 let W, H, gameState = { running: false, paused: false, particles: [] };
 const DEADLINE_Y_RATIO = 0.70; 
 
-// Работа с Рекордом
+// --- ЛОГИКА РЕКОРДОВ (ЗАКОММЕНТИРОВАНА) ---
+/*
 function getHighScore() { return parseInt(localStorage.getItem('eco_record')) || 0; }
 function saveHighScore(score) {
     if (score > getHighScore()) {
@@ -223,9 +211,10 @@ function saveHighScore(score) {
     }
     return false;
 }
-// Инициализация отображения рекорда
 document.getElementById('start-record').innerText = getHighScore();
 document.getElementById('record-text').innerText = getHighScore();
+*/
+// -------------------------------------------
 
 class Fragment {
     constructor(x, y) {
@@ -243,7 +232,6 @@ class Fragment {
 class Bin {
     constructor(cfg, i, total) { this.cfg = cfg; this.scale = 1; this.updatePos(i, total); }
     updatePos(i, total) {
-        // Используем window.innerWidth/Height, так как W/H теперь масштабированы
         let winW = window.innerWidth, winH = window.innerHeight;
         let isL = winW > winH, maxH = winH * (isL ? 0.25 : 0.45), gap = winW / total;
         
@@ -253,7 +241,7 @@ class Bin {
             let r = img.width / img.height; this.h = maxH; this.w = this.h * r;
             if (this.w > gap * 0.98) { this.w = gap * 0.98; this.h = this.w / r; }
         } else {
-            this.w = gap * 0.8; this.h = maxH; // Заглушка
+            this.w = gap * 0.8; this.h = maxH;
         }
         
         this.x = i * gap + (gap - this.w) / 2; 
@@ -264,19 +252,13 @@ class Bin {
         let isL = winW > window.innerHeight;
         let imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
         let img = Loader.imgs[imgKey]; if(!img) return;
-        
         let sw = this.w * this.scale, sh = this.h * this.scale;
         
-        // Рисуем подпись только в портрете
         if (!isL) {
-            // Используем системный шрифт для четкости
             ctx.fillStyle = "black"; ctx.font = "bold 14px 'Segoe UI', Roboto, sans-serif"; ctx.textAlign = "center";
             let labelY = this.y + this.h + 20; 
             let textW = ctx.measureText(this.cfg.name).width + 12;
-            
-            // Скругленная плашка (эмуляция)
             ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 15, textW, 20);
-            
             ctx.fillStyle = "white"; ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
         }
         
@@ -299,7 +281,6 @@ class Trash {
         } else { 
             this.p += 0.0022 * (gameState.speedMultiplier || 1) * (dt/16); 
             
-            // Логика столкновения с линией
             let winH = window.innerHeight;
             let sz = (Math.min(window.innerWidth, winH) * 0.35) * (0.18 + this.p * 0.82);
             let currentY = (winH * 0.44) + (winH - winH * 0.44) * this.p;
@@ -332,7 +313,6 @@ class Trash {
     draw() {
         let winW = window.innerWidth, winH = window.innerHeight;
         let sz = Math.min(winW, winH) * 0.35, x, y, s;
-        
         if(this.fly) {
             let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2;
             x = this.sx + (tx-this.sx)*this.t; y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*160;
@@ -365,9 +345,6 @@ function spawnAnimal() {
 
 function input(ex, ey) {
     if(!gameState.running || gameState.paused) return;
-    // Учитываем масштаб Canvas при вводе
-    // ex и ey приходят в CSS-пикселях, а наши объекты (this.x) тоже хранятся в логических координатах
-    // Но так как мы не меняли this.x/y на scale, а меняли ctx.scale, то тут все ок.
     let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 60);
     if(b) {
         let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0];
@@ -381,9 +358,7 @@ function input(ex, ey) {
 
 function loop(time) {
     let dt = time - (gameState.lt || time); gameState.lt = time;
-    // Очистка с учетом масштаба
     ctx.clearRect(0,0,window.innerWidth,window.innerHeight);
-    
     let bg = Loader.imgs['bg']; 
     if(bg) { 
         let winW = window.innerWidth, winH = window.innerHeight;
@@ -400,10 +375,8 @@ function loop(time) {
         
         gameState.trash.forEach(t => { t.update(dt); t.draw(); });
         gameState.trash = gameState.trash.filter(t => !t.die);
-        
         gameState.particles.forEach(p => { p.update(); p.draw(); });
         gameState.particles = gameState.particles.filter(p => p.life > 0);
-
         gameState.bins.forEach(b => b.draw());
         if(gameState.animal) {
             let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
@@ -429,44 +402,26 @@ function startGame() {
 
 function endGame() { 
     gameState.running = false; 
-    const isNewRecord = saveHighScore(gameState.score);
+    // const isNewRecord = saveHighScore(gameState.score); // ЗАКОММЕНТИРОВАНО
     document.getElementById('game-over-screen').classList.remove('hidden'); 
     document.getElementById('final-score').innerText = gameState.score;
-    // Показать надпись "Новый рекорд" если он был побит
-    document.getElementById('new-record-msg').style.display = isNewRecord ? 'block' : 'none';
-    
-    // Обновить рекорды в интерфейсе
-    document.getElementById('start-record').innerText = getHighScore();
-    document.getElementById('record-text').innerText = getHighScore();
+    // document.getElementById('new-record-msg').style.display = isNewRecord ? 'block' : 'none'; // ЗАКОММЕНТИРОВАНО
 }
 
-// 4. HD Canvas (Retina Support)
 function resize() {
-    W = window.innerWidth; 
-    H = window.innerHeight; 
-    
-    // Масштабирование под плотность пикселей
+    W = window.innerWidth; H = window.innerHeight; 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    
-    // Стилизуем под размер окна
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    
-    // Масштабируем контекст, чтобы координаты рисования остались прежними (логическими)
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.scale(dpr, dpr);
     
-    let ks = Object.keys(TYPES); 
-    gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
+    let ks = Object.keys(TYPES); gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
     
     const container = document.getElementById('tutorial-bins'); 
     if(container) { 
-        const isL = W > H; 
-        container.innerHTML = ''; 
+        const isL = W > H; container.innerHTML = ''; 
         Object.keys(TYPES).forEach(k => { 
-            const t = TYPES[k]; 
-            const img = isL ? t.imgSm : t.img; 
+            const t = TYPES[k]; const img = isL ? t.imgSm : t.img; 
             container.innerHTML += `<div class="tut-i"><img src="${ASSETS}${img}" class="tut-img"><span class="bin-l">${t.name}</span></div>`; 
         }); 
     }
@@ -478,11 +433,7 @@ canvas.addEventListener('touchstart', e => { e.preventDefault(); input(e.touches
 document.getElementById('start-btn').onclick = startGame;
 document.getElementById('restart-btn').onclick = startGame;
 
-// Ускоренная загрузка (критические ресурсы + отрисовка сразу)
-Loader.load().then(() => {
-    resize();
-    requestAnimationFrame(loop);
-});
+Loader.load().then(() => { resize(); requestAnimationFrame(loop); });
 </script>
 </body>
 </html>
