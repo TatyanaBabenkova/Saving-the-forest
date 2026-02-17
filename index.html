@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Лесной Патруль</title>
+    <title>Эко-Тропа</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2E7D32; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; }
@@ -118,7 +118,7 @@ const Loader = {
 
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 let W, H, gameState = { running: false, paused: false, particles: [] };
-const DEADLINE_Y_RATIO = 0.70; // Линия на 70%
+const DEADLINE_Y_RATIO = 0.70; 
 
 class Fragment {
     constructor(x, y) {
@@ -173,12 +173,22 @@ class Trash {
             if(this.t >= 1) this.resolve(); 
         } else { 
             this.p += 0.0022 * (gameState.speedMultiplier || 1) * (dt/16); 
-            if(this.p >= DEADLINE_Y_RATIO) { this.die = 1; this.explode(); handleMiss(); }
+            
+            let sz = (Math.min(W, H) * 0.35) * (0.18 + this.p * 0.82);
+            let currentY = (H * 0.44) + (H - H * 0.44) * this.p;
+            let lineY = (H * 0.44) + (H - H * 0.44) * DEADLINE_Y_RATIO;
+            
+            // Если мусор коснулся линии - только здесь взрыв и потеря жизни
+            if(currentY + sz/3 >= lineY) { 
+                this.die = 1; 
+                this.explode(); 
+                handleMiss(); 
+            }
         }
     }
     explode() {
         let x = W/2 + (this.lane * W * 0.45 * this.p);
-        let y = H*0.44 + (H-H*0.44)*this.p;
+        let y = (H * 0.44) + (H - H * 0.44) * this.p;
         for(let i=0; i<18; i++) gameState.particles.push(new Fragment(x, y));
     }
     resolve() {
@@ -187,7 +197,12 @@ class Trash {
             gameState.score += 10; AudioSys.ok(); gameState.count++; 
             if(gameState.count % 10 === 0) spawnAnimal();
             if(gameState.count % 20 === 0) { gameState.speedLevel++; gameState.speedMultiplier += 0.2; document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedLevel; }
-        } else { gameState.score = Math.max(0, gameState.score - 5); AudioSys.err(); this.explode(); }
+            // ПРИ ПРАВИЛЬНОМ ПОПАДАНИИ ВЗРЫВА НЕТ
+        } else { 
+            gameState.score = Math.max(0, gameState.score - 5); 
+            AudioSys.err(); 
+            this.explode(); // ВЗРЫВ ПРИ ОШИБКЕ БАКА
+        }
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
