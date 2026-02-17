@@ -605,4 +605,179 @@ function resize() {
     canvas.width = width;
     canvas.height = height;
     cx = width / 2;
-    cy = height * HORIZ
+    cy = height * HORIZON_Y; 
+    
+    if (gameState.bins.length > 0) {
+        gameState.bins.forEach((bin, i) => bin.recalculate(i, gameState.bins.length));
+    }
+}
+
+function createBins() {
+    gameState.bins = [];
+    
+    // Перемешиваем типы баков перед созданием
+    let keys = Object.keys(TYPES);
+    shuffleArray(keys);
+    
+    const count = keys.length;
+    for (let i = 0; i < count; i++) {
+        let typeKey = keys[i];
+        gameState.bins.push(new Bin(TYPES[typeKey], i, count));
+    }
+}
+
+function createParticles(x, y, c) { for(let i=0; i<15; i++) gameState.particles.push(new Particle(x, y, c)); }
+
+function handleMiss() { 
+    gameState.lives--; 
+    AudioSys.playError(); 
+    triggerShake(); 
+    updateHUD(); 
+    if (gameState.lives <= 0) gameOver(); 
+}
+
+let shakeTimer = 0;
+function triggerShake() { shakeTimer = 15; }
+
+function updateHUD() {
+    document.getElementById('score-el').textContent = `${gameState.score}`;
+    document.getElementById('speed-el').textContent = `${gameState.speedLevel}`;
+    
+    const container = document.getElementById('lives-container');
+    container.innerHTML = ''; 
+    const leafRes = Loader.get('leaf');
+    for(let i=0; i < gameState.lives; i++) {
+        const img = document.createElement('img');
+        if (leafRes && leafRes.loaded) {
+            img.src = leafRes.img.src;
+        } else {
+            img.style.width = '30px'; img.style.height = '30px'; img.style.backgroundColor = '#4CAF50'; img.style.borderRadius = '50%';
+        }
+        img.className = 'life-leaf';
+        container.appendChild(img);
+    }
+}
+
+function gameOver() {
+    gameState.isRunning = false;
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').textContent = `Итоговый: ${gameState.score}`;
+}
+
+function startGame() {
+    AudioSys.init();
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-over-screen').classList.add('hidden');
+    pauseOverlay.classList.add('hidden');
+    pauseBtn.textContent = "II Пауза";
+    
+    gameState = {
+        score: 0, lives: 5, speedLevel: 1, itemsSorted: 0, speedMultiplier: 1, 
+        isRunning: true, isPaused: false,
+        bins: [], trash: [], particles: [],
+        lastTime: performance.now(), spawnTimer: 2000,
+        activeAnimal: null // Сброс животного
+    };
+    
+    createBins(); 
+    updateHUD(); 
+    resize();
+    requestAnimationFrame(loop);
+}
+
+function loop(time) {
+    if (!gameState.isRunning) return;
+    if (gameState.isPaused) return; 
+
+    const dt = time - gameState.lastTime;
+    gameState.lastTime = time;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const bgRes = Loader.get('bg');
+    if (bgRes && bgRes.loaded) {
+        const imgRatio = bgRes.img.width / bgRes.img.height;
+        const canvasRatio = width / height;
+        let drawW, drawH, drawX, drawY;
+        if (canvasRatio > imgRatio) {
+            drawW = width; drawH = width / imgRatio; drawX = 0; drawY = height - drawH; 
+        } else {
+            drawW = height * imgRatio; drawH = height; drawX = (width - drawW) / 2; drawY = 0;
+        }
+        ctx.drawImage(bgRes.img, drawX, drawY, drawW, drawH);
+    } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, '#87CEEB'); grad.addColorStop(HORIZON_Y, '#ccc'); 
+        grad.addColorStop(1, '#1B5E20');
+        ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
+    }
+
+    if (shakeTimer > 0) {
+        ctx.save();
+        ctx.translate((Math.random()-0.5)*15, (Math.random()-0.5)*15);
+        shakeTimer--;
+    }
+
+    // === ОТРИСОВКА ЖИВОТНОГО (ПОСЛЕ ФОНА, ДО МУСОРА) ===
+    if (gameState.activeAnimal) {
+        gameState.activeAnimal.life -= dt / 1000;
+        
+        // Анимация увеличения (Pop Up)
+        if (gameState.activeAnimal.scale < 1) gameState.activeAnimal.scale += 0.05;
+        
+        // Рисуем
+        const animRes = Loader.get(gameState.activeAnimal.key);
+        if (animRes && animRes.loaded) {
+            const size = Math.min(width, height) * 0.4 * gameState.activeAnimal.scale;
+            ctx.save();
+            ctx.translate(gameState.activeAnimal.x, gameState.activeAnimal.y);
+            // Тень
+            ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 20;
+            ctx.drawImage(animRes.img, -size/2, -size/2, size, size);
+            ctx.restore();
+        }
+
+        if (gameState.activeAnimal.life <= 0) gameState.activeAnimal = null;
+    }
+
+    gameState.spawnTimer += dt;
+    const spawnInterval = 2500 / gameState.speedMultiplier;
+    
+    if (gameState.spawnTimer > spawnInterval) {
+        gameState.trash.push(new Trash());
+        gameState.spawnTimer = 0;
+    }
+    
+    let roadTrash = []; let draggedTrash = [];
+    gameState.trash.forEach(t => {
+        t.update(dt);
+        if (t.isDragging) draggedTrash.push(t); else roadTrash.push(t);
+    });
+    gameState.trash = gameState.trash.filter(t => !t.markedForDeletion);
+
+    roadTrash.sort((a,b) => a.progress - b.progress);
+    roadTrash.forEach(t => t.draw(ctx));
+
+    gameState.bins.forEach(b => b.isHovered = false);
+    if (dragItem) {
+        let hoverBin = gameState.bins.find(b => b.checkHit(dragItem.dragX, dragItem.dragY));
+        if (hoverBin) {
+            hoverBin.isHovered = true;
+        }
+    }
+    gameState.bins.forEach(b => b.draw(ctx));
+
+    draggedTrash.forEach(t => t.draw(ctx));
+
+    gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
+    gameState.particles = gameState.particles.filter(p => p.life > 0);
+
+    if (shakeTimer > 0) ctx.restore();
+    requestAnimationFrame(loop);
+}
+
+Loader.init().then(() => { resize(); console.log("Ready"); });
+
+</script>
+</body>
+</html>
