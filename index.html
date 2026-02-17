@@ -37,7 +37,6 @@
         }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
         
-        /* Стили для подсказок на старте */
         .tutorial-container {
             display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap;
             justify-content: center; max-width: 95%; pointer-events: none;
@@ -53,7 +52,6 @@
         .life-leaf { width: 25px; height: 25px; object-fit: contain; }
         .hidden { display: none !important; }
 
-        /* Адаптация под маленькие экраны (альбомная ориентация) */
         @media (max-height: 500px) {
             h1 { font-size: 28px; margin: 5px; }
             .tutorial-container { margin: 5px 0; }
@@ -76,11 +74,11 @@
         <h1>Эко-Тропа</h1>
         
         <div class="tutorial-container">
-            <div class="tut-item"><img src="IMG/bin_organic.png" class="tut-img"><span class="tut-label">Органика</span></div>
-            <div class="tut-item"><img src="IMG/bin_paper.png" class="tut-img"><span class="tut-label">Бумага</span></div>
-            <div class="tut-item"><img src="IMG/bin_plastic.png" class="tut-img"><span class="tut-label">Пластик</span></div>
-            <div class="tut-item"><img src="IMG/bin_met.png" class="tut-img"><span class="tut-label">Металл</span></div>
-            <div class="tut-item"><img src="IMG/bin_glass.png" class="tut-img"><span class="tut-label">Стекло</span></div>
+            <div class="tut-item"><img src="IMG/bin_organic.jpg" class="tut-img"><span class="tut-label">Органика</span></div>
+            <div class="tut-item"><img src="IMG/bin_paper.jpg" class="tut-img"><span class="tut-label">Бумага</span></div>
+            <div class="tut-item"><img src="IMG/bin_plastic.jpg" class="tut-img"><span class="tut-label">Пластик</span></div>
+            <div class="tut-item"><img src="IMG/bin_met.jpg" class="tut-img"><span class="tut-label">Металл</span></div>
+            <div class="tut-item"><img src="IMG/bin_glass.jpg" class="tut-img"><span class="tut-label">Стекло</span></div>
         </div>
 
         <button class="btn" id="start-btn">В ПУТЬ</button>
@@ -98,11 +96,11 @@
 <script>
 const ASSETS = 'IMG/';
 const TYPES = {
-    ORG: { id: 'organic', img: 'bin_organic.png', pref: 'trash_apple' },
-    PAP: { id: 'paper', img: 'bin_paper.png', pref: 'trash_newspaper' },
-    PLA: { id: 'plastic', img: 'bin_plastic.png', pref: 'trash_bottle' },
-    MET: { id: 'metal', img: 'bin_met.png', pref: 'trash_can' },
-    GLA: { id: 'glass', img: 'bin_glass.png', pref: 'trash_jar' }
+    ORG: { id: 'organic', img: 'bin_organic.jpg', pref: 'trash_apple' },
+    PAP: { id: 'paper', img: 'bin_paper.jpg', pref: 'trash_newspaper' },
+    PLA: { id: 'plastic', img: 'bin_plastic.jpg', pref: 'trash_bottle' },
+    MET: { id: 'metal', img: 'bin_met.jpg', pref: 'trash_can' },
+    GLA: { id: 'glass', img: 'bin_glass.jpg', pref: 'trash_jar' }
 };
 
 const AudioSys = {
@@ -153,12 +151,20 @@ class Bin {
     }
     updatePos(i, total) {
         let isLandscape = W > H;
-        let maxHFactor = isLandscape ? 0.22 : 0.28; 
+        let maxHFactor = isLandscape ? 0.25 : 0.3; 
         let maxH = H * maxHFactor; 
         let gap = W / total;
-        
-        this.w = Math.min(gap * 0.9, maxH * 0.8, 130); 
-        this.h = this.w * 1.3;
+
+        const img = Loader.imgs['b_' + this.cfg.id];
+        if (img) {
+            let nativeRatio = img.width / img.height;
+            this.h = maxH;
+            this.w = this.h * nativeRatio;
+            if (this.w > gap * 0.95) {
+                this.w = gap * 0.95;
+                this.h = this.w / nativeRatio;
+            }
+        }
         this.x = i * gap + (gap - this.w) / 2;
         this.y = H - this.h - 5; 
     }
@@ -240,8 +246,10 @@ function handleMiss() {
 function updateHUD() {
     let c = document.getElementById('lives-container'); c.innerHTML = '';
     let leaf = Loader.imgs['leaf'];
-    for(let i=0; i<gameState.lives; i++) {
-        c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`;
+    if(leaf) {
+        for(let i=0; i<gameState.lives; i++) {
+            c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`;
+        }
     }
 }
 
