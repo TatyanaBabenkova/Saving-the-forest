@@ -18,10 +18,12 @@
             align-items: center; backdrop-filter: blur(5px); 
         }
         
+        .hud-controls { display: flex; gap: 10px; align-items: center; }
+        
         .screen { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             display: flex; flex-direction: column; align-items: center; 
-            justify-content: center; z-index: 100; color: white; text-align: center; 
+            justify-content: flex-start; z-index: 100; color: white; text-align: center; 
         }
         .screen-bg { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -31,21 +33,28 @@
         
         .btn { 
             pointer-events: auto; background: #4CAF50; border: none; 
-            padding: 15px 50px; color: white; font-size: 24px; font-weight: bold; 
+            padding: 12px 40px; color: white; font-size: 22px; font-weight: bold; 
             border-radius: 15px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
-            position: relative; z-index: 110; 
+            margin-top: 15px;
         }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
         
-        .tutorial-container {
-            display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap;
-            justify-content: center; max-width: 95%; pointer-events: none;
+        #mute-btn, #pause-btn-hud {
+            background: rgba(255,255,255,0.2); border: 1px solid white; color: white;
+            border-radius: 10px; cursor: pointer; padding: 5px 10px; font-size: 14px;
         }
-        .tut-item { display: flex; flex-direction: column; align-items: center; width: 65px; }
-        .tut-img { width: 100%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
+
+        /* Контейнеры на заставке снизу */
+        .tutorial-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            display: flex; justify-content: space-around; align-items: flex-end;
+            padding-bottom: 5px; pointer-events: none;
+        }
+        .tut-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .tut-img { width: 85%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
         .tut-label { 
-            font-size: 11px; font-weight: bold; background: rgba(0,0,0,0.5); 
-            padding: 2px 6px; border-radius: 8px; margin-top: 5px; white-space: nowrap;
+            font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.7); 
+            padding: 2px 4px; border-radius: 5px; margin-bottom: 2px; white-space: nowrap;
         }
 
         #lives-container { display: flex; gap: 5px; }
@@ -53,10 +62,9 @@
         .hidden { display: none !important; }
 
         @media (max-height: 500px) {
-            h1 { font-size: 28px; margin: 5px; }
-            .tutorial-container { margin: 5px 0; }
-            .tut-item { width: 50px; }
-            .btn { padding: 10px 40px; font-size: 20px; }
+            h1 { font-size: 24px; margin: 2px; }
+            .btn { padding: 8px 30px; font-size: 18px; }
+            .tut-label { font-size: 10px; }
         }
     </style>
 </head>
@@ -64,27 +72,37 @@
 
     <div id="ui-layer">
         <div class="hud">
-            <div id="stat-text" style="font-weight: bold; font-size: 18px;">Очки: 0</div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div id="stat-text" style="font-weight: bold; font-size: 16px;">Очки: 0</div>
+                <div id="speed-text" style="font-weight: bold; font-size: 14px; color: #FFEB3B;">Скорость: 1</div>
+            </div>
+            <div class="hud-controls">
+                <button id="mute-btn">🔊</button>
+                <button id="pause-btn-hud">ПАУЗА</button>
+            </div>
             <div id="lives-container"></div>
         </div>
     </div>
 
     <div id="start-screen" class="screen">
         <div class="screen-bg"></div>
-        <h1>Эко-Тропа</h1>
-        
-        <div class="tutorial-container">
-            <div class="tut-item"><img src="IMG/bin_organic.png" class="tut-img"><span class="tut-label">Органика</span></div>
-            <div class="tut-item"><img src="IMG/bin_paper.png" class="tut-img"><span class="tut-label">Бумага</span></div>
-            <div class="tut-item"><img src="IMG/bin_plastic.png" class="tut-img"><span class="tut-label">Пластик</span></div>
-            <div class="tut-item"><img src="IMG/bin_met.png" class="tut-img"><span class="tut-label">Металл</span></div>
-            <div class="tut-item"><img src="IMG/bin_glass.png" class="tut-img"><span class="tut-label">Стекло</span></div>
-        </div>
-
+        <h1 style="margin-top: 20px;">Эко-Тропа</h1>
+        <p style="max-width: 80%; font-size: 16px; margin: 10px 0;">
+            Помоги очистить лес! Нажимай на баки внизу, чтобы поймать летящий мусор. <br>
+            Не допускай, чтобы мусор упал на траву!
+        </p>
         <button class="btn" id="start-btn">В ПУТЬ</button>
+        
+        <div class="tutorial-overlay">
+            <div class="tut-item"><span class="tut-label">Органика</span><img src="IMG/bin_organic.png" class="tut-img"></div>
+            <div class="tut-item"><span class="tut-label">Бумага</span><img src="IMG/bin_paper.png" class="tut-img"></div>
+            <div class="tut-item"><span class="tut-label">Пластик</span><img src="IMG/bin_plastic.png" class="tut-img"></div>
+            <div class="tut-item"><span class="tut-label">Металл</span><img src="IMG/bin_met.png" class="tut-img"></div>
+            <div class="tut-item"><span class="tut-label">Стекло</span><img src="IMG/bin_glass.png" class="tut-img"></div>
+        </div>
     </div>
 
-    <div id="game-over-screen" class="screen hidden">
+    <div id="game-over-screen" class="screen hidden" style="justify-content: center;">
         <div class="screen-bg" style="filter: grayscale(1) blur(10px);"></div>
         <h1>Игра окончена</h1>
         <p id="final-score" style="font-size: 24px; margin-bottom: 20px;"></p>
@@ -95,7 +113,6 @@
 
 <script>
 const ASSETS = 'IMG/';
-// Здесь исправлены расширения на .png
 const TYPES = {
     ORG: { id: 'organic', img: 'bin_organic.png', pref: 'trash_apple' },
     PAP: { id: 'paper', img: 'bin_paper.png', pref: 'trash_newspaper' },
@@ -106,9 +123,10 @@ const TYPES = {
 
 const AudioSys = {
     ctx: null,
+    isMuted: false,
     init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
     play(f, t, d) {
-        if(!this.ctx) return;
+        if(!this.ctx || this.isMuted) return;
         try {
             let o = this.ctx.createOscillator(), g = this.ctx.createGain();
             o.type = t; o.frequency.value = f;
@@ -126,12 +144,11 @@ const AudioSys = {
 const Loader = {
     imgs: {},
     async load() {
-        // Фоновые файлы и листочки - png
         const list = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
-        for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png'; // Животные - png
+        for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
         Object.keys(TYPES).forEach(k => {
             list['b_'+TYPES[k].id] = TYPES[k].img;
-            for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png'; // Мусор - png
+            for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
         });
         for(let k in list) {
             let img = new Image();
@@ -144,7 +161,7 @@ const Loader = {
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let W, H, gameState = { running: false };
+let W, H, gameState = { running: false, paused: false };
 
 class Bin {
     constructor(cfg, i, total) {
@@ -160,7 +177,8 @@ class Bin {
         const img = Loader.imgs['b_' + this.cfg.id];
         if (img) {
             let nativeRatio = img.width / img.height;
-            this.h = maxH;
+            // Увеличиваем на 10%
+            this.h = maxH * 1.1;
             this.w = this.h * nativeRatio;
             if (this.w > gap * 0.95) {
                 this.w = gap * 0.95;
@@ -188,6 +206,7 @@ class Trash {
         this.fly = false; this.t = 0;
     }
     update(dt) {
+        if(gameState.paused) return;
         if(this.fly) { 
             this.t += 0.08; 
             if(this.t >= 1) this.resolve(); 
@@ -202,7 +221,11 @@ class Trash {
             gameState.score += 10; AudioSys.ok();
             gameState.count++; 
             if(gameState.count % 10 === 0) spawnAnimal();
-            if(gameState.count % 20 === 0) gameState.speed += 0.2;
+            if(gameState.count % 20 === 0) {
+                gameState.speedLevel++;
+                gameState.speed += 0.2;
+                document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedLevel;
+            }
         } else { 
             gameState.score = Math.max(0, gameState.score - 5);
             AudioSys.err(); 
@@ -228,10 +251,9 @@ class Trash {
 
 function spawnAnimal() {
     const side = Math.random() > 0.5 ? 1 : -1;
-    const spawnX = W/2 + (side * W * 0.35); 
     gameState.animal = { 
         img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], 
-        x: spawnX, 
+        x: W/2 + (side * W * 0.35), 
         y: H * 0.35, 
         life: 2.5, 
         s: 0 
@@ -239,9 +261,7 @@ function spawnAnimal() {
 }
 
 function handleMiss() { 
-    gameState.lives--; 
-    AudioSys.err(); 
-    updateHUD(); 
+    gameState.lives--; AudioSys.err(); updateHUD(); 
     if(gameState.lives <= 0) endGame(); 
 }
 
@@ -256,7 +276,7 @@ function updateHUD() {
 }
 
 function input(ex, ey) {
-    if(!gameState.running) return;
+    if(!gameState.running || gameState.paused) return;
     let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 50);
     if(b) {
         let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0];
@@ -271,38 +291,51 @@ function input(ex, ey) {
 function loop(time) {
     if(!gameState.running) return;
     let dt = time - (gameState.lt || time); gameState.lt = time;
-    ctx.clearRect(0,0,W,H);
     
-    let bg = Loader.imgs['bg'];
-    if(bg) {
-        let sc = Math.max(W/bg.width, H/bg.height);
-        ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc);
-    }
+    if(!gameState.paused) {
+        ctx.clearRect(0,0,W,H);
+        let bg = Loader.imgs['bg'];
+        if(bg) {
+            let sc = Math.max(W/bg.width, H/bg.height);
+            ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc);
+        }
 
-    gameState.st += dt; 
-    if(gameState.st > 2200/(gameState.speed||1)) { 
-        gameState.trash.push(new Trash()); 
-        gameState.st=0; 
-    }
-    
-    gameState.trash.forEach(t => { t.update(dt); t.draw(); });
-    gameState.trash = gameState.trash.filter(t => !t.die);
-    gameState.bins.forEach(b => b.draw());
+        gameState.st += dt; 
+        if(gameState.st > 2200/(gameState.speed||1)) { 
+            gameState.trash.push(new Trash()); 
+            gameState.st=0; 
+        }
+        
+        gameState.trash.forEach(t => { t.update(dt); t.draw(); });
+        gameState.trash = gameState.trash.filter(t => !t.die);
+        gameState.bins.forEach(b => b.draw());
 
-    if(gameState.animal) {
-        let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
-        let sz = Math.min(W,H) * 0.25 * a.s; 
-        if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
-        if(a.life <= 0) gameState.animal = null;
+        if(gameState.animal) {
+            let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
+            let sz = Math.min(W,H) * 0.25 * a.s; 
+            if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
+            if(a.life <= 0) gameState.animal = null;
+        }
     }
     requestAnimationFrame(loop);
 }
 
+document.getElementById('mute-btn').onclick = () => {
+    AudioSys.isMuted = !AudioSys.isMuted;
+    document.getElementById('mute-btn').innerText = AudioSys.isMuted ? "🔇" : "🔊";
+};
+
+document.getElementById('pause-btn-hud').onclick = () => {
+    gameState.paused = !gameState.paused;
+    document.getElementById('pause-btn-hud').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА";
+};
+
 function startGame() {
     AudioSys.init();
-    gameState = { running: true, score: 0, lives: 5, count: 0, speed: 1, trash: [], st: 1500, lt: performance.now(), animal: null };
+    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speed: 1, speedLevel: 1, trash: [], st: 1500, lt: performance.now(), animal: null };
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     document.getElementById('stat-text').innerText = "Очки: 0";
+    document.getElementById('speed-text').innerText = "Скорость: 1";
     resize(); updateHUD(); requestAnimationFrame(loop);
 }
 
@@ -316,11 +349,7 @@ function resize() {
     W = window.innerWidth; H = window.innerHeight;
     canvas.width = W; canvas.height = H;
     let ks = Object.keys(TYPES);
-    if(gameState.bins) {
-        gameState.bins.forEach((b, i) => b.updatePos(i, ks.length));
-    } else {
-        gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
-    }
+    gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
 }
 
 window.addEventListener('resize', resize);
@@ -333,9 +362,7 @@ canvas.addEventListener('touchstart', e => {
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('restart-btn').addEventListener('click', startGame);
 
-Loader.load().then(() => {
-    resize();
-});
+Loader.load().then(() => resize());
 </script>
 </body>
 </html>
