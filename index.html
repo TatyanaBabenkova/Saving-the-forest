@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Финал</title>
+    <title>Эко-Тропа</title>
     <style>
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
@@ -15,19 +15,7 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
         
-        /* --- СТАБИЛЬНЫЙ ИНТЕРФЕЙС (HUD) --- */
-        .hud { 
-            pointer-events: auto; 
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
-            color: white; 
-            padding: 10px 15px; 
-            /* Используем GRID для жесткой фиксации элементов */
-            display: grid;
-            grid-template-columns: 100px 1fr 140px; /* Лево (Очки), Центр (Жизни), Право (Кнопки) */
-            align-items: start;
-        }
-
-        /* Стиль капсул */
+        /* ГЛОБАЛЬНЫЕ СТИЛИ ЭЛЕМЕНТОВ */
         .stat-capsule {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -35,103 +23,80 @@
             padding: 6px 14px;
             font-size: 16px;
             font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            white-space: nowrap;
-            backdrop-filter: blur(4px);
-            color: white;
-            width: fit-content;
+            display: inline-flex; align-items: center; white-space: nowrap;
+            backdrop-filter: blur(4px); color: white; height: 36px; box-sizing: border-box;
         }
 
-        /* Правая часть (Скорость + Кнопки) */
-        .hud-right {
-            display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
-        }
-        .control-group { display: flex; gap: 8px; }
-
-        /* Кнопки */
+        .control-group { display: flex; gap: 8px; pointer-events: auto; }
+        
         #mute-btn, #pause-btn-hud { 
             background: rgba(255,255,255,0.2); 
             border: 1px solid rgba(255,255,255,0.6); 
             color: white; border-radius: 12px; cursor: pointer; 
             display: flex; align-items: center; justify-content: center;
-            height: 38px;
+            height: 36px; box-sizing: border-box;
         }
         #mute-btn { font-size: 20px; width: 40px; }
         #pause-btn-hud { font-size: 14px; font-weight: bold; padding: 0 15px; }
 
-        /* Центральная часть (Жизни) */
-        .hud-center { display: flex; justify-content: center; }
-        
         .lives-wrapper {
             display: flex; gap: 5px; align-items: center; justify-content: center;
-            min-height: 40px;
-            /* Подложка для жизней (чтобы не терялись) */
             background: rgba(0, 0, 0, 0.25);
             border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 30px;
-            padding: 5px 15px;
-            backdrop-filter: blur(2px);
+            border-radius: 30px; padding: 5px 15px;
+            backdrop-filter: blur(2px); height: fit-content;
         }
-        
-        /* Листочки КРУПНЫЕ */
-        .life-leaf { width: 45px; height: 45px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
+        .life-leaf { width: 50px; height: 50px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
 
-        /* АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНА (ПОРТРЕТ) */
+        /* HUD - ВЕРТИКАЛЬНЫЙ РЕЖИМ (ТЕЛЕФОН) */
+        .hud-portrait {
+            display: flex; flex-direction: column; gap: 10px;
+            padding: 10px 15px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
+        }
+        /* Верхняя строка: Очки */
+        .hud-row-top { width: 100%; display: flex; }
+        /* Средняя строка: Скорость слева, Кнопки справа */
+        .hud-row-mid { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+        /* Нижняя строка: Жизни по центру */
+        .hud-row-bot { width: 100%; display: flex; justify-content: center; margin-top: 5px; }
+
+        /* HUD - ГОРИЗОНТАЛЬНЫЙ РЕЖИМ (ПК/ПЛАНШЕТ) */
+        .hud-landscape {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr; /* Три колонки, центр по содержимому */
+            align-items: start;
+            padding: 15px 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
+        }
+        .hud-col-left { display: flex; justify-content: flex-start; }
+        .hud-col-center { display: flex; justify-content: center; }
+        .hud-col-right { display: flex; justify-content: flex-end; gap: 15px; align-items: center; }
+
+        /* Управление видимостью HUD через JS */
+        .hud-portrait { display: none; }
+        .hud-landscape { display: none; }
+        
         @media (orientation: portrait) {
-            .hud {
-                display: flex; flex-direction: column; gap: 10px;
-            }
-            .hud-top-row { 
-                display: flex; justify-content: space-between; width: 100%; 
-            }
-            .hud-center {
-                order: 2; width: 100%; margin-top: 5px;
-            }
-            /* В портрете жизни по центру внизу шапки */
-            .lives-wrapper { width: auto; align-self: center; border: 2px solid rgba(255,255,255,0.3); }
-            .life-leaf { width: 50px; height: 50px; } /* Еще крупнее на телефоне */
-            
-            /* Скрываем структуру грида в портрете и переопределяем */
-            .hud-right { flex-direction: row; align-items: center; }
+            .hud-portrait { display: flex; }
+        }
+        @media (orientation: landscape) {
+            .hud-landscape { display: grid; }
         }
 
         /* ЭКРАНЫ */
-        .screen { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            display: flex; flex-direction: column; align-items: center; 
-            justify-content: flex-start; z-index: 100; color: white; text-align: center; 
-        }
-        .screen-bg { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: url('IMG/bg_forest.png') no-repeat center center; 
-            background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); 
-        }
-        
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; color: white; text-align: center; }
+        .screen-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('IMG/bg_forest.png') no-repeat center center; background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); }
         .start-content { margin-top: 15vh; display: flex; flex-direction: column; align-items: center; max-width: 90%; }
-        
-        h1 {
-            color: #76FF03; font-size: 42px; margin: 0 0 20px 0;
-            text-shadow: 2px 2px 0 #1B5E20, -1px -1px 0 #1B5E20, 1px -1px 0 #1B5E20, -1px 1px 0 #1B5E20, 1px 1px 0 #1B5E20, 0px 4px 10px rgba(0,0,0,0.5);
-        }
-
-        .btn { 
-            pointer-events: auto; background: #4CAF50; border: none; 
-            padding: 16px 50px; color: white; font-size: 24px; font-weight: bold; 
-            border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
-            text-transform: uppercase; letter-spacing: 1px; margin-top: 20px;
-        }
+        h1 { color: #76FF03; font-size: 42px; margin: 0 0 20px 0; text-shadow: 2px 2px 0 #1B5E20, -1px -1px 0 #1B5E20, 1px -1px 0 #1B5E20, -1px 1px 0 #1B5E20, 1px 1px 0 #1B5E20, 0px 4px 10px rgba(0,0,0,0.5); }
+        .btn { pointer-events: auto; background: #4CAF50; border: none; padding: 16px 50px; color: white; font-size: 24px; font-weight: bold; border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; text-transform: uppercase; letter-spacing: 1px; margin-top: 20px; }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
         
+        /* КАРТИНКИ ВНИЗУ ЗАСТАВКИ */
         .tut { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-around; align-items: flex-end; }
         .tut-i { display: flex; flex-direction: column; align-items: center; flex: 1; }
         .tut-img { width: 90%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
-        
-        .bin-l { 
-            font-size: 13px; font-weight: bold; background: #000; color: #fff; 
-            padding: 4px 8px; border-radius: 6px; margin-top: 5px; 
-            /* Скрываем надписи на заставке в горизонте, показываем в вертикали скриптом */
-        }
+        .bin-l { font-size: 13px; font-weight: bold; background: #000; color: #fff; padding: 4px 8px; border-radius: 6px; margin-top: 5px; }
         
         .hidden { display: none !important; }
         .speed-val { color: #FFEB3B; margin-left: 5px; }
@@ -139,23 +104,34 @@
 </head>
 <body>
     <div id="ui-layer">
-        <div class="hud">
-            <div class="hud-top-row" style="display:contents"> <div class="stat-capsule" style="grid-column: 1;">
-                    ⭐ <span id="stat-text" style="margin-left:5px">0</span>
-                </div>
-                
-                <div class="hud-right" style="grid-column: 3;">
-                    <div class="stat-capsule">🚀 <span id="speed-text" class="speed-val">1</span></div>
-                    <div class="control-group">
-                        <button id="mute-btn">🔊</button>
-                        <button id="pause-btn-hud">ПАУЗА</button>
-                    </div>
+        <div class="hud-portrait">
+            <div class="hud-row-top">
+                <div class="stat-capsule">⭐ <span class="score-display" style="margin-left:5px">0</span></div>
+            </div>
+            <div class="hud-row-mid">
+                <div class="stat-capsule">🚀 <span class="speed-display speed-val">1</span></div>
+                <div class="control-group">
+                    <button class="mute-btn-cls" id="mute-btn-p">🔊</button>
+                    <button class="pause-btn-cls" id="pause-btn-p">ПАУЗА</button>
                 </div>
             </div>
+            <div class="hud-row-bot">
+                <div class="lives-wrapper lives-container-cls"></div>
+            </div>
+        </div>
 
-            <div class="hud-center" style="grid-column: 2;">
-                <div class="lives-wrapper">
-                    <div id="lives-container"></div>
+        <div class="hud-landscape">
+            <div class="hud-col-left">
+                <div class="stat-capsule">⭐ <span class="score-display" style="margin-left:5px">0</span></div>
+            </div>
+            <div class="hud-col-center">
+                <div class="lives-wrapper lives-container-cls"></div>
+            </div>
+            <div class="hud-col-right">
+                <div class="stat-capsule">🚀 <span class="speed-display speed-val">1</span></div>
+                <div class="control-group">
+                    <button class="mute-btn-cls" id="mute-btn-l">🔊</button>
+                    <button class="pause-btn-cls" id="pause-btn-l">ПАУЗА</button>
                 </div>
             </div>
         </div>
@@ -201,25 +177,18 @@ const TYPES = {
     GLA: { id: 'glass', name: 'Стекло', img: 'bin_glass.png', imgSm: 'bin_glass_sm.png', pref: 'trash_jar' }
 };
 
-// --- МГНОВЕННАЯ ИНИЦИАЛИЗАЦИЯ ЗАСТАВКИ ---
+// --- СТАРТОВАЯ ИНИЦИАЛИЗАЦИЯ ЗАСТАВКИ ---
 (function initStartScreen() {
     const isL = window.innerWidth > window.innerHeight;
     const container = document.getElementById('tutorial-bins');
     const labels = container.querySelectorAll('.bin-l');
-    
-    // Показываем/скрываем подписи на старте в зависимости от ориентации
     labels.forEach(l => l.style.display = isL ? 'none' : 'block');
-
     container.querySelectorAll('.tut-img').forEach(img => {
         const typeKey = img.getAttribute('data-id');
         const type = TYPES[typeKey];
-        if(type) {
-            // Сразу ставим правильную картинку
-            img.src = ASSETS + (isL ? type.imgSm : type.img);
-        }
+        if(type) img.src = ASSETS + (isL ? type.imgSm : type.img);
     });
 })();
-// -----------------------------------------
 
 const AudioSys = {
     ctx: null, mute: false,
@@ -276,52 +245,42 @@ class Fragment {
 }
 
 class Bin {
-    constructor(cfg, i, total) { this.cfg = cfg; this.scale = 1; this.i = i; this.total = total; }
-    
-    // ЛОГИКА ЕДИНОГО РАЗМЕРА
-    static updateAll(bins) {
+    constructor(cfg, i, total) { this.cfg = cfg; this.scale = 1; this.updatePos(i, total); }
+    updatePos(i, total) {
         let winW = window.innerWidth, winH = window.innerHeight;
         let isL = winW > winH;
-        let maxH = winH * (isL ? 0.25 : 0.45); // Максимально разрешенная высота
-        let gap = winW / bins.length;
-        let allowedW = gap * 0.98; // Максимально разрешенная ширина (чтобы не слиплись)
+        let gap = winW / total;
+        
+        // УПРОЩЕННАЯ И НАДЕЖНАЯ ЛОГИКА РАЗМЕРОВ
+        // Вместо вычислений общего масштаба, просто вписываем в клетку
+        let cellW = gap * 0.95; // Макс ширина бака (с отступом)
+        let cellH = winH * (isL ? 0.25 : 0.35); // Макс высота бака (чуть меньше чем раньше, чтобы влезли подписи)
 
-        // 1. Вычисляем общий масштаб, чтобы ВСЕ баки влезли
-        let commonScale = 10000; // Начинаем с большого числа
-
-        bins.forEach(b => {
-            const imgKey = isL ? 'b_sm_' + b.cfg.id : 'b_' + b.cfg.id;
-            const img = Loader.imgs[imgKey];
-            if (img) {
-                // Масштаб по высоте
-                let sH = maxH / img.height;
-                // Масштаб по ширине
-                let sW = allowedW / img.width;
-                // Берем наименьший, чтобы бак влез целиком
-                let localMin = Math.min(sH, sW);
-                
-                // Ищем "слабое звено" среди всех баков
-                if (localMin < commonScale) commonScale = localMin;
+        const imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
+        const img = Loader.imgs[imgKey];
+        
+        if (img && img.width > 0) {
+            let ratio = img.width / img.height;
+            // Пробуем вписать по высоте
+            this.h = cellH;
+            this.w = this.h * ratio;
+            // Если вылезло по ширине, вписываем по ширине
+            if (this.w > cellW) {
+                this.w = cellW;
+                this.h = this.w / ratio;
             }
-        });
-
-        // 2. Применяем общий масштаб ко всем
-        bins.forEach(b => {
-            const imgKey = isL ? 'b_sm_' + b.cfg.id : 'b_' + b.cfg.id;
-            const img = Loader.imgs[imgKey];
-            if (img) {
-                b.w = img.width * commonScale;
-                b.h = img.height * commonScale;
-            } else {
-                b.w = allowedW; b.h = maxH; // Фолбэк
-            }
-            b.x = b.i * gap + (gap - b.w) / 2;
-            b.y = winH - b.h - (isL ? 15 : 45);
-        });
+        } else {
+            // Фолбэк если картинка еще не прогрузилась (чтобы не было пустоты)
+            this.w = cellW; this.h = cellH;
+        }
+        
+        this.x = i * gap + (gap - this.w) / 2; 
+        // Поднимаем чуть выше в вертикалке, чтобы влез текст
+        this.y = winH - this.h - (isL ? 15 : 55); 
     }
-
     draw() {
-        let isL = window.innerWidth > window.innerHeight;
+        let winW = window.innerWidth;
+        let isL = winW > window.innerHeight;
         let imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
         let img = Loader.imgs[imgKey]; if(!img) return;
         
@@ -375,13 +334,13 @@ class Trash {
             if(gameState.count % 10 === 0) spawnAnimal();
             if(gameState.count % 20 === 0) { 
                 gameState.speedLevel++; gameState.speedMultiplier += 0.2; 
-                document.getElementById('speed-text').innerText = gameState.speedLevel;
+                updateDOM();
             }
         } else { 
             gameState.score = Math.max(0, gameState.score - 5); 
             AudioSys.err(); this.explode(); 
         }
-        document.getElementById('stat-text').innerText = gameState.score;
+        updateDOM();
     }
     draw() {
         let winW = window.innerWidth, winH = window.innerHeight;
@@ -399,12 +358,17 @@ class Trash {
     }
 }
 
-function handleMiss() { gameState.lives--; AudioSys.err(); updateHUD(); if(gameState.lives <= 0) endGame(); }
+function handleMiss() { gameState.lives--; AudioSys.err(); updateDOM(); if(gameState.lives <= 0) endGame(); }
 
-function updateHUD() {
-    let c = document.getElementById('lives-container'); c.innerHTML = '';
+function updateDOM() {
+    // Обновляем все счетчики (и для моб, и для пк)
+    document.querySelectorAll('.score-display').forEach(el => el.innerText = gameState.score);
+    document.querySelectorAll('.speed-display').forEach(el => el.innerText = gameState.speedLevel);
+    
+    let leafHtml = '';
     let leaf = Loader.imgs['leaf'];
-    if(leaf) for(let i=0; i<gameState.lives; i++) c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`;
+    if(leaf) for(let i=0; i<gameState.lives; i++) leafHtml += `<img src="${leaf.src}" class="life-leaf">`;
+    document.querySelectorAll('.lives-container-cls').forEach(el => el.innerHTML = leafHtml);
 }
 
 function spawnAnimal() {
@@ -463,14 +427,26 @@ function loop(time) {
     requestAnimationFrame(loop);
 }
 
-document.getElementById('mute-btn').onclick = () => { AudioSys.mute = !AudioSys.mute; document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊"; };
-document.getElementById('pause-btn-hud').onclick = () => { gameState.paused = !gameState.paused; document.getElementById('pause-btn-hud').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА"; };
+// Привязка событий кнопок (для обоих наборов кнопок - моб и пк)
+const toggleMute = () => { 
+    AudioSys.mute = !AudioSys.mute; 
+    document.querySelectorAll('.mute-btn-cls').forEach(b => b.innerText = AudioSys.mute ? "🔇" : "🔊");
+};
+const togglePause = () => {
+    gameState.paused = !gameState.paused;
+    document.querySelectorAll('.pause-btn-cls').forEach(b => b.innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА");
+};
+
+document.getElementById('mute-btn-p').onclick = toggleMute;
+document.getElementById('mute-btn-l').onclick = toggleMute;
+document.getElementById('pause-btn-p').onclick = togglePause;
+document.getElementById('pause-btn-l').onclick = togglePause;
 
 function startGame() {
     AudioSys.init();
     gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speedMultiplier: 1, speedLevel: 1, trash: [], particles: [], st: 1500, lt: performance.now() };
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    updateHUD();
+    updateDOM();
 }
 
 function endGame() { 
@@ -486,19 +462,13 @@ function resize() {
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.scale(dpr, dpr);
     
-    let ks = Object.keys(TYPES); 
-    gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
+    let ks = Object.keys(TYPES); gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
     
-    // ВАЖНО: Выравниваем баки под одну гребенку
-    Bin.updateAll(gameState.bins);
-    
-    // Обновляем HTML заставку (для переворота экрана)
     const container = document.getElementById('tutorial-bins'); 
     if(container) { 
         const isL = W > H; 
         const labels = container.querySelectorAll('.bin-l');
         labels.forEach(l => l.style.display = isL ? 'none' : 'block');
-        
         container.querySelectorAll('.tut-img').forEach((img, i) => {
             const key = Object.keys(TYPES)[i];
             const t = TYPES[key];
