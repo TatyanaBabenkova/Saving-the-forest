@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа</title>
+    <title>Эко-Тропа: Мобильная версия</title>
     <style>
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
@@ -14,11 +14,11 @@
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
         .hud { 
             pointer-events: auto; background: rgba(0,0,0,0.6); color: white; 
-            padding: 10px 20px; display: flex; justify-content: space-between; 
+            padding: 10px 15px; display: flex; justify-content: space-between; 
             align-items: center; backdrop-filter: blur(5px); 
         }
         
-        .hud-controls { display: flex; gap: 10px; align-items: center; }
+        .hud-controls { display: flex; gap: 8px; align-items: center; }
         
         .screen { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -31,51 +31,44 @@
             background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); 
         }
         
-        /* Спустили блок старта ниже */
         .start-content {
-            margin-top: 25vh;
+            margin-top: 22vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            max-width: 85%;
+            max-width: 90%;
         }
 
         .btn { 
             pointer-events: auto; background: #4CAF50; border: none; 
-            padding: 14px 45px; color: white; font-size: 24px; font-weight: bold; 
-            border-radius: 15px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
-            margin-top: 25px;
+            padding: 16px 50px; color: white; font-size: 26px; font-weight: bold; 
+            border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
+            margin-top: 20px;
         }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
         
         #mute-btn, #pause-btn-hud {
             background: rgba(255,255,255,0.2); border: 1px solid white; color: white;
-            border-radius: 10px; cursor: pointer; padding: 5px 10px; font-size: 14px;
+            border-radius: 12px; cursor: pointer; padding: 8px 12px; font-size: 16px;
         }
 
         .tutorial-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
             display: flex; justify-content: space-around; align-items: flex-end;
-            padding-bottom: 10px; pointer-events: none;
+            padding-bottom: 45px; pointer-events: none;
         }
         .tut-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .tut-img { width: 90%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
+        .tut-img { width: 95%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
         
-        /* Черные плашки названий как на заставке */
+        /* Крупные надписи для мобильных */
         .bin-label { 
-            font-size: 11px; font-weight: bold; background: #000; color: #fff;
-            padding: 2px 8px; border-radius: 5px; margin-bottom: 4px; white-space: nowrap;
+            font-size: 16px; font-weight: bold; background: #000; color: #fff;
+            padding: 4px 10px; border-radius: 6px; margin-bottom: 6px; white-space: nowrap;
         }
 
-        #lives-container { display: flex; gap: 5px; }
-        .life-leaf { width: 25px; height: 25px; object-fit: contain; }
+        #lives-container { display: flex; gap: 4px; }
+        .life-leaf { width: 28px; height: 28px; object-fit: contain; }
         .hidden { display: none !important; }
-
-        @media (max-height: 500px) {
-            .start-content { margin-top: 15vh; }
-            h1 { font-size: 24px; }
-            .btn { padding: 8px 30px; font-size: 18px; }
-        }
     </style>
 </head>
 <body>
@@ -83,7 +76,7 @@
     <div id="ui-layer">
         <div class="hud">
             <div style="display: flex; flex-direction: column; gap: 2px;">
-                <div id="stat-text" style="font-weight: bold; font-size: 16px;">Очки: 0</div>
+                <div id="stat-text" style="font-weight: bold; font-size: 18px;">Очки: 0</div>
                 <div id="speed-text" style="font-weight: bold; font-size: 14px; color: #FFEB3B;">Скорость: 1</div>
             </div>
             <div class="hud-controls">
@@ -98,9 +91,9 @@
         <div class="screen-bg"></div>
         <div class="start-content">
             <h1>Эко-Тропа</h1>
-            <p style="font-size: 18px; line-height: 1.4; text-shadow: 1px 1px 2px #000;">
-                Помоги очистить лес! Нажимай на баки внизу, чтобы поймать летящий мусор. <br>
-                Не допускай, чтобы мусор упал на траву!
+            <p style="font-size: 20px; line-height: 1.4; text-shadow: 2px 2px 4px #000; padding: 0 10px;">
+                Нажимай на баки внизу, чтобы поймать летящий мусор. <br>
+                Очисти лес от отходов!
             </p>
             <button class="btn" id="start-btn">В ПУТЬ</button>
         </div>
@@ -117,7 +110,7 @@
     <div id="game-over-screen" class="screen hidden" style="justify-content: center;">
         <div class="screen-bg" style="filter: grayscale(1) blur(10px);"></div>
         <h1>Игра окончена</h1>
-        <p id="final-score" style="font-size: 24px; margin-bottom: 20px;"></p>
+        <p id="final-score" style="font-size: 28px; margin-bottom: 25px;"></p>
         <button class="btn" id="restart-btn">ЗАНОВО</button>
     </div>
 
@@ -180,9 +173,8 @@ class Bin {
         this.updatePos(i, total);
     }
     updatePos(i, total) {
-        let isLandscape = W > H;
-        // Увеличено на 20% для вертикальной раскладки (портрета)
-        let maxHFactor = isLandscape ? 0.25 : 0.38; 
+        // УВЕЛИЧЕНО ДЛЯ ТЕЛЕФОНА (на 20% больше чем раньше)
+        let maxHFactor = 0.45; 
         let maxH = H * maxHFactor; 
         let gap = W / total;
 
@@ -191,28 +183,27 @@ class Bin {
             let nativeRatio = img.width / img.height;
             this.h = maxH;
             this.w = this.h * nativeRatio;
-            if (this.w > gap * 0.95) {
-                this.w = gap * 0.95;
+            if (this.w > gap * 0.98) {
+                this.w = gap * 0.98;
                 this.h = this.w / nativeRatio;
             }
         }
         this.x = i * gap + (gap - this.w) / 2;
-        this.y = H - this.h - 25; // Оставили место под подписи
+        this.y = H - this.h - 40; // Место под крупные подписи
     }
     draw() {
         let img = Loader.imgs['b_'+this.cfg.id];
         if(!img) return;
         let sw = this.w * this.scale, sh = this.h * this.scale;
         
-        // Отрисовка подписи
+        // КРУПНЫЕ НАДПИСИ (в 2 раза больше)
         ctx.fillStyle = "black";
-        ctx.font = "bold 10px Segoe UI";
+        ctx.font = "bold 20px Segoe UI"; 
         ctx.textAlign = "center";
-        let labelY = this.y + this.h + 15;
+        let labelY = this.y + this.h + 25;
         
-        // Рисуем плашку под текстом
-        let textW = ctx.measureText(this.cfg.name).width + 10;
-        ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 10, textW, 14);
+        let textW = ctx.measureText(this.cfg.name).width + 16;
+        ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 18, textW, 24);
         
         ctx.fillStyle = "white";
         ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
@@ -227,15 +218,14 @@ class Trash {
         let keys = Object.keys(TYPES);
         this.cfg = TYPES[keys[Math.floor(Math.random()*keys.length)]];
         this.skin = Math.floor(Math.random()*5)+1;
-        this.p = 0; this.lane = (Math.random()-0.5)*1.7;
+        this.p = 0; this.lane = (Math.random()-0.5)*1.6;
         this.fly = false; this.t = 0;
-        this.vScale = 1; // Для эффекта уменьшения
+        this.vScale = 1;
     }
     update(dt) {
         if(gameState.paused) return;
         if(this.fly) { 
             this.t += 0.08;
-            // Уменьшаем мусор, когда он залетает за бак
             if(this.t > 0.7) this.vScale = Math.max(0, 1 - (this.t - 0.7) * 3.3);
             if(this.t >= 1) this.resolve(); 
         } else { 
@@ -261,12 +251,12 @@ class Trash {
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
-        let x, y, s, sz = Math.min(W, H) * 0.32;
+        let x, y, s, sz = Math.min(W, H) * 0.35;
         if(this.fly) {
             let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2;
             x = this.sx + (tx-this.sx)*this.t; 
-            y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*180;
-            s = sz * 0.8 * this.vScale; // Применяем уменьшение
+            y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*160;
+            s = sz * 0.8 * this.vScale;
         } else {
             x = W/2 + (this.lane * W * 0.45 * this.p); 
             y = H*0.44 + (H-H*0.44)*this.p;
@@ -282,7 +272,7 @@ function spawnAnimal() {
     gameState.animal = { 
         img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], 
         x: W/2 + (side * W * 0.35), 
-        y: H * 0.35, life: 2.5, s: 0 
+        y: H * 0.3, life: 2.5, s: 0 
     };
 }
 
@@ -303,7 +293,7 @@ function updateHUD() {
 
 function input(ex, ey) {
     if(!gameState.running || gameState.paused) return;
-    let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 30);
+    let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 40);
     if(b) {
         let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0];
         if(t) { 
