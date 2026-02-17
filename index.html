@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>Эко-Тропа: Сортировка</title>
     <style>
+        /* Фиксы высоты для мобильных */
         html { height: -webkit-fill-available; }
         body {
             margin: 0; padding: 0; overflow: hidden;
@@ -49,7 +50,9 @@
         #pause-btn:active { transform: scale(0.95); }
 
         .stat-block { display: flex; align-items: center; gap: 5px; }
+        
         .hud-label { display: inline !important; } 
+        
         .score-text { font-size: 20px; font-weight: bold; color: white; white-space: nowrap; }
         .speed-text { font-size: 20px; font-weight: bold; color: #FFEB3B; white-space: nowrap; }
 
@@ -60,19 +63,36 @@
         }
 
         /* === АДАПТАЦИЯ === */
+
+        /* 1. ПОРТРЕТ (Телефон вертикально) */
         @media (orientation: portrait) {
             .hud-panel { flex-direction: column; gap: 8px; align-items: stretch; padding-bottom: 15px; }
             .hud-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         }
+
+        /* 2. ЛАНДШАФТ (Телефон горизонтально) */
         @media (orientation: landscape) {
             .hud-panel { flex-direction: row; gap: 20px; height: 60px; padding: 5px 30px; }
         }
+
+        /* 3. ДЕСКТОП (ПК) - ПАНЕЛЬ СЛЕВА И ПОЛНОЙ ВЫСОТЫ */
         @media (min-width: 1024px) {
             .hud-panel {
-                position: absolute; top: 20px; left: 20px; right: auto; 
-                width: 320px; 
-                border-radius: 15px; flex-direction: column; align-items: flex-start;
-                gap: 15px; background: rgba(0, 0, 0, 0.6);
+                position: absolute;
+                top: 20px; 
+                left: 20px; 
+                right: auto; 
+                width: 300px; 
+                
+                /* ИСПРАВЛЕНИЕ: Сбрасываем ограничение высоты от landscape */
+                height: auto !important; 
+                padding-bottom: 20px; /* Немного воздуха снизу */
+                
+                border-radius: 15px;
+                flex-direction: column; 
+                align-items: flex-start;
+                gap: 15px;
+                background: rgba(0, 0, 0, 0.6);
             }
             .stat-block { width: 100%; justify-content: space-between; }
             #pause-btn { width: 100%; }
@@ -110,6 +130,7 @@
             .tut-item { width: 110px; } .tut-label { font-size: 16px; padding: 4px 10px; }
             h1 { font-size: 80px; } .subtitle { font-size: 24px; }
         }
+
         @media (max-height: 500px) {
             .tut-item { width: 40px; } h1 { font-size: 40px; margin-bottom: 5px; }
             .subtitle { font-size: 14px; margin-bottom: 10px; } .tutorial-container { margin-bottom: 10px; gap: 10px; }
@@ -328,8 +349,7 @@ class Trash {
         if (this.isDragging) visualScale = 1.0;
 
         const minDim = Math.min(width, height); 
-        // === УВЕЛИЧЕННЫЙ МУСОР (1.5x) ===
-        // Было 0.35, стало 0.5 (для портретного режима будет крупнее)
+        // === УВЕЛИЧЕННЫЙ МУСОР ===
         let maxSize = Math.min(minDim * 0.5, 330); 
         let size = maxSize * visualScale; 
 
@@ -367,25 +387,22 @@ class Bin {
         const isPortrait = height > width;
         const isMobile = width < 900; 
 
-        // 1. ВЕРТИКАЛЬНО (Mobile): ШАХМАТНЫЙ ПОРЯДОК + УВЕЛИЧЕНИЕ 1.5x
+        // 1. ВЕРТИКАЛЬНО (Mobile): ШАХМАТНЫЙ ПОРЯДОК
         if (isPortrait) {
             const margin = 2;
             const availableW = width - (margin * 2);
             
-            // Было availableW / 4.2 -> Стало availableW / 2.8 (1.5x больше)
-            // Это очень широко, они будут наезжать друг на друга по X
-            // Но благодаря шахматному порядку (Y) это будет работать
+            // Широкие баки для вертикали
             const binW = availableW / 2.8; 
             
             this.w = binW; 
             this.h = this.w * 1.3;
             
-            // Распределяем центры равномерно, как и раньше
             const colWidth = availableW / total;
             this.x = margin + (index * colWidth) + (colWidth / 2) - (this.w / 2);
             
             let baseY = 120;
-            // Увеличиваем вертикальный разброс, так как баки стали выше
+            // Увеличили разницу высот до 130px
             if (index % 2 !== 0) {
                 this.y = baseY + 130; 
             } else {
@@ -587,20 +604,21 @@ function resize() {
     
     if (gameState.bins.length > 0) {
         gameState.bins.forEach((bin, i) => bin.recalculate(i, gameState.bins.length));
+    } else {
+        gameState.bins = [];
+        let i = 0; const count = Object.keys(TYPES).length;
+        for (let key in TYPES) gameState.bins.push(new Bin(TYPES[key], i++, count));
     }
-    // Если игра еще не началась, баки создадутся в createBins
 }
 
 function createBins() {
     gameState.bins = [];
     
     // === РАНДОМИЗАЦИЯ БАКОВ ===
-    // Получаем ключи типов и перемешиваем их
     let keys = Object.keys(TYPES);
     shuffleArray(keys);
     
     const count = keys.length;
-    // Создаем баки в случайном порядке
     for (let i = 0; i < count; i++) {
         let typeKey = keys[i];
         gameState.bins.push(new Bin(TYPES[typeKey], i, count));
