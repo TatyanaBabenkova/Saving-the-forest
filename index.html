@@ -30,7 +30,7 @@
         .btn { pointer-events: auto; background: #4CAF50; border: none; padding: 16px 50px; color: white; font-size: 24px; font-weight: bold; border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
         #mute-btn, #pause-btn-hud { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 8px; cursor: pointer; padding: 4px 10px; font-size: 14px; font-weight: bold; }
-        .tut { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-around; align-items: flex-end; }
+        .tut { position: absolute; bottom: 20px; left: 0; width: 100%; display: flex; justify-content: space-around; align-items: flex-end; }
         .tut-i { display: flex; flex-direction: column; align-items: center; flex: 1; }
         .tut-img { width: 90%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
         .bin-l { font-size: 13px; font-weight: bold; background: #000; color: #fff; padding: 3px 6px; border-radius: 4px; margin-top: 5px; }
@@ -54,7 +54,7 @@
         <div class="screen-bg"></div>
         <div class="start-content">
             <h1>Эко-Тропа</h1>
-            <p style="font-size: 18px; line-height: 1.4; text-shadow: 2px 2px 4px #000; padding: 0 20px;">
+            <p id="desc" style="font-size: 18px; line-height: 1.4; text-shadow: 2px 2px 4px #000; padding: 0 20px;">
                 Помоги лесу стать чище! <br>
                 Нажимай на баки внизу, чтобы отправить в них соответствующий мусор. <br>
                 Если мусор пересечет <b>красную линию</b> — лесной листочек завянет. <br>
@@ -62,7 +62,13 @@
             </p>
             <button class="btn" id="start-btn">В ПУТЬ</button>
         </div>
-        <div id="tutorial-bins" class="tut"></div>
+        <div id="tutorial-bins" class="tut">
+            <div class="tut-i"><img src="IMG/bin_organic.png" class="tut-img"><span class="bin-l">Органика</span></div>
+            <div class="tut-i"><img src="IMG/bin_paper.png" class="tut-img"><span class="bin-l">Бумага</span></div>
+            <div class="tut-i"><img src="IMG/bin_plastic.png" class="tut-img"><span class="bin-l">Пластик</span></div>
+            <div class="tut-i"><img src="IMG/bin_met.png" class="tut-img"><span class="bin-l">Металл</span></div>
+            <div class="tut-i"><img src="IMG/bin_glass.png" class="tut-img"><span class="bin-l">Стекло</span></div>
+        </div>
     </div>
     <div id="game-over-screen" class="screen hidden" style="justify-content:center;">
         <div class="screen-bg" style="filter:grayscale(1) blur(10px);"></div>
@@ -93,25 +99,35 @@ const AudioSys = {
             o.start(); o.stop(this.ctx.currentTime + d);
         } catch(e) {}
     },
-    ok() { this.play(600, 'sine', 0.2); },
-    err() { this.play(150, 'sawtooth', 0.3); },
-    pop() { this.play(800, 'triangle', 0.05); }
+    ok() { this.play(600, 'sine', 0.2); }, err() { this.play(150, 'sawtooth', 0.3); }, pop() { this.play(800, 'triangle', 0.05); }
 };
 
 const Loader = {
     imgs: {},
-    async load() {
-        const list = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
-        for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
+    // Принудительная загрузка критически важных файлов в первую очередь
+    async loadCritical() {
+        const critical = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
         Object.keys(TYPES).forEach(k => {
-            list['b_'+TYPES[k].id] = TYPES[k].img;
-            list['b_sm_'+TYPES[k].id] = TYPES[k].imgSm;
-            for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
+            critical['b_'+TYPES[k].id] = TYPES[k].img;
+            critical['b_sm_'+TYPES[k].id] = TYPES[k].imgSm;
         });
-        for(let k in list) {
-            let img = new Image(); img.src = ASSETS + list[k];
+        for(let k in critical) {
+            let img = new Image(); img.src = ASSETS + critical[k];
             await new Promise(r => { img.onload = r; img.onerror = r; });
             this.imgs[k] = img;
+        }
+    },
+    // Фоновая загрузка мусора и животных
+    loadSecondary() {
+        Object.keys(TYPES).forEach(k => {
+            for(let i=1; i<=5; i++) {
+                let img = new Image(); img.src = `${ASSETS}${TYPES[k].pref}${i}.png`;
+                img.onload = () => this.imgs[TYPES[k].pref+i] = img;
+            }
+        });
+        for(let i=1; i<=10; i++) {
+            let img = new Image(); img.src = ASSETS + 'animal' + i + '.png';
+            img.onload = () => this.imgs['a'+i] = img;
         }
     }
 };
@@ -123,10 +139,8 @@ const DEADLINE_Y_RATIO = 0.70;
 class Fragment {
     constructor(x, y) {
         this.x = x; this.y = y;
-        this.vx = (Math.random() - 0.5) * 14;
-        this.vy = (Math.random() - 0.5) * 14;
-        this.life = 1.0;
-        this.size = Math.random() * 8 + 4;
+        this.vx = (Math.random() - 0.5) * 14; this.vy = (Math.random() - 0.5) * 14;
+        this.life = 1.0; this.size = Math.random() * 8 + 4;
         this.color = Math.random() > 0.5 ? '#9e9e9e' : '#616161';
     }
     update() { this.x += this.vx; this.y += this.vy; this.life -= 0.04; }
@@ -142,6 +156,8 @@ class Bin {
         if (img) {
             let r = img.width / img.height; this.h = maxH; this.w = this.h * r;
             if (this.w > gap * 0.98) { this.w = gap * 0.98; this.h = this.w / r; }
+        } else { // Заглушка до загрузки
+            this.w = gap * 0.8; this.h = maxH;
         }
         this.x = i * gap + (gap - this.w) / 2; this.y = H - this.h - (isL ? 15 : 45); 
     }
@@ -173,17 +189,10 @@ class Trash {
             if(this.t >= 1) this.resolve(); 
         } else { 
             this.p += 0.0022 * (gameState.speedMultiplier || 1) * (dt/16); 
-            
             let sz = (Math.min(W, H) * 0.35) * (0.18 + this.p * 0.82);
             let currentY = (H * 0.44) + (H - H * 0.44) * this.p;
             let lineY = (H * 0.44) + (H - H * 0.44) * DEADLINE_Y_RATIO;
-            
-            // Если мусор коснулся линии - только здесь взрыв и потеря жизни
-            if(currentY + sz/3 >= lineY) { 
-                this.die = 1; 
-                this.explode(); 
-                handleMiss(); 
-            }
+            if(currentY + sz/3 >= lineY) { this.die = 1; this.explode(); handleMiss(); }
         }
     }
     explode() {
@@ -197,12 +206,7 @@ class Trash {
             gameState.score += 10; AudioSys.ok(); gameState.count++; 
             if(gameState.count % 10 === 0) spawnAnimal();
             if(gameState.count % 20 === 0) { gameState.speedLevel++; gameState.speedMultiplier += 0.2; document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedLevel; }
-            // ПРИ ПРАВИЛЬНОМ ПОПАДАНИИ ВЗРЫВА НЕТ
-        } else { 
-            gameState.score = Math.max(0, gameState.score - 5); 
-            AudioSys.err(); 
-            this.explode(); // ВЗРЫВ ПРИ ОШИБКЕ БАКА
-        }
+        } else { gameState.score = Math.max(0, gameState.score - 5); AudioSys.err(); this.explode(); }
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
@@ -243,57 +247,71 @@ function input(ex, ey) {
 }
 
 function loop(time) {
-    if(!gameState.running) return;
     let dt = time - (gameState.lt || time); gameState.lt = time;
-    if(!gameState.paused) {
-        ctx.clearRect(0,0,W,H);
-        let bg = Loader.imgs['bg']; if(bg) { let sc = Math.max(W/bg.width, H/bg.height); ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc); }
-        
+    ctx.clearRect(0,0,W,H);
+    let bg = Loader.imgs['bg']; 
+    if(bg) { let sc = Math.max(W/bg.width, H/bg.height); ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc); }
+    
+    if(gameState.running && !gameState.paused) {
         ctx.beginPath(); ctx.setLineDash([10, 10]); ctx.strokeStyle = "rgba(255, 0, 0, 0.6)"; ctx.lineWidth = 3;
         let lineY = H*0.44 + (H-H*0.44)*DEADLINE_Y_RATIO; ctx.moveTo(0, lineY); ctx.lineTo(W, lineY); ctx.stroke(); ctx.setLineDash([]);
-
         gameState.st += dt; if(gameState.st > 2200/(gameState.speedMultiplier||1)) { gameState.trash.push(new Trash()); gameState.st=0; }
-        
         gameState.trash.forEach(t => { t.update(dt); t.draw(); });
         gameState.trash = gameState.trash.filter(t => !t.die);
-        
         gameState.particles.forEach(p => { p.update(); p.draw(); });
         gameState.particles = gameState.particles.filter(p => p.life > 0);
-
         gameState.bins.forEach(b => b.draw());
         if(gameState.animal) {
             let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
             let sz = Math.min(W,H) * 0.25 * a.s; if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
             if(a.life <= 0) gameState.animal = null;
         }
+    } else if(!gameState.running) {
+        // Отрисовка баков на заставке
+        gameState.bins.forEach(b => b.draw());
     }
     requestAnimationFrame(loop);
 }
 
-document.getElementById('mute-btn').onclick = () => { AudioSys.mute = !AudioSys.mute; document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊"; };
-document.getElementById('pause-btn-hud').onclick = () => { gameState.paused = !gameState.paused; document.getElementById('pause-btn-hud').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА"; };
-
 function startGame() {
     AudioSys.init();
-    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speedMultiplier: 1, speedLevel: 1, trash: [], particles: [], st: 1500, lt: performance.now() };
+    gameState.running = true; gameState.paused = false; gameState.score = 0; gameState.lives = 5; gameState.count = 0; 
+    gameState.speedMultiplier = 1; gameState.speedLevel = 1; gameState.trash = []; gameState.particles = []; gameState.st = 1500;
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    resize(); updateHUD(); requestAnimationFrame(loop);
+    updateHUD();
 }
 
 function endGame() { gameState.running = false; document.getElementById('game-over-screen').classList.remove('hidden'); document.getElementById('final-score').innerText = "Ваш результат: " + gameState.score; }
 
 function resize() {
     W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H;
-    let ks = Object.keys(TYPES); gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
-    const container = document.getElementById('tutorial-bins'); if(container) { const isL = W > H; container.innerHTML = ''; Object.keys(TYPES).forEach(k => { const t = TYPES[k]; const img = isL ? t.imgSm : t.img; container.innerHTML += `<div class="tut-i"><img src="${ASSETS}${img}" class="tut-img"><span class="bin-l">${t.name}</span></div>`; }); }
+    let ks = Object.keys(TYPES); 
+    gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
+    
+    // Обновление картинок в HTML туториале
+    const container = document.getElementById('tutorial-bins');
+    const isL = W > H;
+    container.querySelectorAll('.tut-img').forEach((img, i) => {
+        const type = TYPES[Object.keys(TYPES)[i]];
+        img.src = ASSETS + (isL ? type.imgSm : type.img);
+    });
 }
+
+document.getElementById('mute-btn').onclick = () => { AudioSys.mute = !AudioSys.mute; document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊"; };
+document.getElementById('pause-btn-hud').onclick = () => { gameState.paused = !gameState.paused; document.getElementById('pause-btn-hud').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА"; };
 
 window.addEventListener('resize', resize);
 canvas.addEventListener('mousedown', e => input(e.clientX, e.clientY));
 canvas.addEventListener('touchstart', e => { e.preventDefault(); input(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
 document.getElementById('start-btn').onclick = startGame;
 document.getElementById('restart-btn').onclick = startGame;
-Loader.load().then(() => resize());
+
+// ЗАПУСК: Сначала критическое, потом всё остальное
+Loader.loadCritical().then(() => {
+    resize();
+    requestAnimationFrame(loop);
+    Loader.loadSecondary(); // Докачка в фоне
+});
 </script>
 </body>
 </html>
