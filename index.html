@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Финал</title>
+    <title>Эко-Тропа: Эффект Осколков</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2E7D32; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; }
@@ -26,7 +26,7 @@
         }
         .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; color: white; text-align: center; }
         .screen-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('IMG/bg_forest.png') center/cover; filter: blur(8px); z-index: -1; transform: scale(1.1); }
-        .start-content { margin-top: 20vh; display: flex; flex-direction: column; align-items: center; max-width: 90%; }
+        .start-content { margin-top: 15vh; display: flex; flex-direction: column; align-items: center; max-width: 90%; }
         .btn { pointer-events: auto; background: #4CAF50; border: none; padding: 16px 50px; color: white; font-size: 24px; font-weight: bold; border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
         #mute-btn, #pause-btn-hud { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 8px; cursor: pointer; padding: 4px 10px; font-size: 14px; font-weight: bold; }
@@ -52,7 +52,16 @@
     </div>
     <div id="start-screen" class="screen">
         <div class="screen-bg"></div>
-        <div class="start-content"><h1>Эко-Тропа</h1><p style="font-size:18px; text-shadow:2px 2px 4px #000;">Очисти лес от мусора!</p><button class="btn" id="start-btn">В ПУТЬ</button></div>
+        <div class="start-content">
+            <h1>Эко-Тропа</h1>
+            <p style="font-size: 18px; line-height: 1.4; text-shadow: 2px 2px 4px #000; padding: 0 20px;">
+                Помоги лесу стать чище! <br>
+                Нажимай на баки внизу, чтобы отправить в них соответствующий мусор. <br>
+                Если мусор пересечет <b>красную линию</b> — ты потеряешь жизнь. <br>
+                Будь внимателен, скорость со временем растет!
+            </p>
+            <button class="btn" id="start-btn">В ПУТЬ</button>
+        </div>
         <div id="tutorial-bins" class="tut"></div>
     </div>
     <div id="game-over-screen" class="screen hidden" style="justify-content:center;">
@@ -63,18 +72,18 @@
 
 <script>
 const ASSETS = 'IMG/', TYPES = {
-    ORG: { id: 'organic', name: 'Органика', img: 'bin_organic.png', imgSm: 'bin_organic_sm.png', pref: 'trash_apple' },
-    PAP: { id: 'paper', name: 'Бумага', img: 'bin_paper.png', imgSm: 'bin_paper_sm.png', pref: 'trash_newspaper' },
-    PLA: { id: 'plastic', name: 'Пластик', img: 'bin_plastic.png', imgSm: 'bin_plastic_sm.png', pref: 'trash_bottle' },
-    MET: { id: 'metal', name: 'Металл', img: 'bin_met.png', imgSm: 'bin_met_sm.png', pref: 'trash_can' },
-    GLA: { id: 'glass', name: 'Стекло', img: 'bin_glass.png', imgSm: 'bin_glass_sm.png', pref: 'trash_jar' }
+    ORG: { id: 'organic', name: 'Органика', img: 'bin_organic.png', imgSm: 'bin_organic_sm.png', pref: 'trash_apple', color: '#8BC34A' },
+    PAP: { id: 'paper', name: 'Бумага', img: 'bin_paper.png', imgSm: 'bin_paper_sm.png', pref: 'trash_newspaper', color: '#2196F3' },
+    PLA: { id: 'plastic', name: 'Пластик', img: 'bin_plastic.png', imgSm: 'bin_plastic_sm.png', pref: 'trash_bottle', color: '#FF9800' },
+    MET: { id: 'metal', name: 'Металл', img: 'bin_met.png', imgSm: 'bin_met_sm.png', pref: 'trash_can', color: '#9E9E9E' },
+    GLA: { id: 'glass', name: 'Стекло', img: 'bin_glass.png', imgSm: 'bin_glass_sm.png', pref: 'trash_jar', color: '#00BCD4' }
 };
 
 const AudioSys = {
     ctx: null, mute: false,
     init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
     play(f, t, d) {
-        if(!this.ctx || this.mute) return; // Проверка выключения звука
+        if(!this.ctx || this.mute) return;
         try {
             let o = this.ctx.createOscillator(), g = this.ctx.createGain();
             o.type = t; o.frequency.value = f;
@@ -108,8 +117,30 @@ const Loader = {
 };
 
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
-let W, H, gameState = { running: false, paused: false };
-const DEADLINE_Y_RATIO = 0.85; // Линия края: 85% пути (до баков)
+let W, H, gameState = { running: false, paused: false, particles: [] };
+const DEADLINE_Y_RATIO = 0.80; // Сдвинута на 80%
+
+// Класс для осколков
+class Fragment {
+    constructor(x, y) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 12;
+        this.vy = (Math.random() - 0.5) * 12;
+        this.life = 1.0;
+        this.size = Math.random() * 8 + 4;
+        this.color = Math.random() > 0.5 ? '#888' : '#555'; // Серые осколки
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        this.life -= 0.04;
+    }
+    draw() {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+        ctx.globalAlpha = 1;
+    }
+}
 
 class Bin {
     constructor(cfg, i, total) { this.cfg = cfg; this.scale = 1; this.updatePos(i, total); }
@@ -151,8 +182,19 @@ class Trash {
             if(this.t >= 1) this.resolve(); 
         } else { 
             this.p += 0.0022 * (gameState.speedMultiplier || 1) * (dt/16); 
-            if(this.p > DEADLINE_Y_RATIO) { this.die=1; handleMiss(); } // Порог "линии края"
+            // Мгновенное "сгорание" при достижении линии
+            if(this.p >= DEADLINE_Y_RATIO) {
+                this.die=1;
+                this.explode();
+                handleMiss();
+            }
         }
+    }
+    explode() {
+        // Создаем осколки в текущей позиции мусора
+        let x = W/2 + (this.lane * W * 0.45 * this.p);
+        let y = H*0.44 + (H-H*0.44)*this.p;
+        for(let i=0; i<15; i++) gameState.particles.push(new Fragment(x, y));
     }
     resolve() {
         this.die = 1;
@@ -163,7 +205,11 @@ class Trash {
                 gameState.speedLevel++; gameState.speedMultiplier += 0.2;
                 document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedLevel;
             }
-        } else { gameState.score = Math.max(0, gameState.score - 5); AudioSys.err(); }
+        } else { 
+            gameState.score = Math.max(0, gameState.score - 5); 
+            AudioSys.err(); 
+            this.explode(); // Взрыв при ошибке тоже добавим для красоты
+        }
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
@@ -210,13 +256,17 @@ function loop(time) {
         ctx.clearRect(0,0,W,H);
         let bg = Loader.imgs['bg']; if(bg) { let sc = Math.max(W/bg.width, H/bg.height); ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc); }
         
-        // РИСУЕМ КРАЙ (DEADLINE)
-        ctx.beginPath(); ctx.setLineDash([10, 10]); ctx.strokeStyle = "rgba(255, 0, 0, 0.4)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.setLineDash([10, 10]); ctx.strokeStyle = "rgba(255, 0, 0, 0.5)"; ctx.lineWidth = 3;
         let lineY = H*0.44 + (H-H*0.44)*DEADLINE_Y_RATIO; ctx.moveTo(0, lineY); ctx.lineTo(W, lineY); ctx.stroke(); ctx.setLineDash([]);
 
         gameState.st += dt; if(gameState.st > 2200/(gameState.speedMultiplier||1)) { gameState.trash.push(new Trash()); gameState.st=0; }
+        
         gameState.trash.forEach(t => { t.update(dt); t.draw(); });
         gameState.trash = gameState.trash.filter(t => !t.die);
+
+        gameState.particles.forEach(p => { p.update(); p.draw(); });
+        gameState.particles = gameState.particles.filter(p => p.life > 0);
+
         gameState.bins.forEach(b => b.draw());
         if(gameState.animal) {
             let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
@@ -227,19 +277,12 @@ function loop(time) {
     requestAnimationFrame(loop);
 }
 
-document.getElementById('mute-btn').onclick = () => {
-    AudioSys.mute = !AudioSys.mute; // Тоггл состояния
-    document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊";
-};
-
-document.getElementById('pause-btn-hud').onclick = () => {
-    gameState.paused = !gameState.paused;
-    document.getElementById('pause-btn-hud').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА";
-};
+document.getElementById('mute-btn').onclick = () => { AudioSys.mute = !AudioSys.mute; document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊"; };
+document.getElementById('pause-btn-hud').onclick = () => { gameState.paused = !gameState.paused; document.getElementById('pause-btn-hud').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА"; };
 
 function startGame() {
     AudioSys.init();
-    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speedMultiplier: 1, speedLevel: 1, trash: [], st: 1500, lt: performance.now() };
+    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speedMultiplier: 1, speedLevel: 1, trash: [], particles: [], st: 1500, lt: performance.now() };
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     resize(); updateHUD(); requestAnimationFrame(loop);
 }
