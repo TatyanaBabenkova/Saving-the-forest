@@ -3,127 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Финальная Версия</title>
+    <title>Эко-Тропа: Финал</title>
     <style>
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background: #2E7D32; font-family: 'Segoe UI', sans-serif; 
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2E7D32; font-family: 'Segoe UI', sans-serif; }
         canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; }
-        
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
-        
         .hud { 
             pointer-events: auto; background: rgba(30, 45, 60, 0.9); color: white; 
             padding: 8px 15px; display: flex; backdrop-filter: blur(5px); 
             border-bottom: 2px solid rgba(255,255,255,0.1);
         }
-        
         .hud-row { display: flex; align-items: center; }
         .hud-controls { display: flex; gap: 10px; align-items: center; }
-
         @media (orientation: portrait) {
             .hud { flex-direction: column; gap: 8px; }
             .hud-row { justify-content: space-between; width: 100%; }
             .hud-lives-row { justify-content: center; }
         }
-
         @media (orientation: landscape) {
             .hud { flex-direction: row; justify-content: space-between; align-items: center; height: 50px; }
             .hud-row { gap: 20px; }
         }
-
-        .screen { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            display: flex; flex-direction: column; align-items: center; 
-            justify-content: flex-start; z-index: 100; color: white; text-align: center; 
-        }
-        .screen-bg { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: url('IMG/bg_forest.png') no-repeat center center; 
-            background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); 
-        }
-        
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; z-index: 100; color: white; text-align: center; }
+        .screen-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('IMG/bg_forest.png') center/cover; filter: blur(8px); z-index: -1; transform: scale(1.1); }
         .start-content { margin-top: 20vh; display: flex; flex-direction: column; align-items: center; max-width: 90%; }
-
-        .btn { 
-            pointer-events: auto; background: #4CAF50; border: none; 
-            padding: 16px 50px; color: white; font-size: 24px; font-weight: bold; 
-            border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
-            margin-top: 20px;
-        }
+        .btn { pointer-events: auto; background: #4CAF50; border: none; padding: 16px 50px; color: white; font-size: 24px; font-weight: bold; border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
-        
-        #mute-btn, #pause-btn-hud {
-            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.5); color: white;
-            border-radius: 8px; cursor: pointer; padding: 4px 10px; font-size: 14px; font-weight: bold;
-        }
-
-        .tutorial-overlay {
-            position: absolute; bottom: 20px; left: 0; width: 100%;
-            display: flex; justify-content: space-around; align-items: flex-end;
-            pointer-events: none;
-        }
-        .tut-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        #mute-btn, #pause-btn-hud { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.5); color: white; border-radius: 8px; cursor: pointer; padding: 4px 10px; font-size: 14px; font-weight: bold; }
+        .tut { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-around; align-items: flex-end; }
+        .tut-i { display: flex; flex-direction: column; align-items: center; flex: 1; }
         .tut-img { width: 90%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
-        
-        /* Надписи только в портретном режиме */
-        .bin-label { 
-            font-size: 13px; font-weight: bold; background: #000; color: #fff;
-            padding: 3px 6px; border-radius: 4px; margin-top: 5px; white-space: nowrap;
-            display: none; /* По умолчанию скрыто */
-        }
-        @media (orientation: portrait) {
-            .bin-label { display: block; }
-        }
-
+        .bin-l { font-size: 13px; font-weight: bold; background: #000; color: #fff; padding: 3px 6px; border-radius: 4px; margin-top: 5px; }
         #lives-container { display: flex; gap: 10px; align-items: center; }
         .life-leaf { width: 55px; height: 55px; object-fit: contain; } 
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
-
     <div id="ui-layer">
         <div class="hud">
+            <div class="hud-row"><div id="stat-text" style="font-weight:bold; font-size:18px;">Очки: 0</div></div>
             <div class="hud-row">
-                <div id="stat-text" style="font-weight: bold; font-size: 18px;">Очки: 0</div>
+                <div id="speed-text" style="font-weight:bold; font-size:15px; color:#FFEB3B;">Скорость: 1</div>
+                <div class="hud-controls"><button id="mute-btn">🔊</button><button id="pause-btn-hud">ПАУЗА</button></div>
             </div>
-            <div class="hud-row">
-                <div id="speed-text" style="font-weight: bold; font-size: 15px; color: #FFEB3B;">Скорость: 1</div>
-                <div class="hud-controls">
-                    <button id="mute-btn">🔊</button>
-                    <button id="pause-btn-hud">ПАУЗА</button>
-                </div>
-            </div>
-            <div class="hud-row hud-center hud-lives-row">
-                <div id="lives-container"></div>
-            </div>
+            <div class="hud-row hud-lives-row"><div id="lives-container"></div></div>
         </div>
     </div>
-
     <div id="start-screen" class="screen">
         <div class="screen-bg"></div>
-        <div class="start-content">
-            <h1>Эко-Тропа</h1>
-            <p style="font-size: 18px; text-shadow: 2px 2px 4px #000;">Очисти лес от мусора!</p>
-            <button class="btn" id="start-btn">В ПУТЬ</button>
-        </div>
-        <div id="tutorial-bins" class="tutorial-overlay"></div>
+        <div class="start-content"><h1>Эко-Тропа</h1><p style="font-size:18px; text-shadow:2px 2px 4px #000;">Очисти лес от мусора!</p><button class="btn" id="start-btn">В ПУТЬ</button></div>
+        <div id="tutorial-bins" class="tut"></div>
     </div>
-
-    <div id="game-over-screen" class="screen hidden" style="justify-content: center;">
-        <div class="screen-bg" style="filter: grayscale(1) blur(10px);"></div>
-        <h1>Игра окончена</h1>
-        <p id="final-score" style="font-size: 28px; margin-bottom: 25px;"></p>
-        <button class="btn" id="restart-btn">ЗАНОВО</button>
+    <div id="game-over-screen" class="screen hidden" style="justify-content:center;">
+        <div class="screen-bg" style="filter:grayscale(1) blur(10px);"></div>
+        <h1>Игра окончена</h1><p id="final-score" style="font-size:28px; margin-bottom:25px;"></p><button class="btn" id="restart-btn">ЗАНОВО</button>
     </div>
-
     <canvas id="gameCanvas"></canvas>
 
 <script>
-const ASSETS = 'IMG/';
-const TYPES = {
+const ASSETS = 'IMG/', TYPES = {
     ORG: { id: 'organic', name: 'Органика', img: 'bin_organic.png', imgSm: 'bin_organic_sm.png', pref: 'trash_apple' },
     PAP: { id: 'paper', name: 'Бумага', img: 'bin_paper.png', imgSm: 'bin_paper_sm.png', pref: 'trash_newspaper' },
     PLA: { id: 'plastic', name: 'Пластик', img: 'bin_plastic.png', imgSm: 'bin_plastic_sm.png', pref: 'trash_bottle' },
@@ -132,10 +71,10 @@ const TYPES = {
 };
 
 const AudioSys = {
-    ctx: null, isMuted: false,
+    ctx: null, mute: false,
     init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
     play(f, t, d) {
-        if(!this.ctx || this.isMuted) return;
+        if(!this.ctx || this.mute) return; // Проверка выключения звука
         try {
             let o = this.ctx.createOscillator(), g = this.ctx.createGain();
             o.type = t; o.frequency.value = f;
@@ -161,58 +100,39 @@ const Loader = {
             for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
         });
         for(let k in list) {
-            let img = new Image();
-            img.src = ASSETS + list[k];
+            let img = new Image(); img.src = ASSETS + list[k];
             await new Promise(r => { img.onload = r; img.onerror = r; });
             this.imgs[k] = img;
         }
     }
 };
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 let W, H, gameState = { running: false, paused: false };
+const DEADLINE_Y_RATIO = 0.85; // Линия края: 85% пути (до баков)
 
 class Bin {
-    constructor(cfg, i, total) {
-        this.cfg = cfg; this.scale = 1;
-        this.updatePos(i, total);
-    }
+    constructor(cfg, i, total) { this.cfg = cfg; this.scale = 1; this.updatePos(i, total); }
     updatePos(i, total) {
-        let isL = W > H;
-        let maxH = H * (isL ? 0.25 : 0.45); 
-        let gap = W / total;
+        let isL = W > H, maxH = H * (isL ? 0.25 : 0.45), gap = W / total;
         const imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
         const img = Loader.imgs[imgKey];
         if (img) {
-            let r = img.width / img.height;
-            this.h = maxH; this.w = this.h * r;
+            let r = img.width / img.height; this.h = maxH; this.w = this.h * r;
             if (this.w > gap * 0.98) { this.w = gap * 0.98; this.h = this.w / r; }
         }
-        this.x = i * gap + (gap - this.w) / 2;
-        // В вертикальном режиме поднимаем чуть выше, чтобы надпись влезла под бак
-        this.y = H - this.h - (isL ? 15 : 45); 
+        this.x = i * gap + (gap - this.w) / 2; this.y = H - this.h - (isL ? 15 : 45); 
     }
     draw() {
-        let isL = W > H;
-        const imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
-        let img = Loader.imgs[imgKey];
-        if(!img) return;
-        
+        let isL = W > H, imgKey = isL ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
+        let img = Loader.imgs[imgKey]; if(!img) return;
         let sw = this.w * this.scale, sh = this.h * this.scale;
-
-        // НАДПИСИ ПОД БАКАМИ ТОЛЬКО В ВЕРТИКАЛЬНОМ РЕЖИМЕ
         if (!isL) {
-            ctx.fillStyle = "black";
-            ctx.font = "bold 13px Segoe UI"; 
-            ctx.textAlign = "center";
-            let labelY = this.y + this.h + 20;
-            let textW = ctx.measureText(this.cfg.name).width + 10;
+            ctx.fillStyle = "black"; ctx.font = "bold 13px Segoe UI"; ctx.textAlign = "center";
+            let labelY = this.y + this.h + 20; let textW = ctx.measureText(this.cfg.name).width + 10;
             ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 14, textW, 18);
-            ctx.fillStyle = "white";
-            ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
+            ctx.fillStyle = "white"; ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
         }
-
         ctx.drawImage(img, this.x - (sw-this.w)/2, this.y - (sh-this.h)/2, sw, sh);
         if(this.scale > 1) this.scale -= 0.05;
     }
@@ -220,21 +140,18 @@ class Bin {
 
 class Trash {
     constructor() {
-        let ks = Object.keys(TYPES);
-        this.cfg = TYPES[ks[Math.floor(Math.random()*ks.length)]];
-        this.skin = Math.floor(Math.random()*5)+1;
-        this.p = 0; this.lane = (Math.random()-0.5)*1.6;
+        let ks = Object.keys(TYPES); this.cfg = TYPES[ks[Math.floor(Math.random()*ks.length)]];
+        this.skin = Math.floor(Math.random()*5)+1; this.p = 0; this.lane = (Math.random()-0.5)*1.6;
         this.fly = false; this.t = 0; this.vs = 1;
     }
     update(dt) {
         if(gameState.paused) return;
         if(this.fly) { 
-            this.t += 0.08;
-            if(this.t > 0.7) this.vs = Math.max(0, 1 - (this.t - 0.7) * 3.3);
+            this.t += 0.08; if(this.t > 0.7) this.vs = Math.max(0, 1 - (this.t - 0.7) * 3.3);
             if(this.t >= 1) this.resolve(); 
         } else { 
-            this.p += 0.0022 * (gameState.speed || 1) * (dt/16); 
-            if(this.p > 1.05) { this.die=1; handleMiss(); } 
+            this.p += 0.0022 * (gameState.speedMultiplier || 1) * (dt/16); 
+            if(this.p > DEADLINE_Y_RATIO) { this.die=1; handleMiss(); } // Порог "линии края"
         }
     }
     resolve() {
@@ -243,25 +160,20 @@ class Trash {
             gameState.score += 10; AudioSys.ok(); gameState.count++; 
             if(gameState.count % 10 === 0) spawnAnimal();
             if(gameState.count % 20 === 0) {
-                gameState.speedL++; gameState.speed += 0.2;
-                document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedL;
+                gameState.speedLevel++; gameState.speedMultiplier += 0.2;
+                document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedLevel;
             }
-        } else { 
-            gameState.score = Math.max(0, gameState.score - 5); 
-            AudioSys.err(); // ОШИБКА ИЗДАЕТ ЗВУК
-        }
+        } else { gameState.score = Math.max(0, gameState.score - 5); AudioSys.err(); }
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
         let sz = Math.min(W, H) * 0.35, x, y, s;
         if(this.fly) {
             let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2;
-            x = this.sx + (tx-this.sx)*this.t; 
-            y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*160;
+            x = this.sx + (tx-this.sx)*this.t; y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*160;
             s = sz * 0.8 * this.vs;
         } else {
-            x = W/2 + (this.lane * W * 0.45 * this.p); 
-            y = H*0.44 + (H-H*0.44)*this.p;
+            x = W/2 + (this.lane * W * 0.45 * this.p); y = H*0.44 + (H-H*0.44)*this.p;
             s = sz * (0.18 + this.p*0.82);
         }
         let img = Loader.imgs[this.cfg.pref+this.skin];
@@ -269,18 +181,7 @@ class Trash {
     }
 }
 
-function spawnAnimal() {
-    const side = Math.random() > 0.5 ? 1 : -1;
-    gameState.animal = { 
-        img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], 
-        x: W/2 + (side * W * 0.35), y: H * 0.3, life: 2.5, s: 0 
-    };
-}
-
-function handleMiss() { 
-    gameState.lives--; AudioSys.err(); updateHUD(); 
-    if(gameState.lives <= 0) endGame(); 
-}
+function handleMiss() { gameState.lives--; AudioSys.err(); updateHUD(); if(gameState.lives <= 0) endGame(); }
 
 function updateHUD() {
     let c = document.getElementById('lives-container'); c.innerHTML = '';
@@ -288,17 +189,9 @@ function updateHUD() {
     if(leaf) for(let i=0; i<gameState.lives; i++) c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`;
 }
 
-function updateStartScreenTutorial() {
-    const container = document.getElementById('tutorial-bins');
-    const isL = W > H; container.innerHTML = '';
-    Object.keys(TYPES).forEach(k => {
-        const t = TYPES[k]; const img = isL ? t.imgSm : t.img;
-        container.innerHTML += `
-            <div class="tut-item">
-                <img src="${ASSETS}${img}" class="tut-img">
-                <span class="bin-label">${t.name}</span>
-            </div>`;
-    });
+function spawnAnimal() {
+    const side = Math.random() > 0.5 ? 1 : -1;
+    gameState.animal = { img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], x: W/2 + (side * W * 0.35), y: H * 0.3, life: 2.5, s: 0 };
 }
 
 function input(ex, ey) {
@@ -306,10 +199,7 @@ function input(ex, ey) {
     let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 60);
     if(b) {
         let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0];
-        if(t) { 
-            AudioSys.pop(); b.scale = 1.35; t.fly = true; t.target = b;
-            t.sx = W/2 + (t.lane * W * 0.45 * t.p); t.sy = H*0.44 + (H-H*0.44)*t.p;
-        }
+        if(t) { AudioSys.pop(); b.scale = 1.35; t.fly = true; t.target = b; t.sx = W/2 + (t.lane * W * 0.45 * t.p); t.sy = H*0.44 + (H-H*0.44)*t.p; }
     }
 }
 
@@ -318,20 +208,19 @@ function loop(time) {
     let dt = time - (gameState.lt || time); gameState.lt = time;
     if(!gameState.paused) {
         ctx.clearRect(0,0,W,H);
-        let bg = Loader.imgs['bg'];
-        if(bg) {
-            let sc = Math.max(W/bg.width, H/bg.height);
-            ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc);
-        }
-        gameState.st += dt; 
-        if(gameState.st > 2200/(gameState.speed||1)) { gameState.trash.push(new Trash()); gameState.st=0; }
+        let bg = Loader.imgs['bg']; if(bg) { let sc = Math.max(W/bg.width, H/bg.height); ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc); }
+        
+        // РИСУЕМ КРАЙ (DEADLINE)
+        ctx.beginPath(); ctx.setLineDash([10, 10]); ctx.strokeStyle = "rgba(255, 0, 0, 0.4)"; ctx.lineWidth = 3;
+        let lineY = H*0.44 + (H-H*0.44)*DEADLINE_Y_RATIO; ctx.moveTo(0, lineY); ctx.lineTo(W, lineY); ctx.stroke(); ctx.setLineDash([]);
+
+        gameState.st += dt; if(gameState.st > 2200/(gameState.speedMultiplier||1)) { gameState.trash.push(new Trash()); gameState.st=0; }
         gameState.trash.forEach(t => { t.update(dt); t.draw(); });
         gameState.trash = gameState.trash.filter(t => !t.die);
         gameState.bins.forEach(b => b.draw());
         if(gameState.animal) {
             let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
-            let sz = Math.min(W,H) * 0.25 * a.s; 
-            if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
+            let sz = Math.min(W,H) * 0.25 * a.s; if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
             if(a.life <= 0) gameState.animal = null;
         }
     }
@@ -339,7 +228,7 @@ function loop(time) {
 }
 
 document.getElementById('mute-btn').onclick = () => {
-    AudioSys.mute = !AudioSys.mute;
+    AudioSys.mute = !AudioSys.mute; // Тоггл состояния
     document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊";
 };
 
@@ -350,37 +239,24 @@ document.getElementById('pause-btn-hud').onclick = () => {
 
 function startGame() {
     AudioSys.init();
-    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speed: 1, speedL: 1, trash: [], st: 1500, lt: performance.now(), animal: null };
+    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speedMultiplier: 1, speedLevel: 1, trash: [], st: 1500, lt: performance.now() };
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    document.getElementById('stat-text').innerText = "Очки: 0";
-    document.getElementById('speed-text').innerText = "Скорость: 1";
     resize(); updateHUD(); requestAnimationFrame(loop);
 }
 
-function endGame() {
-    gameState.running = false;
-    document.getElementById('game-over-screen').classList.remove('hidden');
-    document.getElementById('final-score').innerText = "Ваш результат: " + gameState.score;
-}
+function endGame() { gameState.running = false; document.getElementById('over-s' || 'game-over-screen').classList.remove('hidden'); document.getElementById('final-score').innerText = "Ваш результат: " + gameState.score; }
 
 function resize() {
-    W = window.innerWidth; H = window.innerHeight;
-    canvas.width = W; canvas.height = H;
-    let ks = Object.keys(TYPES);
-    gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
-    updateStartScreenTutorial();
+    W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H;
+    let ks = Object.keys(TYPES); gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
+    const container = document.getElementById('tutorial-bins'); if(container) { const isL = W > H; container.innerHTML = ''; Object.keys(TYPES).forEach(k => { const t = TYPES[k]; const img = isL ? t.imgSm : t.img; container.innerHTML += `<div class="tut-i"><img src="${ASSETS}${img}" class="tut-img"><span class="bin-l">${t.name}</span></div>`; }); }
 }
 
 window.addEventListener('resize', resize);
 canvas.addEventListener('mousedown', e => input(e.clientX, e.clientY));
-canvas.addEventListener('touchstart', e => { 
-    e.preventDefault(); 
-    input(e.touches[0].clientX, e.touches[0].clientY); 
-}, {passive: false});
-
-document.getElementById('start-btn').addEventListener('click', startGame);
-document.getElementById('restart-btn').addEventListener('click', startGame);
-
+canvas.addEventListener('touchstart', e => { e.preventDefault(); input(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
+document.getElementById('start-btn').onclick = startGame;
+document.getElementById('restart-btn').onclick = startGame;
 Loader.load().then(() => resize());
 </script>
 </body>
