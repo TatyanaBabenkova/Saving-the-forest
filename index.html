@@ -3,39 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Реакция</title>
+    <title>Эко-Тропа</title>
     <style>
-        body {
-            margin: 0; padding: 0; overflow: hidden;
-            background-color: #2E7D32;
-            touch-action: none;
-            font-family: 'Segoe UI', sans-serif;
-            height: 100dvh; width: 100vw;
-        }
-        canvas { display: block; width: 100%; height: 100%; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .hud-panel {
-            pointer-events: auto; background: rgba(0, 0, 0, 0.6);
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 20px; color: white; backdrop-filter: blur(5px);
-            border-radius: 0 0 15px 15px;
-        }
-        #pause-btn { background: #FF9800; border: 2px solid #fff; color: white; font-weight: bold; border-radius: 20px; cursor: pointer; padding: 5px 15px; }
-        #lives-container { display: flex; align-items: center; gap: 2px; }
-        .life-leaf { width: 30px; height: 30px; object-fit: contain; }
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; z-index: 100; pointer-events: auto; text-align: center; }
-        .screen-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('IMG/bg_forest.png') no-repeat center center; background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); }
-        .btn { background: #4CAF50; border: none; padding: 15px 45px; color: white; font-size: 24px; cursor: pointer; border-radius: 15px; box-shadow: 0 6px 0 #2E7D32; font-weight: bold; margin-top: 20px; }
-        .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #2E7D32; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2E7D32; font-family: sans-serif; }
+        canvas { display: block; touch-action: none; }
+        
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 10; }
+        .hud { pointer-events: auto; background: rgba(0,0,0,0.5); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(5px); }
+        
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; text-align: center; }
+        .screen-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('IMG/bg_forest.png') no-repeat center center; background-size: cover; filter: blur(8px); z-index: -1; }
+        
+        .btn { pointer-events: auto; background: #4CAF50; border: none; padding: 15px 50px; color: white; font-size: 24px; font-weight: bold; border-radius: 15px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; }
+        .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
+        
+        #lives-container { display: flex; gap: 5px; }
+        .life-leaf { width: 25px; height: 25px; object-fit: contain; }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
-        <div class="hud-panel">
-            <div style="font-size: 18px;">Очки: <span id="score-el">0</span> | Скор: <span id="speed-el">1</span></div>
-            <button id="pause-btn">ПАУЗА</button>
+        <div class="hud">
+            <div id="stat-text">Очки: 0</div>
             <div id="lives-container"></div>
         </div>
     </div>
@@ -43,277 +34,189 @@
     <div id="start-screen" class="screen">
         <div class="screen-bg"></div>
         <h1>Эко-Тропа</h1>
-        <p>Тапай на нужный бак!</p>
+        <p>Жми на правильный бак!</p>
         <button class="btn" id="start-btn">В ПУТЬ</button>
     </div>
 
     <div id="game-over-screen" class="screen hidden">
-        <div class="screen-bg" style="filter: grayscale(1) blur(5px);"></div>
-        <h1>Конец игры</h1>
-        <p id="final-score" style="font-size: 28px;">Счет: 0</p>
+        <div class="screen-bg" style="filter: grayscale(1) blur(10px);"></div>
+        <h1>Игра окончена</h1>
+        <p id="final-score" style="font-size: 24px;"></p>
         <button class="btn" id="restart-btn">ЗАНОВО</button>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
 <script>
-const ASSETS_PATH = 'IMG/';
-const HORIZON_Y = 0.44; 
-
+const ASSETS = 'IMG/';
 const TYPES = {
-    ORGANIC: { id: 'organic', color: '#8BC34A', binImg: 'bin_organic.png', prefix: 'trash_apple' },
-    PAPER:   { id: 'paper',   color: '#2196F3', binImg: 'bin_paper.png',   prefix: 'trash_newspaper' },
-    PLASTIC: { id: 'plastic', color: '#FF9800', binImg: 'bin_plastic.png', prefix: 'trash_bottle' },
-    METAL:   { id: 'metal',   color: '#9E9E9E', binImg: 'bin_met.png',     prefix: 'trash_can' },
-    GLASS:   { id: 'glass',   color: '#00BCD4', binImg: 'bin_glass.png',   prefix: 'trash_jar' }
+    ORG: { id: 'organic', img: 'bin_organic.png', pref: 'trash_apple' },
+    PAP: { id: 'paper', img: 'bin_paper.png', pref: 'trash_newspaper' },
+    PLA: { id: 'plastic', img: 'bin_plastic.png', pref: 'trash_bottle' },
+    MET: { id: 'metal', img: 'bin_met.png', pref: 'trash_can' },
+    GLA: { id: 'glass', img: 'bin_glass.png', pref: 'trash_jar' }
 };
 
-// --- ЗВУКОВАЯ СИСТЕМА ИЗ ПРЕДЫДУЩЕГО КОДА ---
 const AudioSys = {
     ctx: null,
-    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
-    playTone(freq, type, duration, vol=0.1) {
-        if (!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
-        osc.connect(gain); gain.connect(this.ctx.destination);
-        osc.start(); osc.stop(this.ctx.currentTime + duration);
+    init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+    play(f, t, d) {
+        if(!this.ctx) return;
+        let o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = t; o.frequency.value = f; g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + d);
+        o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime + d);
     },
-    playSuccess() { this.playTone(500, 'sine', 0.1); setTimeout(() => this.playTone(1000, 'sine', 0.2), 100); },
-    playError() { this.playTone(150, 'sawtooth', 0.3, 0.2); },
-    playPop() { this.playTone(600, 'triangle', 0.05, 0.05); }
+    ok() { this.play(600, 'sine', 0.2); },
+    err() { this.play(150, 'sawtooth', 0.3); },
+    pop() { this.play(800, 'triangle', 0.05); }
 };
 
 const Loader = {
-    images: {},
-    async init() {
-        const toLoad = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
-        for (let i=1; i<=10; i++) toLoad[`animal${i}`] = `animal${i}.png`;
-        for (let k in TYPES) {
-            toLoad[`bin_${TYPES[k].id}`] = TYPES[k].binImg;
-            for (let i=1; i<=5; i++) toLoad[`${TYPES[k].prefix}${i}`] = `${TYPES[k].prefix}${i}.png`;
+    imgs: {},
+    async load() {
+        const list = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
+        for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
+        Object.keys(TYPES).forEach(k => {
+            list['b_'+TYPES[k].id] = TYPES[k].img;
+            for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
+        });
+        for(let k in list) {
+            let img = new Image(); img.src = ASSETS + list[k];
+            await new Promise(r => img.onload = r); this.imgs[k] = img;
         }
-        for (let key in toLoad) {
-            const img = new Image();
-            img.src = ASSETS_PATH + toLoad[key];
-            await new Promise(r => img.onload = r);
-            this.images[key] = img;
-        }
-    },
-    get(key) { return this.images[key]; }
+    }
 };
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let width, height, cx, cy;
-let isHandlingClick = false; 
-
-let gameState = {
-    score: 0, lives: 5, itemsSorted: 0, speedLevel: 1, speedMult: 1,
-    isRunning: false, bins: [], trash: [], activeAnimal: null,
-    spawnTimer: 0, lastTime: 0, lastLaunchTime: 0
-};
+let W, H, gameState = { running: false };
 
 class Bin {
-    constructor(typeObj, index, total) {
-        this.type = typeObj;
-        this.scale = 1.0;
-        this.recalculate(index, total);
+    constructor(cfg, i, total) {
+        this.cfg = cfg; this.scale = 1;
+        this.w = 0; this.h = 0; this.x = 0; this.y = 0;
+        this.resize(i, total);
     }
-    recalculate(index, total) {
-        const isPortrait = height > width;
-        if (isPortrait) {
-            // ВЕРТИКАЛЬНО: 2 ряда для максимальной ширины
-            const itemsPerRow = index < 3 ? 3 : 2;
-            const rowIdx = index < 3 ? 0 : 1;
-            const posInRow = index < 3 ? index : index - 3;
-            const gap = width / itemsPerRow;
-            this.w = gap * 0.9;
-            this.h = this.w * 1.2;
-            this.x = (posInRow * gap) + (gap / 2) - (this.w / 2);
-            this.y = height - (this.h * (rowIdx === 0 ? 1.6 : 0.75));
-        } else {
-            // ГОРИЗОНТАЛЬНО: в один ряд
-            const gap = width / total;
-            this.w = Math.min(gap * 0.9, 160);
-            this.h = this.w * 1.3;
-            this.x = (index * gap) + (gap / 2) - (this.w / 2);
-            this.y = height - (this.h * 0.8);
-        }
+    resize(i, total) {
+        let gap = W / total;
+        this.w = Math.min(gap * 0.95, W < 600 ? 80 : 150);
+        this.h = this.w * 1.3;
+        this.x = i * gap + (gap - this.w)/2;
+        this.y = H - this.h * 0.85;
     }
-    draw(ctx) {
-        const img = Loader.get(`bin_${this.type.id}`);
-        const dw = this.w * this.scale;
-        const dh = this.h * this.scale;
-        ctx.drawImage(img, this.x - (dw-this.w)/2, this.y - (dh-this.h)/2, dw, dh);
-        if (this.scale > 1.0) this.scale -= 0.05;
+    draw() {
+        let img = Loader.imgs['b_'+this.cfg.id], sw = this.w * this.scale, sh = this.h * this.scale;
+        ctx.drawImage(img, this.x - (sw-this.w)/2, this.y - (sh-this.h)/2, sw, sh);
+        if(this.scale > 1) this.scale -= 0.05;
     }
 }
 
 class Trash {
     constructor() {
-        const keys = Object.keys(TYPES);
-        this.type = TYPES[keys[Math.floor(Math.random() * keys.length)]];
-        this.skin = Math.floor(Math.random() * 5) + 1;
-        this.progress = 0;
-        this.lane = (Math.random() - 0.5) * 1.8;
-        this.flying = false; this.flyT = 0;
+        let keys = Object.keys(TYPES);
+        this.cfg = TYPES[keys[Math.floor(Math.random()*keys.length)]];
+        this.skin = Math.floor(Math.random()*5)+1;
+        this.p = 0; this.lane = (Math.random()-0.5)*1.8;
+        this.fly = false; this.t = 0;
     }
     update(dt) {
-        if (this.flying) {
-            this.flyT += 0.08;
-            if (this.flyT >= 1) this.resolve();
-            return;
-        }
-        // Возвращена спокойная скорость из старого кода
-        this.progress += 0.002 * gameState.speedMult * (dt / 16);
-        if (this.progress > 1.05) { this.remove = true; handleMiss(); }
+        if(this.fly) { this.t += 0.08; if(this.t >= 1) this.resolve(); }
+        else { this.p += 0.002 * (gameState.speed || 1) * (dt/16); if(this.p > 1.1) { this.die=1; handleMiss(); } }
     }
     resolve() {
-        this.remove = true;
-        if (this.targetBin.type.id === this.type.id) {
-            gameState.score += 10;
-            gameState.itemsSorted++;
-            AudioSys.playSuccess();
-            if (gameState.itemsSorted % 10 === 0) spawnAnimal();
-            if (gameState.itemsSorted % 20 === 0) { // Каждые 20 ускоряемся
-                gameState.speedLevel++;
-                gameState.speedMult += 0.2;
-                document.getElementById('speed-el').innerText = gameState.speedLevel;
-            }
-        } else {
-            gameState.score = Math.max(0, gameState.score - 5);
-            handleMiss();
-        }
-        document.getElementById('score-el').innerText = gameState.score;
+        this.die = 1;
+        if(this.target.cfg.id === this.cfg.id) {
+            gameState.score += 10; AudioSys.ok();
+            gameState.count++; if(gameState.count%10===0) spawnAnimal();
+            if(gameState.count%20===0) gameState.speed += 0.2;
+        } else { handleMiss(); }
+        document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
-    draw(ctx) {
-        let x, y, s;
-        const sizeBase = Math.min(width, height) * 0.3;
-        if (this.flying) {
-            const tx = this.targetBin.x + this.targetBin.w/2, ty = this.targetBin.y + this.targetBin.h/2;
-            x = this.sx + (tx - this.sx) * this.flyT;
-            y = this.sy + (ty - this.sy) * this.flyT - Math.sin(this.flyT * Math.PI) * 150;
-            s = sizeBase;
+    draw() {
+        let x, y, s, sz = Math.min(W, H) * 0.3;
+        if(this.fly) {
+            let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2;
+            x = this.sx + (tx-this.sx)*this.t; y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*150;
+            s = sz * 0.8;
         } else {
-            x = cx + (this.lane * (width * 0.45) * this.progress);
-            y = cy + (height - cy) * this.progress;
-            s = sizeBase * (0.15 + this.progress * 0.85);
+            x = W/2 + (this.lane * W * 0.4 * this.p); y = H*0.44 + (H-H*0.44)*this.p;
+            s = sz * (0.2 + this.p*0.8);
         }
-        const img = Loader.get(`${this.type.prefix}${this.skin}`);
-        if (img) ctx.drawImage(img, x - s/2, y - s/2, s, s);
-    }
-}
-
-function onClick(e) {
-    if (!gameState.isRunning || isHandlingClick) return;
-    
-    // Предотвращение двойного срабатывания (touch + click)
-    isHandlingClick = true;
-    setTimeout(() => isHandlingClick = false, 50);
-
-    const touch = e.clientX ? e : e.touches[0];
-    const bin = gameState.bins.find(b => 
-        touch.clientX > b.x && touch.clientX < b.x + b.w && touch.clientY > b.y
-    );
-
-    if (bin) {
-        const now = Date.now();
-        if (now - gameState.lastLaunchTime < 150) return; // Мини задержка запуска
-
-        bin.scale = 1.3;
-        const target = gameState.trash.filter(t => !t.flying && t.progress > 0.05)
-                                     .sort((a,b) => b.progress - a.progress)[0];
-        if (target) {
-            AudioSys.playPop();
-            target.flying = true;
-            target.targetBin = bin;
-            target.sx = cx + (target.lane * (width * 0.45) * target.progress);
-            target.sy = cy + (height - cy) * target.progress;
-            gameState.lastLaunchTime = now;
-        }
+        ctx.drawImage(Loader.imgs[this.cfg.pref+this.skin], x-s/2, y-s/2, s, s);
     }
 }
 
 function spawnAnimal() {
-    const id = Math.floor(Math.random() * 10) + 1;
-    gameState.activeAnimal = { img: Loader.get(`animal${id}`), x: width*(0.2+Math.random()*0.6), y: height*0.5, life: 2, scale: 0 };
+    gameState.animal = { img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], x: W*(0.2+Math.random()*0.6), y: H*0.5, life: 2, s: 0 };
 }
 
-function handleMiss() { gameState.lives--; AudioSys.playError(); updateHUD(); if (gameState.lives <= 0) endGame(); }
+function handleMiss() { gameState.lives--; AudioSys.err(); updateHUD(); if(gameState.lives<=0) endGame(); }
 
 function updateHUD() {
-    const container = document.getElementById('lives-container');
-    container.innerHTML = '';
-    for (let i=0; i<gameState.lives; i++) {
-        const img = document.createElement('img');
-        img.src = Loader.get('leaf').src;
-        img.className = 'life-leaf';
-        container.appendChild(img);
+    let c = document.getElementById('lives-container'); c.innerHTML = '';
+    for(let i=0; i<gameState.lives; i++) c.innerHTML += `<img src="${ASSETS}leaf.png" class="life-leaf">`;
+}
+
+function input(ex, ey) {
+    if(!gameState.running) return;
+    let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y);
+    if(b) {
+        let t = gameState.trash.filter(t => !t.fly && t.p > 0.1).sort((a,b)=>b.p-a.p)[0];
+        if(t) { 
+            AudioSys.pop(); b.scale = 1.3; t.fly = true; t.target = b;
+            t.sx = W/2 + (t.lane * W * 0.4 * t.p); t.sy = H*0.44 + (H-H*0.44)*t.p;
+        }
     }
 }
 
 function loop(time) {
-    if (!gameState.isRunning) return;
-    const dt = time - gameState.lastTime; gameState.lastTime = time;
-    ctx.clearRect(0, 0, width, height);
+    if(!gameState.running) return;
+    let dt = time - (gameState.lt || time); gameState.lt = time;
+    ctx.clearRect(0,0,W,H);
     
-    const bg = Loader.get('bg');
-    if (bg) {
-        const scale = Math.max(width/bg.width, height/bg.height);
-        const nw = bg.width*scale, nh = bg.height*scale;
-        ctx.drawImage(bg, (width-nw)/2, (height-nh)/2, nw, nh);
-    }
+    let bg = Loader.imgs['bg'], sc = Math.max(W/bg.width, H/bg.height);
+    ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc);
 
-    gameState.spawnTimer += dt;
-    if (gameState.spawnTimer > 2500 / gameState.speedMult) {
-        gameState.trash.push(new Trash());
-        gameState.spawnTimer = 0;
-    }
+    gameState.st += dt; if(gameState.st > 2000/(gameState.speed||1)) { gameState.trash.push(new Trash()); gameState.st=0; }
+    
+    gameState.trash.forEach(t => { t.update(dt); t.draw(); });
+    gameState.trash = gameState.trash.filter(t => !t.die);
+    gameState.bins.forEach(b => b.draw());
 
-    gameState.trash.forEach(t => { t.update(dt); t.draw(ctx); });
-    gameState.trash = gameState.trash.filter(t => !t.remove);
-    gameState.bins.forEach(b => b.draw(ctx));
-
-    if (gameState.activeAnimal) {
-        const a = gameState.activeAnimal; a.life -= dt/1000;
-        if (a.scale < 1) a.scale += 0.1;
-        const s = Math.min(width, height) * 0.4 * a.scale;
-        ctx.drawImage(a.img, a.x - s/2, a.y - s/2, s, s);
-        if (a.life <= 0) gameState.activeAnimal = null;
+    if(gameState.animal) {
+        let a = gameState.animal; a.life -= dt/1000; if(a.s<1) a.s+=0.1;
+        let sz = Math.min(W,H)*0.4*a.s; ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
+        if(a.life<=0) gameState.animal = null;
     }
     requestAnimationFrame(loop);
 }
 
 function startGame() {
     AudioSys.init();
-    gameState = { score: 0, lives: 5, itemsSorted: 0, speedLevel: 1, speedMult: 1, isRunning: true, bins: [], trash: [], activeAnimal: null, spawnTimer: 2000, lastTime: performance.now(), lastLaunchTime: 0 };
+    gameState = { running: true, score: 0, lives: 5, count: 0, speed: 1, trash: [], st: 2000, lt: performance.now() };
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    document.getElementById('score-el').innerText = '0';
-    document.getElementById('speed-el').innerText = '1';
     resize(); updateHUD(); requestAnimationFrame(loop);
 }
 
-function endGame() { gameState.isRunning = false; document.getElementById('game-over-screen').classList.remove('hidden'); document.getElementById('final-score').innerText = "Счет: " + gameState.score; }
+function endGame() {
+    gameState.running = false;
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = "Ваш результат: " + gameState.score;
+}
 
 function resize() {
-    width = window.innerWidth; height = window.innerHeight;
-    canvas.width = width; canvas.height = height;
-    cx = width / 2; cy = height * HORIZON_Y;
-    const keys = Object.keys(TYPES);
-    gameState.bins = keys.map((k, i) => new Bin(TYPES[k], i, keys.length));
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W; canvas.height = H;
+    let ks = Object.keys(TYPES);
+    gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
 }
 
 window.addEventListener('resize', resize);
-window.addEventListener('mousedown', onClick);
-window.addEventListener('touchstart', (e) => { e.preventDefault(); onClick(e); }, {passive: false});
+canvas.addEventListener('mousedown', e => input(e.clientX, e.clientY));
+canvas.addEventListener('touchstart', e => { e.preventDefault(); input(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
 document.getElementById('start-btn').onclick = startGame;
 document.getElementById('restart-btn').onclick = startGame;
-Loader.init().then(() => resize());
+Loader.load().then(resize);
 </script>
 </body>
 </html>
