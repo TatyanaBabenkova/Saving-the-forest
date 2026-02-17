@@ -7,16 +7,12 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2E7D32; font-family: sans-serif; }
         canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; }
-        
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
         .hud { pointer-events: auto; background: rgba(0,0,0,0.6); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(5px); }
-        
         .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; text-align: center; }
         .screen-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('IMG/bg_forest.png') no-repeat center center; background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); }
-        
         .btn { pointer-events: auto; background: #4CAF50; border: none; padding: 15px 50px; color: white; font-size: 24px; font-weight: bold; border-radius: 15px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; position: relative; z-index: 110; }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
-        
         #lives-container { display: flex; gap: 5px; }
         .life-leaf { width: 25px; height: 25px; object-fit: contain; }
         .hidden { display: none !important; }
@@ -143,7 +139,11 @@ class Trash {
             gameState.count++; 
             if(gameState.count % 10 === 0) spawnAnimal();
             if(gameState.count % 20 === 0) gameState.speed += 0.2;
-        } else { handleMiss(); }
+        } else { 
+            // Штраф 5 очков за ошибку, но не ниже нуля
+            gameState.score = Math.max(0, gameState.score - 5);
+            AudioSys.err(); 
+        }
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
@@ -164,10 +164,25 @@ class Trash {
 }
 
 function spawnAnimal() {
-    gameState.animal = { img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], x: W*(0.2+Math.random()*0.6), y: H*0.5, life: 2, s: 0 };
+    // Появление сбоку (слева или справа от центральной тропинки)
+    const side = Math.random() > 0.5 ? 1 : -1;
+    const spawnX = W/2 + (side * W * 0.35); 
+    gameState.animal = { 
+        img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], 
+        x: spawnX, 
+        y: H * 0.4, // Выше баков
+        life: 2.5, 
+        s: 0 
+    };
 }
 
-function handleMiss() { gameState.lives--; AudioSys.err(); updateHUD(); if(gameState.lives<=0) endGame(); }
+function handleMiss() { 
+    // Жизнь пропадает только если мусор дошел до края
+    gameState.lives--; 
+    AudioSys.err(); 
+    updateHUD(); 
+    if(gameState.lives <= 0) endGame(); 
+}
 
 function updateHUD() {
     let c = document.getElementById('lives-container'); c.innerHTML = '';
@@ -212,10 +227,11 @@ function loop(time) {
     gameState.bins.forEach(b => b.draw());
 
     if(gameState.animal) {
-        let a = gameState.animal; a.life -= dt/1000; if(a.s<1) a.s+=0.08;
-        let sz = Math.min(W,H)*0.45*a.s; 
+        let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
+        // Животные теперь поменьше (размер 0.25 вместо 0.45)
+        let sz = Math.min(W,H) * 0.25 * a.s; 
         if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
-        if(a.life<=0) gameState.animal = null;
+        if(a.life <= 0) gameState.animal = null;
     }
     requestAnimationFrame(loop);
 }
@@ -253,7 +269,6 @@ document.getElementById('restart-btn').addEventListener('click', startGame);
 
 Loader.load().then(() => {
     resize();
-    console.log("Game Loaded");
 });
 </script>
 </body>
