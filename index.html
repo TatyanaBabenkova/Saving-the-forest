@@ -3,143 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Мобайл</title>
+    <title>Эко-Тропа: Мобайл Оптимизированный</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #2E7D32; font-family: sans-serif; }
-        canvas { display: block; touch-action: none; position: absolute; }
-        #ui { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
-        .hud { pointer-events: auto; background: rgba(0,0,0,0.6); color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(5px); }
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; text-align: center; }
-        .screen-bg { position: absolute; width: 100%; height: 100%; background: url('IMG/bg_forest.png') center/cover; filter: blur(8px); z-index: -1; transform: scale(1.1); }
-        .btn { pointer-events: auto; background: #4CAF50; border: none; padding: 15px 40px; color: white; font-size: 22px; font-weight: bold; border-radius: 15px; box-shadow: 0 5px 0 #1B5E20; cursor: pointer; }
-        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #1B5E20; }
-        .tut { position: absolute; bottom: 10px; width: 100%; display: flex; justify-content: space-around; align-items: flex-end; }
-        .tut-i { display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .tut-img { width: 90%; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
-        .bin-l { font-size: 14px; font-weight: bold; background: #000; padding: 2px 8px; border-radius: 5px; margin-bottom: 5px; }
-        .life-leaf { width: 22px; height: 22px; }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; background: #2E7D32; font-family: 'Segoe UI', sans-serif; 
+        }
+        canvas { display: block; touch-action: none; position: absolute; top: 0; left: 0; }
+        
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
+        .hud { 
+            pointer-events: auto; background: rgba(0,0,0,0.6); color: white; 
+            padding: 10px 15px; display: flex; justify-content: space-between; 
+            align-items: center; backdrop-filter: blur(5px); 
+        }
+        
+        .hud-controls { display: flex; gap: 8px; align-items: center; }
+        
+        .screen { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            display: flex; flex-direction: column; align-items: center; 
+            justify-content: flex-start; z-index: 100; color: white; text-align: center; 
+        }
+        .screen-bg { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: url('IMG/bg_forest.png') no-repeat center center; 
+            background-size: cover; filter: blur(8px); z-index: -1; transform: scale(1.1); 
+        }
+        
+        .start-content {
+            margin-top: 22vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 90%;
+        }
+
+        .btn { 
+            pointer-events: auto; background: #4CAF50; border: none; 
+            padding: 16px 50px; color: white; font-size: 26px; font-weight: bold; 
+            border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
+            margin-top: 20px;
+        }
+        .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
+        
+        #mute-btn, #pause-btn-hud {
+            background: rgba(255,255,255,0.2); border: 1px solid white; color: white;
+            border-radius: 12px; cursor: pointer; padding: 8px 12px; font-size: 16px;
+        }
+
+        /* Контейнеры на заставке */
+        .tutorial-overlay {
+            position: absolute; bottom: 20px; left: 0; width: 100%;
+            display: flex; justify-content: space-around; align-items: flex-end;
+            pointer-events: none;
+        }
+        .tut-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .tut-img { width: 95%; height: auto; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5)); }
+        
+        /* Надписи уменьшены на 15% (было 16px -> стало ~14px) */
+        .bin-label { 
+            font-size: 14px; font-weight: bold; background: #000; color: #fff;
+            padding: 3px 8px; border-radius: 6px; margin-bottom: 6px; white-space: nowrap;
+        }
+
+        #lives-container { display: flex; gap: 4px; }
+        .life-leaf { width: 28px; height: 28px; object-fit: contain; }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div id="ui">
+
+    <div id="ui-layer">
         <div class="hud">
-            <div style="line-height:1.2"><b id="score-text">Очки: 0</b><br><small id="speed-text" style="color:#FFEB3B">Скорость: 1</small></div>
-            <div style="display:flex;gap:5px"><button id="mute-btn" style="background:none;border:1px solid;color:white;border-radius:5px">🔊</button><button id="pause-btn" style="background:none;border:1px solid;color:white;border-radius:5px">ПАУЗА</button></div>
-            <div id="lives-container" style="display:flex;gap:3px"></div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div id="stat-text" style="font-weight: bold; font-size: 18px;">Очки: 0</div>
+                <div id="speed-text" style="font-weight: bold; font-size: 14px; color: #FFEB3B;">Скорость: 1</div>
+            </div>
+            <div class="hud-controls">
+                <button id="mute-btn">🔊</button>
+                <button id="pause-btn-hud">ПАУЗА</button>
+            </div>
+            <div id="lives-container"></div>
         </div>
     </div>
-    <div id="start-s" class="screen">
+
+    <div id="start-screen" class="screen">
         <div class="screen-bg"></div>
-        <div style="margin-top:-10vh; max-width:90%">
-            <h1 style="margin:0">Эко-Тропа</h1>
-            <p style="text-shadow: 2px 2px 4px #000">Нажимай на баки внизу, чтобы ловить мусор. Очисти лес!</p>
+        <div class="start-content">
+            <h1>Эко-Тропа</h1>
+            <p style="font-size: 20px; line-height: 1.4; text-shadow: 2px 2px 4px #000; padding: 0 10px;">
+                Нажимай на баки внизу, чтобы поймать летящий мусор. <br>
+                Очисти лес от отходов!
+            </p>
             <button class="btn" id="start-btn">В ПУТЬ</button>
         </div>
-        <div class="tut">
-            <div class="tut-i"><span class="bin-l">Органика</span><img src="IMG/bin_organic.png" class="tut-img"></div>
-            <div class="tut-i"><span class="bin-l">Бумага</span><img src="IMG/bin_paper.png" class="tut-i tut-img"></div>
-            <div class="tut-i"><span class="bin-l">Пластик</span><img src="IMG/bin_plastic.png" class="tut-i tut-img"></div>
-            <div class="tut-i"><span class="bin-l">Металл</span><img src="IMG/bin_met.png" class="tut-i tut-img"></div>
-            <div class="tut-i"><span class="bin-l">Стекло</span><img src="IMG/bin_glass.png" class="tut-i tut-img"></div>
+        
+        <div class="tutorial-overlay">
+            <div class="tut-item"><span class="bin-label">Органика</span><img src="IMG/bin_organic.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Бумага</span><img src="IMG/bin_paper.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Пластик</span><img src="IMG/bin_plastic.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Металл</span><img src="IMG/bin_met.png" class="tut-img"></div>
+            <div class="tut-item"><span class="bin-label">Стекло</span><img src="IMG/bin_glass.png" class="tut-img"></div>
         </div>
     </div>
-    <div id="over-s" class="screen hidden">
-        <div class="screen-bg" style="filter:grayscale(1) blur(10px)"></div>
-        <h1>Игра окончена</h1><p id="final-score" style="font-size:24px"></p>
+
+    <div id="game-over-screen" class="screen hidden" style="justify-content: center;">
+        <div class="screen-bg" style="filter: grayscale(1) blur(10px);"></div>
+        <h1>Игра окончена</h1>
+        <p id="final-score" style="font-size: 28px; margin-bottom: 25px;"></p>
         <button class="btn" id="restart-btn">ЗАНОВО</button>
     </div>
+
     <canvas id="gameCanvas"></canvas>
 
 <script>
-const ASSETS = 'IMG/', TYPES = {
-    ORG: { id: 'organic', n: 'Органика', b: 'bin_organic.png', p: 'trash_apple' },
-    PAP: { id: 'paper', n: 'Бумага', b: 'bin_paper.png', p: 'trash_newspaper' },
-    PLA: { id: 'plastic', n: 'Пластик', b: 'bin_plastic.png', p: 'trash_bottle' },
-    MET: { id: 'metal', n: 'Металл', b: 'bin_met.png', p: 'trash_can' },
-    GLA: { id: 'glass', n: 'Стекло', b: 'bin_glass.png', p: 'trash_jar' }
+const ASSETS = 'IMG/';
+const TYPES = {
+    ORG: { id: 'organic', name: 'Органика', img: 'bin_organic.png', pref: 'trash_apple' },
+    PAP: { id: 'paper', name: 'Бумага', img: 'bin_paper.png', pref: 'trash_newspaper' },
+    PLA: { id: 'plastic', name: 'Пластик', img: 'bin_plastic.png', pref: 'trash_bottle' },
+    MET: { id: 'metal', name: 'Металл', img: 'bin_met.png', pref: 'trash_can' },
+    GLA: { id: 'glass', name: 'Стекло', img: 'bin_glass.png', pref: 'trash_jar' }
 };
+
 const AudioSys = {
-    ctx: null, mute: false, init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
-    play(f, t, d) { if(!this.ctx || this.mute) return; let o = this.ctx.createOscillator(), g = this.ctx.createGain(); o.type = t; o.frequency.value = f; g.gain.setValueAtTime(0.1, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime+d); o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+d); },
-    ok() { this.play(600, 'sine', 0.2); }, err() { this.play(150, 'sawtooth', 0.3); }, pop() { this.play(800, 'triangle', 0.05); }
+    ctx: null, isMuted: false,
+    init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+    play(f, t, d) {
+        if(!this.ctx || this.isMuted) return;
+        try {
+            let o = this.ctx.createOscillator(), g = this.ctx.createGain();
+            o.type = t; o.frequency.value = f;
+            g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + d);
+            o.connect(g); g.connect(this.ctx.destination);
+            o.start(); o.stop(this.ctx.currentTime + d);
+        } catch(e) {}
+    },
+    ok() { this.play(600, 'sine', 0.2); },
+    err() { this.play(150, 'sawtooth', 0.3); },
+    pop() { this.play(800, 'triangle', 0.05); }
 };
+
 const Loader = {
-    imgs: {}, async load() {
-        const list = { bg: 'bg_forest.png', leaf: 'leaf.png' };
-        for(let i=1;i<=10;i++) list['a'+i] = 'animal'+i+'.png';
-        Object.keys(TYPES).forEach(k => { list['b_'+TYPES[k].id] = TYPES[k].b; for(let i=1;i<=5;i++) list[TYPES[k].p+i] = TYPES[k].p+i+'.png'; });
-        for(let k in list) { let img = new Image(); img.src = ASSETS + list[k]; await new Promise(r => img.onload = r); this.imgs[k] = img; }
+    imgs: {},
+    async load() {
+        const list = { 'bg': 'bg_forest.png', 'leaf': 'leaf.png' };
+        for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
+        Object.keys(TYPES).forEach(k => {
+            list['b_'+TYPES[k].id] = TYPES[k].img;
+            for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
+        });
+        for(let k in list) {
+            let img = new Image();
+            img.src = ASSETS + list[k];
+            await new Promise(r => { img.onload = r; img.onerror = r; });
+            this.imgs[k] = img;
+        }
     }
 };
-const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 let W, H, gameState = { running: false, paused: false };
 
 class Bin {
-    constructor(c, i, t) { this.c = c; this.scale = 1; this.update(i, t); }
-    update(i, t) {
-        let hf = W > H ? 0.25 : 0.45; this.h = H * hf; 
-        let gap = W / t, img = Loader.imgs['b_'+this.c.id];
-        if(img) { this.w = this.h * (img.width/img.height); if(this.w > gap*0.98) { this.w = gap*0.98; this.h = this.w / (img.width/img.height); } }
-        this.x = i * gap + (gap - this.w)/2; this.y = H - this.h - 40;
+    constructor(cfg, i, total) {
+        this.cfg = cfg; this.scale = 1;
+        this.updatePos(i, total);
+    }
+    updatePos(i, total) {
+        let isLandscape = W > H;
+        // УВЕЛИЧЕНО на 15% (было 0.45 -> стало ~0.52 для вертикали)
+        let maxHFactor = isLandscape ? 0.28 : 0.52; 
+        let maxH = H * maxHFactor; 
+        let gap = W / total;
+
+        const img = Loader.imgs['b_' + this.cfg.id];
+        if (img) {
+            let nativeRatio = img.width / img.height;
+            this.h = maxH;
+            this.w = this.h * nativeRatio;
+            if (this.w > gap * 0.98) {
+                this.w = gap * 0.98;
+                this.h = this.w / nativeRatio;
+            }
+        }
+        this.x = i * gap + (gap - this.w) / 2;
+        // Отступ снизу добавлен (15px), чтобы не прилипало к краю
+        this.y = H - this.h - 15; 
     }
     draw() {
-        let img = Loader.imgs['b_'+this.c.id], s = this.scale;
-        ctx.fillStyle = "black"; ctx.font = "bold 18px sans-serif"; ctx.textAlign = "center";
-        let ly = this.y + this.h + 25, tw = ctx.measureText(this.c.n).width + 16;
-        ctx.fillRect(this.x + this.w/2 - tw/2, ly - 18, tw, 24); ctx.fillStyle = "white"; ctx.fillText(this.c.n, this.x + this.w/2, ly);
-        ctx.drawImage(img, this.x - (this.w*s - this.w)/2, this.y - (this.h*s - this.h)/2, this.w*s, this.h*s);
+        let img = Loader.imgs['b_'+this.cfg.id];
+        if(!img) return;
+        let sw = this.w * this.scale, sh = this.h * this.scale;
+        
+        // НАДПИСИ ПЕРЕНЕСЕНЫ НАВЕРХ И УМЕНЬШЕНЫ (было 20px -> стало 17px)
+        ctx.fillStyle = "black";
+        ctx.font = "bold 17px Segoe UI"; 
+        ctx.textAlign = "center";
+        // labelY теперь выше бака (this.y - 15)
+        let labelY = this.y - 15; 
+        
+        let textW = ctx.measureText(this.cfg.name).width + 12;
+        ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 16, textW, 22);
+        
+        ctx.fillStyle = "white";
+        ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
+
+        ctx.drawImage(img, this.x - (sw-this.w)/2, this.y - (sh-this.h)/2, sw, sh);
         if(this.scale > 1) this.scale -= 0.05;
     }
 }
+
 class Trash {
     constructor() {
-        let ks = Object.keys(TYPES); this.c = TYPES[ks[Math.floor(Math.random()*ks.length)]];
-        this.skin = Math.floor(Math.random()*5)+1; this.p = 0; this.lane = (Math.random()-0.5)*1.6; this.fly = false; this.t = 0; this.vs = 1;
+        let keys = Object.keys(TYPES);
+        this.cfg = TYPES[keys[Math.floor(Math.random()*keys.length)]];
+        this.skin = Math.floor(Math.random()*5)+1;
+        this.p = 0; this.lane = (Math.random()-0.5)*1.6;
+        this.fly = false; this.t = 0;
+        this.vScale = 1;
     }
     update(dt) {
         if(gameState.paused) return;
-        if(this.fly) { this.t += 0.08; if(this.t > 0.6) this.vs = Math.max(0, 1 - (this.t - 0.6)*2.5); if(this.t >= 1) this.resolve(); }
-        else { this.p += 0.0022 * (gameState.speed || 1) * (dt/16); if(this.p > 1.05) { this.die=1; handleMiss(); } }
+        if(this.fly) { 
+            this.t += 0.08;
+            if(this.t > 0.7) this.vScale = Math.max(0, 1 - (this.t - 0.7) * 3.3);
+            if(this.t >= 1) this.resolve(); 
+        } else { 
+            this.p += 0.0022 * (gameState.speed || 1) * (dt/16); 
+            if(this.p > 1.05) { this.die=1; handleMiss(); } 
+        }
     }
     resolve() {
-        this.die = 1; if(this.target.c.id === this.c.id) { gameState.score += 10; AudioSys.ok(); gameState.count++; if(gameState.count%10===0) spawnAnimal(); if(gameState.count%20===0) { gameState.speedL++; gameState.speed += 0.2; document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedL; } }
-        else { gameState.score = Math.max(0, gameState.score-5); AudioSys.err(); }
-        document.getElementById('score-text').innerText = "Очки: " + gameState.score;
+        this.die = 1;
+        if(this.target.cfg.id === this.cfg.id) {
+            gameState.score += 10; AudioSys.ok();
+            gameState.count++; 
+            if(gameState.count % 10 === 0) spawnAnimal();
+            if(gameState.count % 20 === 0) {
+                gameState.speedLevel++;
+                gameState.speed += 0.2;
+                document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedLevel;
+            }
+        } else { 
+            gameState.score = Math.max(0, gameState.score - 5);
+            AudioSys.err(); 
+        }
+        document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
-        let sz = Math.min(W, H)*0.35, x, y, s;
-        if(this.fly) { let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2; x = this.sx + (tx-this.sx)*this.t; y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*160; s = sz * 0.8 * this.vs; }
-        else { x = W/2 + (this.lane*W*0.45*this.p); y = H*0.44 + (H-H*0.44)*this.p; s = sz * (0.18 + this.p*0.82); }
-        let img = Loader.imgs[this.c.p+this.skin]; if(img && this.vs > 0) ctx.drawImage(img, x-s/2, y-s/2, s, s);
+        let x, y, s, sz = Math.min(W, H) * 0.35;
+        if(this.fly) {
+            let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2;
+            x = this.sx + (tx-this.sx)*this.t; 
+            y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*160;
+            s = sz * 0.8 * this.vScale;
+        } else {
+            x = W/2 + (this.lane * W * 0.45 * this.p); 
+            y = H*0.44 + (H-H*0.44)*this.p;
+            s = sz * (0.18 + this.p*0.82);
+        }
+        let img = Loader.imgs[this.cfg.pref+this.skin];
+        if(img && this.vScale > 0) ctx.drawImage(img, x-s/2, y-s/2, s, s);
     }
 }
-function spawnAnimal() { let side = Math.random() > 0.5 ? 1 : -1; gameState.animal = { img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], x: W/2 + (side*W*0.35), y: H*0.3, life: 2.5, s: 0 }; }
-function handleMiss() { gameState.lives--; AudioSys.err(); updateHUD(); if(gameState.lives <= 0) endGame(); }
-function updateHUD() { let c = document.getElementById('lives-container'), leaf = Loader.imgs['leaf']; c.innerHTML = ''; if(leaf) for(let i=0;i<gameState.lives;i++) c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`; }
+
+function spawnAnimal() {
+    const side = Math.random() > 0.5 ? 1 : -1;
+    gameState.animal = { 
+        img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], 
+        x: W/2 + (side * W * 0.35), 
+        y: H * 0.3, life: 2.5, s: 0 
+    };
+}
+
+function handleMiss() { 
+    gameState.lives--; AudioSys.err(); updateHUD(); 
+    if(gameState.lives <= 0) endGame(); 
+}
+
+function updateHUD() {
+    let c = document.getElementById('lives-container'); c.innerHTML = '';
+    let leaf = Loader.imgs['leaf'];
+    if(leaf) {
+        for(let i=0; i<gameState.lives; i++) {
+            c.innerHTML += `<img src="${leaf.src}" class="life-leaf">`;
+        }
+    }
+}
+
 function input(ex, ey) {
     if(!gameState.running || gameState.paused) return;
-    let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 40);
-    if(b) { let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0]; if(t) { AudioSys.pop(); b.scale = 1.3; t.fly = true; t.target = b; t.sx = W/2 + (t.lane*W*0.45*t.p); t.sy = H*0.44 + (H-H*0.44)*t.p; } }
+    // Чуть расширена зона клика вверх (-60 вместо -40), так как баки стали выше
+    let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 60);
+    if(b) {
+        let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0];
+        if(t) { 
+            AudioSys.pop(); b.scale = 1.35; t.fly = true; t.target = b;
+            t.sx = W/2 + (t.lane * W * 0.45 * t.p); 
+            t.sy = H*0.44 + (H-H*0.44)*t.p;
+        }
+    }
 }
+
 function loop(time) {
-    if(!gameState.running) return; let dt = time - (gameState.lt || time); gameState.lt = time;
+    if(!gameState.running) return;
+    let dt = time - (gameState.lt || time); gameState.lt = time;
+    
     if(!gameState.paused) {
-        ctx.clearRect(0,0,W,H); let bg = Loader.imgs['bg']; if(bg) { let sc = Math.max(W/bg.width, H/bg.height); ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc); }
-        gameState.st += dt; if(gameState.st > 2200/(gameState.speed||1)) { gameState.trash.push(new Trash()); gameState.st=0; }
-        gameState.trash.forEach(t => { t.update(dt); t.draw(); }); gameState.trash = gameState.trash.filter(t => !t.die); gameState.bins.forEach(b => b.draw());
-        if(gameState.animal) { let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08; let sz = Math.min(W,H)*0.25*a.s; if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz); if(a.life <= 0) gameState.animal = null; }
+        ctx.clearRect(0,0,W,H);
+        let bg = Loader.imgs['bg'];
+        if(bg) {
+            let sc = Math.max(W/bg.width, H/bg.height);
+            ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc);
+        }
+
+        gameState.st += dt; 
+        if(gameState.st > 2200/(gameState.speed||1)) { 
+            gameState.trash.push(new Trash()); 
+            gameState.st=0; 
+        }
+        
+        gameState.trash.forEach(t => { t.update(dt); t.draw(); });
+        gameState.trash = gameState.trash.filter(t => !t.die);
+        gameState.bins.forEach(b => b.draw());
+
+        if(gameState.animal) {
+            let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
+            let sz = Math.min(W,H) * 0.25 * a.s; 
+            if(a.img) ctx.drawImage(a.img, a.x-sz/2, a.y-sz/2, sz, sz);
+            if(a.life <= 0) gameState.animal = null;
+        }
     }
     requestAnimationFrame(loop);
 }
-function startGame() { AudioSys.init(); gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speed: 1, speedL: 1, trash: [], st: 1500, lt: performance.now() }; document.getElementById('start-s').classList.add('hidden'); document.getElementById('over-s').classList.add('hidden'); document.getElementById('score-text').innerText = "Очки: 0"; resize(); updateHUD(); requestAnimationFrame(loop); }
-function endGame() { gameState.running = false; document.getElementById('over-s').classList.remove('hidden'); document.getElementById('final-score').innerText = "Результат: " + gameState.score; }
-function resize() { W = window.innerWidth; H = window.innerHeight; canvas.width = W; canvas.height = H; let ks = Object.keys(TYPES); gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length)); }
-document.getElementById('mute-btn').onclick = () => { AudioSys.mute = !AudioSys.mute; document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊"; };
-document.getElementById('pause-btn').onclick = () => { gameState.paused = !gameState.paused; document.getElementById('pause-btn').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА"; };
-window.addEventListener('resize', resize); canvas.addEventListener('mousedown', e => input(e.clientX, e.clientY));
-canvas.addEventListener('touchstart', e => { e.preventDefault(); input(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
-document.getElementById('start-btn').onclick = startGame; document.getElementById('restart-btn').onclick = startGame;
+
+document.getElementById('mute-btn').onclick = () => {
+    AudioSys.isMuted = !AudioSys.isMuted;
+    document.getElementById('mute-btn').innerText = AudioSys.isMuted ? "🔇" : "🔊";
+};
+
+document.getElementById('pause-btn-hud').onclick = () => {
+    gameState.paused = !gameState.paused;
+    document.getElementById('pause-btn-hud').innerText = gameState.paused ? "ИГРАТЬ" : "ПАУЗА";
+};
+
+function startGame() {
+    AudioSys.init();
+    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speed: 1, speedLevel: 1, trash: [], st: 1500, lt: performance.now(), animal: null };
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById('stat-text').innerText = "Очки: 0";
+    document.getElementById('speed-text').innerText = "Скорость: 1";
+    resize(); updateHUD(); requestAnimationFrame(loop);
+}
+
+function endGame() {
+    gameState.running = false;
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').innerText = "Ваш результат: " + gameState.score;
+}
+
+function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W; canvas.height = H;
+    let ks = Object.keys(TYPES);
+    gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
+}
+
+window.addEventListener('resize', resize);
+canvas.addEventListener('mousedown', e => input(e.clientX, e.clientY));
+canvas.addEventListener('touchstart', e => { 
+    e.preventDefault(); 
+    input(e.touches[0].clientX, e.touches[0].clientY); 
+}, {passive: false});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
 Loader.load().then(() => resize());
 </script>
 </body>
