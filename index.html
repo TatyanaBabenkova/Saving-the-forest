@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Финальная Оптимизация</title>
+    <title>Эко-Тропа: Адаптивные Баки</title>
     <style>
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
@@ -13,7 +13,6 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
         
-        /* ТРЕХСТРОЧНАЯ ПАНЕЛЬ */
         .hud { 
             pointer-events: auto; background: rgba(30, 45, 60, 0.9); color: white; 
             padding: 8px 15px; display: flex; flex-direction: column; gap: 5px;
@@ -22,7 +21,6 @@
         
         .hud-row { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 25px; }
         .hud-center { justify-content: center; }
-
         .hud-controls { display: flex; gap: 10px; align-items: center; }
         
         .screen { 
@@ -65,7 +63,7 @@
         }
 
         #lives-container { display: flex; gap: 10px; }
-        /* УВЕЛИЧЕННЫЕ ЛИСТОЧКИ (в 3 раза) */
+        /* Листочки в 3 раза крупнее */
         .life-leaf { width: 66px; height: 66px; object-fit: contain; }
         .hidden { display: none !important; }
     </style>
@@ -98,13 +96,8 @@
             <button class="btn" id="start-btn">В ПУТЬ</button>
         </div>
         
-        <div class="tutorial-overlay">
-            <div class="tut-item"><span class="bin-label">Органика</span><img src="IMG/bin_organic.png" class="tut-img"></div>
-            <div class="tut-item"><span class="bin-label">Бумага</span><img src="IMG/bin_paper.png" class="tut-img"></div>
-            <div class="tut-item"><span class="bin-label">Пластик</span><img src="IMG/bin_plastic.png" class="tut-img"></div>
-            <div class="tut-item"><span class="bin-label">Металл</span><img src="IMG/bin_met.png" class="tut-img"></div>
-            <div class="tut-item"><span class="bin-label">Стекло</span><img src="IMG/bin_glass.png" class="tut-img"></div>
-        </div>
+        <div id="tutorial-bins" class="tutorial-overlay">
+            </div>
     </div>
 
     <div id="game-over-screen" class="screen hidden" style="justify-content: center;">
@@ -119,11 +112,11 @@
 <script>
 const ASSETS = 'IMG/';
 const TYPES = {
-    ORG: { id: 'organic', name: 'Органика', img: 'bin_organic.png', pref: 'trash_apple' },
-    PAP: { id: 'paper', name: 'Бумага', img: 'bin_paper.png', pref: 'trash_newspaper' },
-    PLA: { id: 'plastic', name: 'Пластик', img: 'bin_plastic.png', pref: 'trash_bottle' },
-    MET: { id: 'metal', name: 'Металл', img: 'bin_met.png', pref: 'trash_can' },
-    GLA: { id: 'glass', name: 'Стекло', img: 'bin_glass.png', pref: 'trash_jar' }
+    ORG: { id: 'organic', name: 'Органика', img: 'bin_organic.png', imgSm: 'bin_organic_sm.png', pref: 'trash_apple' },
+    PAP: { id: 'paper', name: 'Бумага', img: 'bin_paper.png', imgSm: 'bin_paper_sm.png', pref: 'trash_newspaper' },
+    PLA: { id: 'plastic', name: 'Пластик', img: 'bin_plastic.png', imgSm: 'bin_plastic_sm.png', pref: 'trash_bottle' },
+    MET: { id: 'metal', name: 'Металл', img: 'bin_met.png', imgSm: 'bin_met_sm.png', pref: 'trash_can' },
+    GLA: { id: 'glass', name: 'Стекло', img: 'bin_glass.png', imgSm: 'bin_glass_sm.png', pref: 'trash_jar' }
 };
 
 const AudioSys = {
@@ -152,6 +145,7 @@ const Loader = {
         for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
         Object.keys(TYPES).forEach(k => {
             list['b_'+TYPES[k].id] = TYPES[k].img;
+            list['b_sm_'+TYPES[k].id] = TYPES[k].imgSm; // Загрузка маленьких баков
             for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
         });
         for(let k in list) {
@@ -178,7 +172,10 @@ class Bin {
         let maxH = H * maxHFactor; 
         let gap = W / total;
 
-        const img = Loader.imgs['b_' + this.cfg.id];
+        // Выбираем картинку в зависимости от альбомной ориентации
+        const imgKey = isLandscape ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
+        const img = Loader.imgs[imgKey];
+        
         if (img) {
             let nativeRatio = img.width / img.height;
             this.h = maxH;
@@ -192,15 +189,18 @@ class Bin {
         this.y = H - this.h - 15; 
     }
     draw() {
-        let img = Loader.imgs['b_'+this.cfg.id];
+        let isLandscape = W > H;
+        let imgKey = isLandscape ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
+        let img = Loader.imgs[imgKey];
         if(!img) return;
+        
         let sw = this.w * this.scale, sh = this.h * this.scale;
         
         ctx.fillStyle = "black";
         ctx.font = "bold 13px Segoe UI"; 
         ctx.textAlign = "center";
         
-        // ВЫРАВНИВАНИЕ ТЕКСТА: Теперь он находится прямо над баком (отступ 15px)
+        // Выравнивание надписи прямо над баком
         let labelY = this.y - 15; 
         
         let textW = ctx.measureText(this.cfg.name).width + 10;
@@ -293,6 +293,22 @@ function updateHUD() {
     }
 }
 
+function updateStartScreenTutorial() {
+    const container = document.getElementById('tutorial-bins');
+    const isLandscape = W > H;
+    container.innerHTML = '';
+    Object.keys(TYPES).forEach(k => {
+        const type = TYPES[k];
+        const imgFile = isLandscape ? type.imgSm : type.img;
+        container.innerHTML += `
+            <div class="tut-item">
+                <span class="bin-label">${type.name}</span>
+                <img src="${ASSETS}${imgFile}" class="tut-img">
+            </div>
+        `;
+    });
+}
+
 function input(ex, ey) {
     if(!gameState.running || gameState.paused) return;
     let b = gameState.bins.find(b => ex > b.x && ex < b.x+b.w && ey > b.y - 60);
@@ -368,6 +384,7 @@ function resize() {
     canvas.width = W; canvas.height = H;
     let ks = Object.keys(TYPES);
     gameState.bins = ks.map((k, i) => new Bin(TYPES[k], i, ks.length));
+    updateStartScreenTutorial();
 }
 
 window.addEventListener('resize', resize);
