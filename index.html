@@ -378,7 +378,7 @@ class Bin {
             const margin = 2;
             const availableW = width - (margin * 2);
             // Большие баки (1/2.8 ширины)
-            const binW = availableW / 3.3; 
+            const binW = availableW / 2.8; 
             
             this.w = binW; 
             this.h = this.w * 1.3;
@@ -712,7 +712,10 @@ function loop(time) {
         ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height);
     }
 
+    // === ИСПРАВЛЕНИЕ ДРОЖАНИЯ ===
+    let isShaking = false;
     if (shakeTimer > 0) {
+        isShaking = true;
         ctx.save();
         ctx.translate((Math.random()-0.5)*15, (Math.random()-0.5)*15);
         shakeTimer--;
@@ -772,7 +775,11 @@ function loop(time) {
     gameState.particles.forEach(p => { p.update(); p.draw(ctx); });
     gameState.particles = gameState.particles.filter(p => p.life > 0);
 
-    if (shakeTimer > 0) ctx.restore();
+    // === ИСПРАВЛЕНИЕ ДРОЖАНИЯ (ВОССТАНОВЛЕНИЕ) ===
+    if (isShaking) {
+        ctx.restore();
+    }
+
     requestAnimationFrame(loop);
 }
 
