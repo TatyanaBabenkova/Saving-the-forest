@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Эко-Тропа: Адаптивные Баки</title>
+    <title>Эко-Тропа: Адаптивный HUD</title>
     <style>
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
@@ -13,16 +13,29 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 20; }
         
+        /* ГИБКИЙ HUD */
         .hud { 
             pointer-events: auto; background: rgba(30, 45, 60, 0.9); color: white; 
-            padding: 8px 15px; display: flex; flex-direction: column; gap: 5px;
-            backdrop-filter: blur(5px); border-bottom: 2px solid rgba(255,255,255,0.1);
+            padding: 8px 15px; display: flex; backdrop-filter: blur(5px); 
+            border-bottom: 2px solid rgba(255,255,255,0.1);
         }
         
-        .hud-row { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 25px; }
-        .hud-center { justify-content: center; }
+        .hud-row { display: flex; align-items: center; }
         .hud-controls { display: flex; gap: 10px; align-items: center; }
-        
+
+        /* ВЕРТИКАЛЬНЫЙ РЕЖИМ (3 СТРОКИ) */
+        @media (orientation: portrait) {
+            .hud { flex-direction: column; gap: 8px; }
+            .hud-row { justify-content: space-between; width: 100%; }
+            .hud-lives-row { justify-content: center; }
+        }
+
+        /* АЛЬБОМНЫЙ РЕЖИМ И ПК (1 СТРОКА) */
+        @media (orientation: landscape) {
+            .hud { flex-direction: row; justify-content: space-between; align-items: center; height: 50px; }
+            .hud-row { gap: 20px; }
+        }
+
         .screen { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             display: flex; flex-direction: column; align-items: center; 
@@ -62,9 +75,8 @@
             padding: 3px 6px; border-radius: 4px; margin-bottom: 5px; white-space: nowrap;
         }
 
-        #lives-container { display: flex; gap: 10px; }
-        /* Листочки в 3 раза крупнее */
-        .life-leaf { width: 66px; height: 66px; object-fit: contain; }
+        #lives-container { display: flex; gap: 10px; align-items: center; }
+        .life-leaf { width: 55px; height: 55px; object-fit: contain; } /* Увеличено */
         .hidden { display: none !important; }
     </style>
 </head>
@@ -74,6 +86,7 @@
         <div class="hud">
             <div class="hud-row">
                 <div id="stat-text" style="font-weight: bold; font-size: 18px;">Очки: 0</div>
+                <div class="speed-box-mobile" style="display: none;"></div>
             </div>
             <div class="hud-row">
                 <div id="speed-text" style="font-weight: bold; font-size: 15px; color: #FFEB3B;">Скорость: 1</div>
@@ -82,7 +95,7 @@
                     <button id="pause-btn-hud">ПАУЗА</button>
                 </div>
             </div>
-            <div class="hud-row hud-center">
+            <div class="hud-row hud-lives-row">
                 <div id="lives-container"></div>
             </div>
         </div>
@@ -95,9 +108,7 @@
             <p style="font-size: 18px; text-shadow: 2px 2px 4px #000;">Очисти лес от мусора!</p>
             <button class="btn" id="start-btn">В ПУТЬ</button>
         </div>
-        
-        <div id="tutorial-bins" class="tutorial-overlay">
-            </div>
+        <div id="tutorial-bins" class="tutorial-overlay"></div>
     </div>
 
     <div id="game-over-screen" class="screen hidden" style="justify-content: center;">
@@ -145,7 +156,7 @@ const Loader = {
         for(let i=1; i<=10; i++) list['a'+i] = 'animal'+i+'.png';
         Object.keys(TYPES).forEach(k => {
             list['b_'+TYPES[k].id] = TYPES[k].img;
-            list['b_sm_'+TYPES[k].id] = TYPES[k].imgSm; // Загрузка маленьких баков
+            list['b_sm_'+TYPES[k].id] = TYPES[k].imgSm;
             for(let i=1; i<=5; i++) list[TYPES[k].pref+i] = TYPES[k].pref+i+'.png';
         });
         for(let k in list) {
@@ -171,19 +182,13 @@ class Bin {
         let maxHFactor = isLandscape ? 0.25 : 0.45; 
         let maxH = H * maxHFactor; 
         let gap = W / total;
-
-        // Выбираем картинку в зависимости от альбомной ориентации
         const imgKey = isLandscape ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
         const img = Loader.imgs[imgKey];
-        
         if (img) {
-            let nativeRatio = img.width / img.height;
+            let ratio = img.width / img.height;
             this.h = maxH;
-            this.w = this.h * nativeRatio;
-            if (this.w > gap * 0.98) {
-                this.w = gap * 0.98;
-                this.h = this.w / nativeRatio;
-            }
+            this.w = this.h * ratio;
+            if (this.w > gap * 0.98) { this.w = gap * 0.98; this.h = this.w / ratio; }
         }
         this.x = i * gap + (gap - this.w) / 2;
         this.y = H - this.h - 15; 
@@ -193,19 +198,17 @@ class Bin {
         let imgKey = isLandscape ? 'b_sm_' + this.cfg.id : 'b_' + this.cfg.id;
         let img = Loader.imgs[imgKey];
         if(!img) return;
-        
         let sw = this.w * this.scale, sh = this.h * this.scale;
         
         ctx.fillStyle = "black";
         ctx.font = "bold 13px Segoe UI"; 
         ctx.textAlign = "center";
         
-        // Выравнивание надписи прямо над баком
-        let labelY = this.y - 15; 
+        // ВЫРАВНИВАНИЕ ПО ЛИНИИ: Текст всегда на одной высоте от верха самого бака
+        let labelY = this.y - 12; 
         
         let textW = ctx.measureText(this.cfg.name).width + 10;
         ctx.fillRect(this.x + this.w/2 - textW/2, labelY - 14, textW, 18);
-        
         ctx.fillStyle = "white";
         ctx.fillText(this.cfg.name, this.x + this.w/2, labelY);
 
@@ -220,14 +223,13 @@ class Trash {
         this.cfg = TYPES[keys[Math.floor(Math.random()*keys.length)]];
         this.skin = Math.floor(Math.random()*5)+1;
         this.p = 0; this.lane = (Math.random()-0.5)*1.6;
-        this.fly = false; this.t = 0;
-        this.vScale = 1;
+        this.fly = false; this.t = 0; this.vs = 1;
     }
     update(dt) {
         if(gameState.paused) return;
         if(this.fly) { 
             this.t += 0.08;
-            if(this.t > 0.7) this.vScale = Math.max(0, 1 - (this.t - 0.7) * 3.3);
+            if(this.t > 0.7) this.vs = Math.max(0, 1 - (this.t - 0.7) * 3.3);
             if(this.t >= 1) this.resolve(); 
         } else { 
             this.p += 0.0022 * (gameState.speed || 1) * (dt/16); 
@@ -237,35 +239,29 @@ class Trash {
     resolve() {
         this.die = 1;
         if(this.target.cfg.id === this.cfg.id) {
-            gameState.score += 10; AudioSys.ok();
-            gameState.count++; 
+            gameState.score += 10; AudioSys.ok(); gameState.count++; 
             if(gameState.count % 10 === 0) spawnAnimal();
             if(gameState.count % 20 === 0) {
-                gameState.speedLevel++;
-                gameState.speed += 0.2;
-                document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedLevel;
+                gameState.speedL++; gameState.speed += 0.2;
+                document.getElementById('speed-text').innerText = "Скорость: " + gameState.speedL;
             }
-        } else { 
-            gameState.score = Math.max(0, gameState.score - 5);
-            AudioSys.err(); 
-        }
+        } else { gameState.score = Math.max(0, gameState.score - 5); AudioSys.err(); }
         document.getElementById('stat-text').innerText = "Очки: " + gameState.score;
     }
     draw() {
-        let sz = Math.min(W, H) * 0.35;
-        let x, y, s;
+        let sz = Math.min(W, H) * 0.35, x, y, s;
         if(this.fly) {
             let tx = this.target.x + this.target.w/2, ty = this.target.y + this.target.h/2;
             x = this.sx + (tx-this.sx)*this.t; 
             y = this.sy + (ty-this.sy)*this.t - Math.sin(this.t*Math.PI)*160;
-            s = sz * 0.8 * this.vScale;
+            s = sz * 0.8 * this.vs;
         } else {
             x = W/2 + (this.lane * W * 0.45 * this.p); 
             y = H*0.44 + (H-H*0.44)*this.p;
             s = sz * (0.18 + this.p*0.82);
         }
         let img = Loader.imgs[this.cfg.pref+this.skin];
-        if(img && this.vScale > 0) ctx.drawImage(img, x-s/2, y-s/2, s, s);
+        if(img && this.vs > 0) ctx.drawImage(img, x-s/2, y-s/2, s, s);
     }
 }
 
@@ -273,8 +269,7 @@ function spawnAnimal() {
     const side = Math.random() > 0.5 ? 1 : -1;
     gameState.animal = { 
         img: Loader.imgs['a'+(Math.floor(Math.random()*10)+1)], 
-        x: W/2 + (side * W * 0.35), 
-        y: H * 0.3, life: 2.5, s: 0 
+        x: W/2 + (side * W * 0.35), y: H * 0.3, life: 2.5, s: 0 
     };
 }
 
@@ -295,17 +290,10 @@ function updateHUD() {
 
 function updateStartScreenTutorial() {
     const container = document.getElementById('tutorial-bins');
-    const isLandscape = W > H;
-    container.innerHTML = '';
+    const isL = W > H; container.innerHTML = '';
     Object.keys(TYPES).forEach(k => {
-        const type = TYPES[k];
-        const imgFile = isLandscape ? type.imgSm : type.img;
-        container.innerHTML += `
-            <div class="tut-item">
-                <span class="bin-label">${type.name}</span>
-                <img src="${ASSETS}${imgFile}" class="tut-img">
-            </div>
-        `;
+        const t = TYPES[k]; const img = isL ? t.imgSm : t.img;
+        container.innerHTML += `<div class="tut-item"><span class="bin-label">${t.name}</span><img src="${ASSETS}${img}" class="tut-img"></div>`;
     });
 }
 
@@ -316,8 +304,7 @@ function input(ex, ey) {
         let t = gameState.trash.filter(t => !t.fly && t.p > 0.05).sort((a,b)=>b.p-a.p)[0];
         if(t) { 
             AudioSys.pop(); b.scale = 1.35; t.fly = true; t.target = b;
-            t.sx = W/2 + (t.lane * W * 0.45 * t.p); 
-            t.sy = H*0.44 + (H-H*0.44)*t.p;
+            t.sx = W/2 + (t.lane * W * 0.45 * t.p); t.sy = H*0.44 + (H-H*0.44)*t.p;
         }
     }
 }
@@ -325,7 +312,6 @@ function input(ex, ey) {
 function loop(time) {
     if(!gameState.running) return;
     let dt = time - (gameState.lt || time); gameState.lt = time;
-    
     if(!gameState.paused) {
         ctx.clearRect(0,0,W,H);
         let bg = Loader.imgs['bg'];
@@ -333,17 +319,11 @@ function loop(time) {
             let sc = Math.max(W/bg.width, H/bg.height);
             ctx.drawImage(bg, (W-bg.width*sc)/2, (H-bg.height*sc)/2, bg.width*sc, bg.height*sc);
         }
-
         gameState.st += dt; 
-        if(gameState.st > 2200/(gameState.speed||1)) { 
-            gameState.trash.push(new Trash()); 
-            gameState.st=0; 
-        }
-        
+        if(gameState.st > 2200/(gameState.speed||1)) { gameState.trash.push(new Trash()); gameState.st=0; }
         gameState.trash.forEach(t => { t.update(dt); t.draw(); });
         gameState.trash = gameState.trash.filter(t => !t.die);
         gameState.bins.forEach(b => b.draw());
-
         if(gameState.animal) {
             let a = gameState.animal; a.life -= dt/1000; if(a.s < 1) a.s += 0.08;
             let sz = Math.min(W,H) * 0.25 * a.s; 
@@ -355,8 +335,8 @@ function loop(time) {
 }
 
 document.getElementById('mute-btn').onclick = () => {
-    AudioSys.isMuted = !AudioSys.isMuted;
-    document.getElementById('mute-btn').innerText = AudioSys.isMuted ? "🔇" : "🔊";
+    AudioSys.mute = !AudioSys.mute;
+    document.getElementById('mute-btn').innerText = AudioSys.mute ? "🔇" : "🔊";
 };
 
 document.getElementById('pause-btn-hud').onclick = () => {
@@ -366,7 +346,7 @@ document.getElementById('pause-btn-hud').onclick = () => {
 
 function startGame() {
     AudioSys.init();
-    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speed: 1, speedLevel: 1, trash: [], st: 1500, lt: performance.now(), animal: null };
+    gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speed: 1, speedL: 1, trash: [], st: 1500, lt: performance.now(), animal: null };
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     document.getElementById('stat-text').innerText = "Очки: 0";
     document.getElementById('speed-text').innerText = "Скорость: 1";
