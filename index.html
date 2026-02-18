@@ -17,7 +17,7 @@
         
         /* --- СТИЛИ ДЛЯ ИНТЕРФЕЙСА --- */
         
-        /* Единый стиль для КНОПОК (Пауза/Звук) на всех экранах */
+        /* Кнопки (Пауза/Звук) */
         .glass-btn { 
             pointer-events: auto;
             background: rgba(255, 255, 255, 0.15); 
@@ -26,29 +26,50 @@
             border-radius: 12px; 
             cursor: pointer; 
             display: flex; align-items: center; justify-content: center;
-            height: 44px; /* Сделали крупнее для пальца */
+            height: 44px; 
             box-sizing: border-box;
             backdrop-filter: blur(4px);
             transition: background 0.2s;
         }
         .glass-btn:active { background: rgba(255, 255, 255, 0.3); transform: translateY(1px); }
         
-        /* Специфика кнопок */
         #mute-btn-p, #mute-btn-l { font-size: 24px; width: 48px; }
         #pause-btn-p, #pause-btn-l { font-size: 16px; font-weight: bold; padding: 0 20px; }
 
-        /* Капсулы со статистикой */
+        /* Общий стиль капсул */
         .stat-capsule {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 22px;
             padding: 0 16px;
-            height: 44px; /* Одинаковая высота с кнопками */
-            font-size: 18px;
-            font-weight: bold;
+            height: 44px;
             display: inline-flex; align-items: center; white-space: nowrap;
             backdrop-filter: blur(4px); color: white;
             box-sizing: border-box;
+        }
+
+        /* Особый стиль для капсулы счета (двухэтажная) */
+        .score-capsule {
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: flex-start;
+            height: auto; /* Высота подстраивается */
+            padding: 6px 16px;
+            min-height: 44px;
+        }
+
+        .score-main {
+            font-size: 18px; 
+            font-weight: bold;
+            display: flex; align-items: center;
+        }
+        
+        .score-record {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 2px;
+            font-weight: normal;
         }
 
         .control-group { display: flex; gap: 10px; pointer-events: auto; }
@@ -99,19 +120,15 @@
             padding: 16px 50px; color: white; font-size: 24px; font-weight: bold; 
             border-radius: 18px; cursor: pointer; box-shadow: 0 6px 0 #1B5E20; 
             text-transform: uppercase; letter-spacing: 1px; margin-top: 20px;
-            display: none; /* Скрыта по умолчанию, пока не загрузится */
+            display: none; 
         }
         .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #1B5E20; }
 
-        /* ЗАГРУЗЧИК (СПИННЕР) */
         .loader {
             border: 6px solid rgba(255, 255, 255, 0.3);
             border-top: 6px solid #76FF03;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin-top: 30px;
+            border-radius: 50%; width: 50px; height: 50px;
+            animation: spin 1s linear infinite; margin-top: 30px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
@@ -121,14 +138,17 @@
         .bin-l { font-size: 13px; font-weight: bold; background: #000; color: #fff; padding: 4px 8px; border-radius: 6px; margin-top: 5px; }
         
         .hidden { display: none !important; }
-        .speed-val { color: #FFEB3B; margin-left: 5px; }
+        .speed-val { color: #FFEB3B; margin-left: 5px; font-weight: bold; font-size: 18px; }
     </style>
 </head>
 <body>
     <div id="ui-layer">
         <div class="hud-portrait">
             <div class="hud-row-top">
-                <div class="stat-capsule">⭐ <span class="score-display" style="margin-left:5px">0</span></div>
+                <div class="stat-capsule score-capsule">
+                    <div class="score-main">⭐ <span class="score-display" style="margin-left:5px">0</span></div>
+                    <div class="score-record">Личный рекорд: <span class="record-display">0</span></div>
+                </div>
             </div>
             <div class="hud-row-mid">
                 <div class="stat-capsule">🚀 <span class="speed-display speed-val">1</span></div>
@@ -144,7 +164,10 @@
 
         <div class="hud-landscape">
             <div class="hud-col-left">
-                <div class="stat-capsule">⭐ <span class="score-display" style="margin-left:5px">0</span></div>
+                <div class="stat-capsule score-capsule">
+                    <div class="score-main">⭐ <span class="score-display" style="margin-left:5px">0</span></div>
+                    <div class="score-record">Личный рекорд: <span class="record-display">0</span></div>
+                </div>
             </div>
             <div class="hud-col-center">
                 <div class="lives-wrapper lives-container-cls"></div>
@@ -254,6 +277,19 @@ const Loader = {
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
 let W, H, gameState = { running: false, paused: false, particles: [] };
 const DEADLINE_Y_RATIO = 0.70; 
+
+// --- ФУНКЦИИ РЕКОРДОВ ---
+function getRecord() {
+    return localStorage.getItem('ecology-game') || 0;
+}
+
+function updateRecordDisplay() {
+    const rec = getRecord();
+    document.querySelectorAll('.record-display').forEach(el => el.innerText = rec);
+}
+
+// Инициализация отображения рекорда при загрузке
+updateRecordDisplay();
 
 class Fragment {
     constructor(x, y) {
@@ -449,7 +485,6 @@ function startGame() {
     gameState = { running: true, paused: false, score: 0, lives: 5, count: 0, speedMultiplier: 1, speedLevel: 1, trash: [], particles: [], st: 1500, lt: performance.now() };
     document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
     
-    // ПРИНУДИТЕЛЬНЫЙ ПЕРЕСЧЕТ РАЗМЕРОВ ПОСЛЕ СТАРТА (Чтобы баки точно появились)
     resize();
     setTimeout(resize, 100); 
     
@@ -458,6 +493,14 @@ function startGame() {
 
 function endGame() { 
     gameState.running = false; 
+    
+    // Проверка и сохранение рекорда
+    const currentRec = parseInt(getRecord());
+    if (gameState.score > currentRec) {
+        localStorage.setItem('ecology-game', gameState.score);
+    }
+    updateRecordDisplay(); // Обновляем в интерфейсе
+    
     document.getElementById('game-over-screen').classList.remove('hidden'); 
     document.getElementById('final-score').innerText = gameState.score;
 }
@@ -492,14 +535,9 @@ document.getElementById('restart-btn').onclick = startGame;
 
 // ГЛАВНЫЙ ЗАГРУЗЧИК
 Loader.loadCritical().then(() => {
-    // 1. Убираем спиннер, показываем кнопку
     document.getElementById('loader').style.display = 'none';
     document.getElementById('start-btn').style.display = 'block';
-    
-    // 2. Инициализируем геометрию
     resize();
-    
-    // 3. Запускаем цикл отрисовки
     requestAnimationFrame(loop);
 });
 </script>
